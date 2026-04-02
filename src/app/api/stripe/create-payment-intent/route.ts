@@ -90,13 +90,19 @@ export async function POST(req: NextRequest) {
       },
     }
 
-    // Router vers le compte Connect du restaurant si connecté
+    // Direct charge sur le compte Connect : les frais Stripe sont supportés par le restaurant
     if (restaurant.stripe_account_id) {
-      paymentIntentParams.transfer_data = { destination: restaurant.stripe_account_id }
+      paymentIntentParams.application_fee_amount = Math.round(amountCents * 0.01)
+      const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams, {
+        stripeAccount: restaurant.stripe_account_id,
+      })
+      return NextResponse.json({
+        clientSecret: paymentIntent.client_secret,
+        stripeAccountId: restaurant.stripe_account_id,
+      })
     }
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
-
     return NextResponse.json({ clientSecret: paymentIntent.client_secret })
   } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })

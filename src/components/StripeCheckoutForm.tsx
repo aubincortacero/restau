@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 function fmt(p: number): string {
   return new Intl.NumberFormat('fr-FR', {
@@ -22,8 +20,9 @@ type Props = {
   onBack: () => void
 }
 
-function CheckoutForm({ totalPrice, onSuccess, onBack }: {
+function CheckoutForm({ totalPrice, stripeAccountId, onSuccess, onBack }: {
   totalPrice: number
+  stripeAccountId: string | null
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -67,7 +66,7 @@ function CheckoutForm({ totalPrice, onSuccess, onBack }: {
       const res = await fetch('/api/stripe/confirm-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+        body: JSON.stringify({ paymentIntentId: paymentIntent.id, stripeAccountId }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -109,8 +108,17 @@ function CheckoutForm({ totalPrice, onSuccess, onBack }: {
 
 export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, onSuccess, onBack }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const fetchedRef = useRef(false)
+
+  const stripePromise = useMemo(
+    () => loadStripe(
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+      stripeAccountId ? { stripeAccount: stripeAccountId } : undefined
+    ),
+    [stripeAccountId]
+  )
 
   useEffect(() => {
     if (fetchedRef.current) return
@@ -123,7 +131,10 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
       .then(res => res.json())
       .then(data => {
         if (data.error) setLoadError(data.error)
-        else setClientSecret(data.clientSecret)
+        else {
+          setStripeAccountId(data.stripeAccountId ?? null)
+          setClientSecret(data.clientSecret)
+        }
       })
       .catch(() => setLoadError('Erreur de connexion'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,7 +175,7 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
         },
       }}
     >
-      <CheckoutForm totalPrice={totalPrice} onSuccess={onSuccess} onBack={onBack} />
+      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} onSuccess={onSuccess} onBack={onBack} />
     </Elements>
   )
 }

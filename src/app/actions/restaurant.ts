@@ -349,10 +349,21 @@ export async function createTable(formData: FormData) {
   const number = parseInt(formData.get('number') as string)
   const label = formData.get('label') as string
 
+  // Calcule une position par défaut visible basée sur le nombre de tables existantes
+  const { count } = await supabase
+    .from('tables')
+    .select('*', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurant_id)
+  const i = count ?? 0
+  const pos_x = 50 + (i % 5) * 160
+  const pos_y = 50 + Math.floor(i / 5) * 120
+
   await supabase.from('tables').insert({
     restaurant_id,
     number,
     label: label || null,
+    pos_x,
+    pos_y,
   })
 
   revalidatePath('/dashboard/tables')

@@ -78,5 +78,19 @@ export async function POST(req: NextRequest) {
     // Rien à faire — la commande n'est jamais créée en cas d'échec
   }
 
+  // Synchroniser le statut du compte Connect quand Stripe valide/modifie un compte
+  if (event.type === 'account.updated') {
+    const account = event.data.object as import('stripe').default.Account
+    const supabase = await createClient()
+    await supabase
+      .from('restaurants')
+      .update({
+        stripe_charges_enabled: account.charges_enabled,
+        stripe_payouts_enabled: account.payouts_enabled,
+        stripe_details_submitted: account.details_submitted,
+      })
+      .eq('stripe_account_id', account.id)
+  }
+
   return NextResponse.json({ received: true })
 }

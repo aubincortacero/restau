@@ -15,7 +15,7 @@ export default function LoginPage({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </div>
-          <h1 className="text-2xl font-semibold text-white tracking-tight">MenuQR</h1>
+          <h1 className="text-2xl font-semibold text-white tracking-tight">Qomand</h1>
           <p className="text-sm text-zinc-400 mt-1">Gérez votre restaurant, encaissez en ligne.</p>
         </div>
 
@@ -45,7 +45,7 @@ export default function LoginPage({
         </div>
 
         <p className="text-center text-xs text-zinc-600 mt-6">
-          © {new Date().getFullYear()} MenuQR
+          © {new Date().getFullYear()} Qomand
         </p>
       </div>
     </main>

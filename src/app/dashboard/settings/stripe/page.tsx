@@ -7,7 +7,12 @@ import {
   disconnectStripeAccount,
 } from '@/app/actions/stripe-connect'
 
-export default async function SettingsStripePage() {
+export default async function SettingsStripePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error: stripeError } = await searchParams
   // Vérification que la clé Stripe est configurée
   if (!process.env.STRIPE_SECRET_KEY) {
     return (
@@ -27,7 +32,7 @@ export default async function SettingsStripePage() {
 
   const { data: restaurant, error: restaurantError } = await supabase
     .from('restaurants')
-    .select('id, stripe_account_id')
+    .select('id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted')
     .eq('owner_id', user.id)
     .single()
 
@@ -37,8 +42,12 @@ export default async function SettingsStripePage() {
         <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-amber-400 mb-2">Migration requise</h2>
           <p className="text-xs text-zinc-400 mb-3">Exécutez cette requête dans Supabase → SQL Editor :</p>
-          <pre className="bg-zinc-800 rounded-lg p-3 text-xs text-zinc-300 overflow-x-auto">
-            ALTER TABLE restaurants{'\n'}ADD COLUMN IF NOT EXISTS stripe_account_id text;
+          <pre className="bg-zinc-800 rounded-lg p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap">
+{`ALTER TABLE restaurants
+ADD COLUMN IF NOT EXISTS stripe_account_id text,
+ADD COLUMN IF NOT EXISTS stripe_charges_enabled boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS stripe_payouts_enabled boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS stripe_details_submitted boolean DEFAULT false;`}
           </pre>
         </div>
       </div>
@@ -47,27 +56,60 @@ export default async function SettingsStripePage() {
 
   if (!restaurant) redirect('/dashboard/new')
 
-  // Charger le statut du compte Stripe si connecté
-  let account: Stripe.Account | null = null
-  if (restaurant.stripe_account_id) {
+  const isConnected = !!restaurant.stripe_account_id
+
+  // Si connecté, vérifier que le compte existe toujours côté Stripe
+  // et rafraîchir les statuts en DB (fallback si webhook manqué)
+  let chargesEnabled = restaurant.stripe_charges_enabled ?? false
+  let payoutsEnabled = restaurant.stripe_payouts_enabled ?? false
+  let detailsSubmitted = restaurant.stripe_details_submitted ?? false
+
+  if (isConnected) {
     try {
-      account = await stripe.accounts.retrieve(restaurant.stripe_account_id)
+      const account = await stripe.accounts.retrieve(restaurant.stripe_account_id!)
+      chargesEnabled = account.charges_enabled
+      payoutsEnabled = account.payouts_enabled
+      detailsSubmitted = account.details_submitted
+      // Mettre à jour en DB si différent
+      if (
+        chargesEnabled !== restaurant.stripe_charges_enabled ||
+        payoutsEnabled !== restaurant.stripe_payouts_enabled ||
+        detailsSubmitted !== restaurant.stripe_details_submitted
+      ) {
+        await supabase
+          .from('restaurants')
+          .update({ stripe_charges_enabled: chargesEnabled, stripe_payouts_enabled: payoutsEnabled, stripe_details_submitted: detailsSubmitted })
+          .eq('id', restaurant.id)
+      }
     } catch {
       // Compte supprimé ou invalide — on nettoie
       await supabase
         .from('restaurants')
-        .update({ stripe_account_id: null })
+        .update({ stripe_account_id: null, stripe_charges_enabled: false, stripe_payouts_enabled: false, stripe_details_submitted: false })
         .eq('id', restaurant.id)
     }
   }
 
-  const isConnected = !!account
-  const chargesEnabled = account?.charges_enabled ?? false
-  const payoutsEnabled = account?.payouts_enabled ?? false
-  const detailsSubmitted = account?.details_submitted ?? false
-
   return (
     <div className="max-w-xl space-y-6">
+      {/* Erreur Stripe */}
+      {stripeError && (
+        <div className="bg-zinc-900 border border-red-500/30 rounded-2xl p-4">
+          <p className="text-xs font-semibold text-red-400 mb-1">Erreur Stripe</p>
+          <p className="text-xs text-zinc-400">{decodeURIComponent(stripeError)}</p>
+          {stripeError.includes('platform-profile') && (
+            <a
+              href="https://dashboard.stripe.com/settings/connect/platform-profile"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-xs text-[#635BFF] hover:underline"
+            >
+              Configurer le profil plateforme Stripe →
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Statut */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-1">

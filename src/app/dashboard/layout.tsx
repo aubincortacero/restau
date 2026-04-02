@@ -98,7 +98,7 @@ export default async function DashboardLayout({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
-              <span className="font-semibold text-sm">MenuQR</span>
+              <span className="font-semibold text-sm">Qomand</span>
             </Link>
 
             <NavDesktop />

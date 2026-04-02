@@ -6,13 +6,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(req: NextRequest) {
   try {
-    const { paymentIntentId } = await req.json()
+    const { paymentIntentId, stripeAccountId } = await req.json()
     if (!paymentIntentId || typeof paymentIntentId !== 'string') {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
     }
 
-    // Vérifier auprès de Stripe que le paiement est bien confirmé
-    const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+    // Récupérer le PI sur le bon compte (direct charge = compte connecté)
+    const retrieveOptions = stripeAccountId && typeof stripeAccountId === 'string'
+      ? { stripeAccount: stripeAccountId }
+      : {}
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {}, retrieveOptions)
     if (pi.status !== 'succeeded') {
       return NextResponse.json({ error: 'Paiement non confirmé' }, { status: 400 })
     }
