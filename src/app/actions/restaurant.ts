@@ -365,6 +365,56 @@ export async function deleteTable(formData: FormData) {
   revalidatePath('/dashboard/tables')
 }
 
+export async function deleteTableById(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  await supabase.from('tables').delete().eq('id', id).eq('restaurant_id', restaurant.id)
+}
+
+export async function saveFloorPlan(
+  restaurantId: string,
+  tables: { id: string; pos_x: number; pos_y: number }[],
+  walls: { id: string; x: number; y: number; w: number; h: number }[],
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', restaurantId)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  // Mise à jour des positions en parallèle
+  await Promise.all(
+    tables.map((t) =>
+      supabase
+        .from('tables')
+        .update({ pos_x: t.pos_x, pos_y: t.pos_y })
+        .eq('id', t.id)
+        .eq('restaurant_id', restaurantId),
+    ),
+  )
+
+  // Sauvegarde des murs dans restaurant.floor_plan
+  await supabase
+    .from('restaurants')
+    .update({ floor_plan: { walls } })
+    .eq('id', restaurantId)
+}
+
 // ─── Orders ───────────────────────────────────────────────────
 export async function updateOrderStatus(formData: FormData) {
   const supabase = await createClient()
