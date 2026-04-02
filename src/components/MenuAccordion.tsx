@@ -4,9 +4,11 @@ import { useState, useTransition } from 'react'
 import { CATEGORY_TYPES } from '@/lib/category-types'
 import type { PublicCategory } from '@/app/menu/[slug]/page'
 import { placeOrder } from '@/app/actions/restaurant'
+import StripeCheckoutForm from '@/components/StripeCheckoutForm'
 
 type Item = PublicCategory['items'][number]
 type CartItem = { id: string; name: string; price: number; quantity: number }
+type CartStep = 'cart' | 'payment-choice' | 'stripe-form' | 'success'
 
 const CATEGORY_CIRCLE: Record<string, string> = {
   standard: 'bg-stone-800 text-stone-300',
@@ -31,12 +33,14 @@ export default function MenuAccordion({
   tableId,
   tableLabel,
   restaurantId,
+  acceptedPaymentMethods,
 }: {
   categories: PublicCategory[]
   hhActive: boolean
   tableId: string | null
   tableLabel: string | null
   restaurantId: string
+  acceptedPaymentMethods: string[]
 }) {
   const [openIds, setOpenIds] = useState<string[]>(
     categories.length > 0 ? [categories[0].id] : []
@@ -45,7 +49,7 @@ export default function MenuAccordion({
   const [cartOpen, setCartOpen] = useState(false)
   const [note, setNote] = useState('')
   const [isPending, startTransition] = useTransition()
-  const [ordered, setOrdered] = useState(false)
+  const [cartStep, setCartStep] = useState<CartStep>('cart')
   const [orderError, setOrderError] = useState<string | null>(null)
 
   function toggleCat(id: string) {
@@ -75,15 +79,29 @@ export default function MenuAccordion({
 
   function handleOrder() {
     setOrderError(null)
+    const hasOnline = acceptedPaymentMethods.includes('online')
+    const hasCash = acceptedPaymentMethods.includes('cash')
+    if (hasOnline && hasCash) {
+      setCartStep('payment-choice')
+    } else if (hasOnline) {
+      setCartStep('stripe-form')
+    } else {
+      placeCashOrder()
+    }
+  }
+
+  function placeCashOrder() {
+    setOrderError(null)
     startTransition(async () => {
       const result = await placeOrder({
         restaurantId,
         tableId,
         items: cartItems.map(i => ({ itemId: i.id, quantity: i.quantity })),
         note,
+        paymentMethod: 'cash',
       })
       if (result.success) {
-        setOrdered(true)
+        setCartStep('success')
         setCart({})
         setNote('')
       } else {
@@ -157,7 +175,7 @@ export default function MenuAccordion({
       {totalQty > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-8 bg-gradient-to-t from-[#0a0908] via-[#0a0908]/95 to-transparent pointer-events-none">
           <button
-            onClick={() => { setCartOpen(true); setOrdered(false); setOrderError(null) }}
+            onClick={() => { setCartOpen(true); setCartStep('cart'); setOrderError(null) }}
             className="pointer-events-auto w-full max-w-lg mx-auto flex items-center justify-between bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-2xl px-5 py-4 shadow-xl shadow-orange-900/30 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -180,7 +198,7 @@ export default function MenuAccordion({
               <div className="w-10 h-1 bg-stone-700 rounded-full" />
             </div>
 
-            {ordered ? (
+            {cartStep === 'success' ? (
               <div className="flex flex-col items-center justify-center py-12 px-8 text-center">
                 <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-800/40">
                   <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -196,6 +214,76 @@ export default function MenuAccordion({
                   Fermer
                 </button>
               </div>
+
+            ) : cartStep === 'payment-choice' ? (
+              <>
+                <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
+                  <button onClick={() => setCartStep('cart')} className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                  </button>
+                  <div>
+                    <h2 className="text-lg font-bold text-stone-100">Comment souhaitez-vous payer ?</h2>
+                    {tableLabel && <p className="text-xs text-stone-500 mt-0.5">{tableLabel}</p>}
+                  </div>
+                </div>
+                <div className="flex-1 px-5 pb-4 flex flex-col gap-3">
+                  <button
+                    onClick={() => setCartStep('stripe-form')}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
+                  >
+                    <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-stone-100">Payer maintenant</p>
+                      <p className="text-xs text-stone-500 mt-0.5">Par carte bancaire — paiement sécurisé</p>
+                    </div>
+                    <span className="text-stone-100 font-bold text-base shrink-0">{fmt(totalPrice)}</span>
+                  </button>
+
+                  <button
+                    onClick={placeCashOrder}
+                    disabled={isPending}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-stone-600 bg-stone-900 hover:bg-stone-800/60 transition-all text-left active:scale-[0.99] disabled:opacity-60"
+                  >
+                    <div className="w-11 h-11 rounded-2xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-stone-100">Payer à la caisse</p>
+                      <p className="text-xs text-stone-500 mt-0.5">Espèces ou carte à la fin du repas</p>
+                    </div>
+                    {isPending && <div className="w-4 h-4 border-2 border-stone-500 border-t-transparent rounded-full animate-spin shrink-0" />}
+                  </button>
+                  {orderError && <p className="text-xs text-red-400 text-center">{orderError}</p>}
+                </div>
+              </>
+
+            ) : cartStep === 'stripe-form' ? (
+              <>
+                <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
+                  <button
+                    onClick={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
+                    className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                  </button>
+                  <div>
+                    <h2 className="text-lg font-bold text-stone-100">Paiement sécurisé</h2>
+                    <p className="text-xs text-stone-500 mt-0.5">Propulsé par Stripe</p>
+                  </div>
+                </div>
+                <StripeCheckoutForm
+                  restaurantId={restaurantId}
+                  tableId={tableId}
+                  items={cartItems.map(i => ({ itemId: i.id, quantity: i.quantity }))}
+                  note={note}
+                  totalPrice={totalPrice}
+                  onSuccess={() => { setCartStep('success'); setCart({}); setNote('') }}
+                  onBack={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
+                />
+              </>
+
             ) : (
               <>
                 <div className="px-5 pt-2 pb-3 shrink-0 flex items-center justify-between">

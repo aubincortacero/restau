@@ -77,7 +77,7 @@ export default async function DashboardPage() {
       {/* Quick actions */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
         <h2 className="text-sm font-medium text-zinc-300 mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { href: '/dashboard/menu', label: 'Gérer le menu', desc: 'Catégories, plats, prix', Icon: IconMenu },
             { href: '/dashboard/tables', label: 'Gérer les tables', desc: 'QR codes, numéros', Icon: IconQR },

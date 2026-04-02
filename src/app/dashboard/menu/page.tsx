@@ -103,7 +103,7 @@ export default async function MenuPage() {
           Aucune catégorie — commencez par en créer une ci-dessus.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4 items-start">
           {(categories ?? []).map((cat) => {
             const catType = cat.category_type as CategoryTypeId
             const typeMeta = CATEGORY_TYPES.find((t) => t.id === catType) ?? CATEGORY_TYPES[0]

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { NavDesktop, MobileNav } from '@/components/NavLinks'
 import UserMenu from '@/components/UserMenu'
+import OrderNotificationBell from '@/components/OrderNotificationBell'
+import PendingOrdersFloat from '@/components/PendingOrdersFloat'
 
 type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
 type HappyHour = { enabled: boolean; start: string; end: string; days: string[] }
@@ -101,6 +103,10 @@ export default async function DashboardLayout({
               </div>
             )}
 
+            {restaurant && (
+              <OrderNotificationBell restaurantId={restaurant.id} />
+            )}
+
             <UserMenu
               displayName={displayName}
               email={email}
@@ -116,6 +122,10 @@ export default async function DashboardLayout({
       <main className="flex-1 w-full px-4 py-8">
         {children}
       </main>
+
+      {restaurant && (
+        <PendingOrdersFloat restaurantId={restaurant.id} />
+      )}
     </div>
   )
 }

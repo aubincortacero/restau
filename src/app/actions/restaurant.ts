@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import Stripe from 'stripe'
 
 function slugify(str: string) {
   return str
@@ -54,6 +55,26 @@ export async function updateRestaurant(formData: FormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/settings')
+}
+
+export async function updatePaymentMethods(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  const methods: string[] = []
+  if (formData.get('online') === '1') methods.push('online')
+  if (formData.get('cash') === '1') methods.push('cash')
+  if (methods.length === 0) return // Au moins une méthode requise
+
+  await supabase
+    .from('restaurants')
+    .update({ accepted_payment_methods: methods })
+    .eq('id', id)
+    .eq('owner_id', user.id)
+
+  revalidatePath('/dashboard/settings/restaurant')
 }
 
 export async function updateSchedules(formData: FormData) {
@@ -352,10 +373,55 @@ export async function updateOrderStatus(formData: FormData) {
   const id = formData.get('id') as string
   const status = formData.get('status') as string
 
-  const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'done', 'cancelled']
+  const VALID_STATUSES = ['done', 'cancelled']
   if (!VALID_STATUSES.includes(status)) return
 
   // Vérifie que la commande appartient bien au restaurant de l'utilisateur
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, restaurant_id, payment_method, payment_status, stripe_payment_intent_id')
+    .eq('id', id)
+    .single()
+  if (!order) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', order.restaurant_id)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  const updateData: Record<string, string> = { status }
+
+  if (status === 'done' && order.payment_method === 'cash' && order.payment_status === 'unpaid') {
+    // Encaisser automatiquement les commandes cash
+    updateData.payment_status = 'paid'
+  }
+
+  if (status === 'cancelled' && order.payment_method === 'online' && order.payment_status === 'paid' && order.stripe_payment_intent_id) {
+    // Rembourser automatiquement via Stripe
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+      await stripe.refunds.create({ payment_intent: order.stripe_payment_intent_id })
+      updateData.payment_status = 'refunded'
+    } catch {
+      // Le remboursement a échoué mais on annule quand même la commande
+    }
+  }
+
+  await supabase.from('orders').update(updateData).eq('id', id)
+  revalidatePath('/dashboard/orders')
+}
+
+export async function archiveOrder(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  if (!id) return
+
   const { data: order } = await supabase
     .from('orders')
     .select('id, restaurant_id')
@@ -371,8 +437,36 @@ export async function updateOrderStatus(formData: FormData) {
     .single()
   if (!restaurant) return
 
-  await supabase.from('orders').update({ status }).eq('id', id)
+  await supabase.from('orders').update({ archived_at: new Date().toISOString() }).eq('id', id)
   revalidatePath('/dashboard/orders')
+}
+
+export async function unarchiveOrder(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  if (!id) return
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, restaurant_id')
+    .eq('id', id)
+    .single()
+  if (!order) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', order.restaurant_id)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  await supabase.from('orders').update({ archived_at: null }).eq('id', id)
+  revalidatePath('/dashboard/orders')
+  revalidatePath('/dashboard/orders/archives')
 }
 
 // ─── Public order placement ───────────────────────────────────
@@ -394,6 +488,7 @@ export async function placeOrder(payload: {
   tableId: string | null
   items: Array<{ itemId: string; quantity: number }>
   note: string
+  paymentMethod?: 'cash' | 'online'
 }): Promise<{ success: true; orderId: string } | { success: false; error: string }> {
   // Validate input
   if (!payload.restaurantId || !Array.isArray(payload.items) || payload.items.length === 0) {
@@ -452,6 +547,7 @@ export async function placeOrder(payload: {
       restaurant_id: payload.restaurantId,
       table_id: payload.tableId ?? null,
       status: 'pending',
+      payment_method: payload.paymentMethod ?? 'cash',
       payment_status: 'unpaid',
       customer_note: payload.note.trim() || null,
     })
