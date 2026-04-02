@@ -154,7 +154,7 @@ export default async function DashboardPage({
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, name, is_open, slug')
+    .select('id, name, slug, opening_hours, happy_hour')
     .eq('owner_id', user.id)
     .single()
 
@@ -206,13 +206,41 @@ export default async function DashboardPage({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              restaurant.is_open
-                ? 'bg-emerald-500/10 text-emerald-400'
-                : 'bg-zinc-800 text-zinc-400'
-            }`}>
-              {restaurant.is_open ? 'Ouvert' : 'Fermé'}
-            </span>
+            {(() => {
+              type OH = Record<string, { open: string; close: string; closed: boolean }>
+              type HH = { enabled: boolean; start: string; end: string; days: string[] }
+              const now = new Date()
+              const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+              }).formatToParts(now)
+              const get = (type: string) => parts.find(p => p.type === type)?.value ?? '0'
+              const hour = parseInt(get('hour')) % 24
+              const mins = hour * 60 + parseInt(get('minute'))
+              const dayKey = get('weekday').toLowerCase().slice(0, 3)
+              const pt = (t: string) => { const [h,m] = t.split(':').map(Number); return h*60+m }
+              const oh = restaurant.opening_hours as OH | null
+              const hh = restaurant.happy_hour as HH | null
+              let isOpen = true
+              if (oh?.[dayKey]) {
+                const { open, close, closed } = oh[dayKey]
+                const o = pt(open), c = pt(close)
+                isOpen = !closed && (c > o ? mins >= o && mins < c : mins >= o || mins < c)
+              }
+              const isHH = (hh?.enabled ?? false) && hh!.days.includes(dayKey) && (() => {
+                const o = pt(hh!.start), c = pt(hh!.end)
+                return c > o ? mins >= o && mins < c : mins >= o || mins < c
+              })()
+              return (
+                <>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ isOpen ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400' }`}>
+                    {isOpen ? 'Ouvert' : 'Fermé'}
+                  </span>
+                  {isHH && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/10 text-amber-400">🍹 Happy Hour</span>
+                  )}
+                </>
+              )
+            })()}
           </div>
           <p className="text-sm text-zinc-400">/{restaurant.slug}</p>
         </div>
@@ -220,7 +248,7 @@ export default async function DashboardPage({
           <Link
             href={`/menu/${restaurant.slug}`}
             target="_blank"
-            className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-lg transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-400 px-3 py-1.5 rounded-lg transition-colors"
           >
             Vitrine
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -433,7 +461,7 @@ function KpiCard({
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
       <p className="text-xs text-zinc-500 mb-2 leading-tight">{label}</p>
-      <p className={`text-2xl font-bold tabular-nums ${accent ? 'text-orange-400' : 'text-white'}`}>{value}</p>
+      <p className="text-2xl font-bold tabular-nums text-white">{value}</p>
       {sub && <p className="text-xs text-zinc-600 mt-0.5">{sub}</p>}
       {delta != null && (
         <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${good ? 'text-emerald-400' : bad ? 'text-red-400' : 'text-zinc-500'}`}>

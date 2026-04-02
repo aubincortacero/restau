@@ -17,27 +17,43 @@ function parseTime(t: string): number {
   return h * 60 + m
 }
 
+function getNowParis() {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '0'
+  const hour   = parseInt(get('hour')) % 24
+  const minute = parseInt(get('minute'))
+  const dayKey = get('weekday').toLowerCase().slice(0, 3)
+  return { dayKey, mins: hour * 60 + minute }
+}
+
 function computePills(
   opening_hours: OpeningHours | null,
   happy_hour: HappyHour | null,
 ): { open: boolean; happyHour: boolean } {
-  const now = new Date()
-  const dayKey = DAY_KEYS[now.getDay()]
-  const todayMins = now.getHours() * 60 + now.getMinutes()
+  const { dayKey, mins } = getNowParis()
 
   let openNow: boolean
   if (opening_hours && opening_hours[dayKey]) {
     const { open, close, closed } = opening_hours[dayKey]
-    openNow = !closed && todayMins >= parseTime(open) && todayMins < parseTime(close)
+    const o = parseTime(open), c = parseTime(close)
+    // Gère les horaires qui traversent minuit (ex: 12:00 → 06:00)
+    openNow = !closed && (c > o ? mins >= o && mins < c : mins >= o || mins < c)
   } else {
-    // Pas d'horaires configurés → ouvert par défaut
     openNow = true
   }
 
-  let happyHourNow = false
-  if (happy_hour?.enabled && happy_hour.days.includes(dayKey)) {
-    happyHourNow = todayMins >= parseTime(happy_hour.start) && todayMins < parseTime(happy_hour.end)
-  }
+  const happyHourNow =
+    (happy_hour?.enabled ?? false) &&
+    happy_hour!.days.includes(dayKey) &&
+    mins >= parseTime(happy_hour!.start) &&
+    mins < parseTime(happy_hour!.end)
 
   return { open: openNow, happyHour: happyHourNow }
 }
@@ -89,18 +105,11 @@ export default async function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Pills statut */}
-            {pills && (
-              <div className="hidden sm:flex items-center gap-2">
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${pills.open ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>
-                  {pills.open ? '● Ouvert' : '● Fermé'}
-                </span>
-                {pills.happyHour && (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
-                    🍹 Happy Hour !
-                  </span>
-                )}
-              </div>
+            {/* Happy Hour pill uniquement dans le header */}
+            {pills?.happyHour && (
+              <span className="hidden sm:inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
+                🍹 Happy Hour !
+              </span>
             )}
 
             {restaurant && (

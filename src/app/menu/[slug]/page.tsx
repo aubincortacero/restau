@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import MenuAccordion from '@/components/MenuAccordion'
+import HappyHourCountdown from '@/components/HappyHourCountdown'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,10 +43,30 @@ function parseTime(t: string): number {
 function isHappyHourActive(hh: HappyHour | null): boolean {
   if (!hh?.enabled) return false
   const now = new Date()
-  const dayKey = DAY_KEYS[now.getDay()]
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '0'
+  const dayKey = get('weekday').toLowerCase().slice(0, 3)
   if (!hh.days.includes(dayKey)) return false
-  const nowMins = now.getHours() * 60 + now.getMinutes()
-  return nowMins >= parseTime(hh.start) && nowMins < parseTime(hh.end)
+  const nowMins = (parseInt(get('hour')) % 24) * 60 + parseInt(get('minute'))
+  const o = parseTime(hh.start), c = parseTime(hh.end)
+  return c > o ? nowMins >= o && nowMins < c : nowMins >= o || nowMins < c
+}
+
+function getHHEndsAtMs(endTimeStr: string): number {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '0'
+  const curMins = (parseInt(get('hour')) % 24) * 60 + parseInt(get('minute'))
+  const [h, m] = endTimeStr.split(':').map(Number)
+  const endMins = h * 60 + m
+  const remainMs = endMins > curMins
+    ? (endMins - curMins) * 60_000
+    : (24 * 60 - curMins + endMins) * 60_000
+  return Date.now() + remainMs
 }
 
 export default async function PublicMenuPage({
@@ -89,7 +110,9 @@ export default async function PublicMenuPage({
     .eq('restaurant_id', restaurant.id)
     .order('position')
 
-  const hhActive = isHappyHourActive(restaurant.happy_hour as HappyHour | null)
+  const hh = restaurant.happy_hour as HappyHour | null
+  const hhActive = isHappyHourActive(hh)
+  const hhEndsAt = hhActive ? getHHEndsAtMs(hh!.end) : null
 
   const categories: PublicCategory[] = (rawCategories ?? [])
     .map(c => ({
@@ -137,11 +160,8 @@ export default async function PublicMenuPage({
             </div>
           )}
 
-          {hhActive && (
-            <div className="mt-3 inline-flex items-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-4 py-1.5 text-sm font-semibold">
-              <span className="animate-pulse">🍹</span>
-              Happy Hour en cours
-            </div>
+          {hhActive && hhEndsAt && (
+            <HappyHourCountdown endsAt={hhEndsAt} />
           )}
         </div>
 
