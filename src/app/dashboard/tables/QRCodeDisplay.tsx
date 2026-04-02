@@ -22,24 +22,45 @@ export default function QRCodeDisplay({
     }
   }, [url])
 
-  function download() {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const link = document.createElement('a')
-    link.download = `table-${tableNumber}-qr.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+  function download(variant: 'white' | 'black') {
+    const offscreen = document.createElement('canvas')
+    const size = 400
+    offscreen.width = size
+    offscreen.height = size
+    QRCode.toCanvas(offscreen, url, {
+      width: size,
+      margin: 2,
+      color: variant === 'white'
+        ? { dark: '#ffffff', light: '#18181b' }
+        : { dark: '#000000', light: '#ffffff' },
+    }, (err) => {
+      if (err) return
+      const link = document.createElement('a')
+      link.download = `table-${tableNumber}-qr-${variant}.png`
+      link.href = offscreen.toDataURL('image/png')
+      link.click()
+    })
   }
 
   return (
     <div className="flex flex-col items-center gap-3">
       <canvas ref={canvasRef} className="rounded-xl" />
-      <button
-        onClick={download}
-        className="text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-lg transition-colors cursor-pointer w-full text-center"
-      >
-        Télécharger PNG
-      </button>
+      <div className="flex gap-2 w-full">
+        <button
+          onClick={() => download('white')}
+          className="flex-1 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-2 py-1.5 rounded-lg transition-colors cursor-pointer text-center"
+          title="QR code blanc sur fond noir"
+        >
+          ⬜ Blanc
+        </button>
+        <button
+          onClick={() => download('black')}
+          className="flex-1 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-2 py-1.5 rounded-lg transition-colors cursor-pointer text-center"
+          title="QR code noir sur fond blanc"
+        >
+          ⬛ Noir
+        </button>
+      </div>
     </div>
   )
 }
