@@ -6,6 +6,7 @@ const SETTINGS_NAV = [
   { href: '/dashboard/settings', label: 'Profil', exact: true },
   { href: '/dashboard/settings/restaurant', label: 'Restaurant' },
   { href: '/dashboard/settings/schedules', label: 'Horaires & Happy Hour' },
+  { href: '/dashboard/settings/stripe', label: 'Stripe Connect' },
   { href: '/dashboard/settings/danger', label: 'Zone dangereuse', danger: true },
 ]
 

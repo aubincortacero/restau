@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     // Vérifier que le restaurant accepte le paiement en ligne
     const { data: restaurant } = await supabase
       .from('restaurants')
-      .select('id, name, accepted_payment_methods, happy_hour')
+      .select('id, name, accepted_payment_methods, happy_hour, stripe_account_id')
       .eq('id', restaurantId)
       .single()
 
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Montant minimum 0,50 €' }, { status: 400 })
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount: amountCents,
       currency: 'eur',
       metadata: {
@@ -88,7 +88,14 @@ export async function POST(req: NextRequest) {
         note: (note ?? '').slice(0, 500),
         items: JSON.stringify(items),
       },
-    })
+    }
+
+    // Router vers le compte Connect du restaurant si connecté
+    if (restaurant.stripe_account_id) {
+      paymentIntentParams.transfer_data = { destination: restaurant.stripe_account_id }
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
 
     return NextResponse.json({ clientSecret: paymentIntent.client_secret })
   } catch {
