@@ -3,6 +3,36 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
+// Génère un son de type "ding" avec Web Audio API — pas de fichier audio requis
+function playNotificationSound(ctx: AudioContext) {
+  const now = ctx.currentTime
+  // Première note
+  const o1 = ctx.createOscillator()
+  const g1 = ctx.createGain()
+  o1.type = 'sine'
+  o1.frequency.setValueAtTime(880, now)
+  o1.frequency.exponentialRampToValueAtTime(660, now + 0.15)
+  g1.gain.setValueAtTime(0.4, now)
+  g1.gain.exponentialRampToValueAtTime(0.001, now + 0.5)
+  o1.connect(g1)
+  g1.connect(ctx.destination)
+  o1.start(now)
+  o1.stop(now + 0.5)
+  // Deuxième note (légère variation)
+  const o2 = ctx.createOscillator()
+  const g2 = ctx.createGain()
+  o2.type = 'sine'
+  o2.frequency.setValueAtTime(1100, now + 0.18)
+  o2.frequency.exponentialRampToValueAtTime(880, now + 0.38)
+  g2.gain.setValueAtTime(0, now)
+  g2.gain.setValueAtTime(0.35, now + 0.18)
+  g2.gain.exponentialRampToValueAtTime(0.001, now + 0.7)
+  o2.connect(g2)
+  g2.connect(ctx.destination)
+  o2.start(now + 0.18)
+  o2.stop(now + 0.7)
+}
+
 type OrderNotif = {
   id: string
   created_at: string
@@ -28,11 +58,26 @@ function fmt(p: number): string {
 export default function OrderNotificationBell({ restaurantId }: { restaurantId: string }) {
   const [notifs, setNotifs] = useState<OrderNotif[]>([])
   const [open, setOpen] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
   const pathname = usePathname()
   const router = useRouter()
   const panelRef = useRef<HTMLDivElement>(null)
   const lastSeenRef = useRef<string>(new Date().toISOString())
   const knownIdsRef = useRef<Set<string>>(new Set())
+  const audioCtxRef = useRef<AudioContext | null>(null)
+
+  // Initialise AudioContext sur la première interaction utilisateur
+  useEffect(() => {
+    function unlock() {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext()
+      } else if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume()
+      }
+    }
+    window.addEventListener('pointerdown', unlock, { once: true })
+    return () => window.removeEventListener('pointerdown', unlock)
+  }, [])
 
   const unread = notifs.filter((n) => !n.read).length
 
@@ -53,6 +98,11 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
         setNotifs((prev) => [...newOrders, ...prev].slice(0, 20))
         setOpen(true)
         router.refresh()
+        // Son de notification
+        if (soundEnabled && audioCtxRef.current) {
+          if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
+          playNotificationSound(audioCtxRef.current)
+        }
       }
     } catch {
       // silently ignore
@@ -102,12 +152,25 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
         <div className="absolute right-0 top-11 w-80 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden z-50">
           <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
             <p className="text-sm font-semibold text-white">Nouvelles commandes</p>
-            <button
-              onClick={() => { router.push('/dashboard/orders'); setOpen(false) }}
-              className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
-            >
-              Tout voir →
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSoundEnabled((v) => !v)}
+                className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                  soundEnabled
+                    ? 'text-orange-400 border-orange-500/30 bg-orange-500/10'
+                    : 'text-zinc-500 border-zinc-700 hover:text-zinc-300'
+                }`}
+                title={soundEnabled ? 'Désactiver le son' : 'Activer le son'}
+              >
+                {soundEnabled ? '🔔' : '🔕'}
+              </button>
+              <button
+                onClick={() => { router.push('/dashboard/orders'); setOpen(false) }}
+                className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
+              >
+                Tout voir →
+              </button>
+            </div>
           </div>
           <div className="max-h-96 overflow-y-auto divide-y divide-zinc-800">
             {notifs.length === 0 && (
