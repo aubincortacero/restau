@@ -7,18 +7,43 @@ import {
   disconnectStripeAccount,
 } from '@/app/actions/stripe-connect'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
 export default async function SettingsStripePage() {
+  // Vérification que la clé Stripe est configurée
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return (
+      <div className="max-w-xl">
+        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6">
+          <h2 className="text-sm font-semibold text-amber-400 mb-1">Configuration manquante</h2>
+          <p className="text-xs text-zinc-400">La variable d&apos;environnement <code className="text-amber-300">STRIPE_SECRET_KEY</code> n&apos;est pas définie sur ce déploiement.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
+  const { data: restaurant, error: restaurantError } = await supabase
     .from('restaurants')
     .select('id, stripe_account_id')
     .eq('owner_id', user.id)
     .single()
+
+  if (restaurantError?.message?.includes('column') || restaurantError?.code === '42703') {
+    return (
+      <div className="max-w-xl">
+        <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6">
+          <h2 className="text-sm font-semibold text-amber-400 mb-2">Migration requise</h2>
+          <p className="text-xs text-zinc-400 mb-3">Exécutez cette requête dans Supabase → SQL Editor :</p>
+          <pre className="bg-zinc-800 rounded-lg p-3 text-xs text-zinc-300 overflow-x-auto">
+            ALTER TABLE restaurants{'\n'}ADD COLUMN IF NOT EXISTS stripe_account_id text;
+          </pre>
+        </div>
+      </div>
+    )
+  }
 
   if (!restaurant) redirect('/dashboard/new')
 
