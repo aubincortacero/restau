@@ -8,7 +8,7 @@ import StripeCheckoutForm from '@/components/StripeCheckoutForm'
 
 type Item = PublicCategory['items'][number]
 type CartItem = { id: string; name: string; price: number; quantity: number }
-type CartStep = 'cart' | 'payment-choice' | 'stripe-form' | 'success'
+type CartStep = 'cart' | 'payment-choice' | 'email' | 'stripe-form' | 'success'
 
 const CATEGORY_CIRCLE: Record<string, string> = {
   standard: 'bg-stone-800 text-stone-300',
@@ -51,6 +51,7 @@ export default function MenuAccordion({
   const [isPending, startTransition] = useTransition()
   const [cartStep, setCartStep] = useState<CartStep>('cart')
   const [orderError, setOrderError] = useState<string | null>(null)
+  const [customerEmail, setCustomerEmail] = useState('')
 
   function toggleCat(id: string) {
     setOpenIds(prev =>
@@ -84,7 +85,7 @@ export default function MenuAccordion({
     if (hasOnline && hasCash) {
       setCartStep('payment-choice')
     } else if (hasOnline) {
-      setCartStep('stripe-form')
+      setCartStep('email')
     } else {
       placeCashOrder()
     }
@@ -228,7 +229,7 @@ export default function MenuAccordion({
                 </div>
                 <div className="flex-1 px-5 pb-4 flex flex-col gap-3">
                   <button
-                    onClick={() => setCartStep('stripe-form')}
+                    onClick={() => setCartStep('email')}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
                   >
                     <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
@@ -259,6 +260,43 @@ export default function MenuAccordion({
                 </div>
               </>
 
+            ) : cartStep === 'email' ? (
+              <>
+                <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
+                  <button
+                    onClick={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
+                    className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                  </button>
+                  <div>
+                    <h2 className="text-lg font-bold text-stone-100">Reçu par email</h2>
+                    <p className="text-xs text-stone-500 mt-0.5">Optionnel — aucune pub, juste la confirmation</p>
+                  </div>
+                </div>
+                <div className="flex-1 px-5 pb-6 flex flex-col gap-4">
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={e => setCustomerEmail(e.target.value)}
+                    placeholder="votre@email.com"
+                    className="w-full bg-stone-900 border border-stone-700 rounded-2xl px-4 py-3 text-sm text-stone-100 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                  />
+                  <button
+                    onClick={() => setCartStep('stripe-form')}
+                    className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-4 rounded-2xl transition-colors text-base"
+                  >
+                    Continuer vers le paiement
+                  </button>
+                  <button
+                    onClick={() => { setCustomerEmail(''); setCartStep('stripe-form') }}
+                    className="text-sm text-stone-500 hover:text-stone-300 text-center py-1 transition-colors"
+                  >
+                    Passer sans email
+                  </button>
+                </div>
+              </>
+
             ) : cartStep === 'stripe-form' ? (
               <>
                 <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
@@ -279,8 +317,9 @@ export default function MenuAccordion({
                   items={cartItems.map(i => ({ itemId: i.id, quantity: i.quantity }))}
                   note={note}
                   totalPrice={totalPrice}
-                  onSuccess={() => { setCartStep('success'); setCart({}); setNote('') }}
-                  onBack={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
+                  customerEmail={customerEmail || undefined}
+                  onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail('') }}
+                  onBack={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'email')}
                 />
               </>
 

@@ -58,28 +58,34 @@ export default async function ArchivesPage({
   const filterPaymentStatus = sp.payment_status as string | undefined
   const dateFrom = sp.date_from as string | undefined
   const dateTo = sp.date_to as string | undefined
+  const page = Math.max(1, parseInt((sp.page as string | undefined) ?? '1', 10))
 
+  const PAGE_SIZE = 20
   const hasFilters = !!(q || filterStatus || filterPaymentMethod || filterPaymentStatus || dateFrom || dateTo)
 
-  let query = supabase
+  let baseQuery = supabase
     .from('orders')
     .select(`
       id, status, payment_method, payment_status,
       customer_note, created_at, archived_at,
       tables(number, label),
       order_items(quantity, unit_price, note, items(name))
-    `)
+    `, { count: 'exact' })
     .eq('restaurant_id', restaurant.id)
     .not('archived_at', 'is', null)
     .order('archived_at', { ascending: false })
 
-  if (filterStatus) query = query.eq('status', filterStatus)
-  if (filterPaymentMethod) query = query.eq('payment_method', filterPaymentMethod)
-  if (filterPaymentStatus) query = query.eq('payment_status', filterPaymentStatus)
-  if (dateFrom) query = query.gte('created_at', dateFrom)
-  if (dateTo) query = query.lte('created_at', dateTo + 'T23:59:59')
+  if (filterStatus) baseQuery = baseQuery.eq('status', filterStatus)
+  if (filterPaymentMethod) baseQuery = baseQuery.eq('payment_method', filterPaymentMethod)
+  if (filterPaymentStatus) baseQuery = baseQuery.eq('payment_status', filterPaymentStatus)
+  if (dateFrom) baseQuery = baseQuery.gte('created_at', dateFrom)
+  if (dateTo) baseQuery = baseQuery.lte('created_at', dateTo + 'T23:59:59')
 
-  const { data: orders } = await query
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  const { data: orders, count: totalCount } = await baseQuery.range(from, to)
+
+  const totalPages = Math.max(1, Math.ceil((totalCount ?? 0) / PAGE_SIZE))
 
   const enriched = (orders ?? [])
     .map((order) => {
@@ -119,6 +125,9 @@ export default async function ArchivesPage({
           <p className="text-sm text-zinc-400 mt-0.5">
             {enriched.length} commande{enriched.length !== 1 ? 's' : ''}
             {hasFilters && ' trouvée' + (enriched.length !== 1 ? 's' : '')}
+            {totalCount !== null && !hasFilters && totalCount > PAGE_SIZE && (
+              <span className="text-zinc-600"> · page {page}/{totalPages}</span>
+            )}
           </p>
         </div>
       </div>
@@ -349,6 +358,31 @@ export default async function ArchivesPage({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          {page > 1 && (
+            <Link
+              href={{ pathname: '/dashboard/orders/archives', query: { ...Object.fromEntries(Object.entries({ q, status: filterStatus, payment_method: filterPaymentMethod, payment_status: filterPaymentStatus, date_from: dateFrom, date_to: dateTo }).filter(([, v]) => v)), page: page - 1 } }}
+              className="px-4 py-2 text-sm text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 rounded-xl transition-colors"
+            >
+              ← Précédent
+            </Link>
+          )}
+          <span className="text-sm text-zinc-500 px-2">
+            Page {page} / {totalPages}
+          </span>
+          {page < totalPages && (
+            <Link
+              href={{ pathname: '/dashboard/orders/archives', query: { ...Object.fromEntries(Object.entries({ q, status: filterStatus, payment_method: filterPaymentMethod, payment_status: filterPaymentStatus, date_from: dateFrom, date_to: dateTo }).filter(([, v]) => v)), page: page + 1 } }}
+              className="px-4 py-2 text-sm text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 rounded-xl transition-colors"
+            >
+              Suivant →
+            </Link>
+          )}
         </div>
       )}
     </div>

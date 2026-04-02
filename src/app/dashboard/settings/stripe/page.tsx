@@ -4,8 +4,8 @@ import Stripe from 'stripe'
 import {
   createConnectOnboardingLink,
   createStripeLoginLink,
-  disconnectStripeAccount,
 } from '@/app/actions/stripe-connect'
+import StripeDisconnectButton from '@/components/StripeDisconnectButton'
 
 export default async function SettingsStripePage({
   searchParams,
@@ -192,14 +192,7 @@ ADD COLUMN IF NOT EXISTS stripe_details_submitted boolean DEFAULT false;`}
           <p className="text-xs text-zinc-500 mb-4">
             Vous pourrez reconnecter un compte à tout moment. Les paiements en ligne seront désactivés.
           </p>
-          <form action={disconnectStripeAccount}>
-            <button
-              type="submit"
-              className="text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg transition-colors cursor-pointer"
-            >
-              Déconnecter
-            </button>
-          </form>
+          <StripeDisconnectButton />
         </div>
       )}
 

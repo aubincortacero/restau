@@ -16,13 +16,15 @@ type Props = {
   items: Array<{ itemId: string; quantity: number }>
   note: string
   totalPrice: number
+  customerEmail?: string
   onSuccess: () => void
   onBack: () => void
 }
 
-function CheckoutForm({ totalPrice, stripeAccountId, onSuccess, onBack }: {
+function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, onSuccess, onBack }: {
   totalPrice: number
   stripeAccountId: string | null
+  customerEmail?: string
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -66,7 +68,7 @@ function CheckoutForm({ totalPrice, stripeAccountId, onSuccess, onBack }: {
       const res = await fetch('/api/stripe/confirm-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentIntentId: paymentIntent.id, stripeAccountId }),
+        body: JSON.stringify({ paymentIntentId: paymentIntent.id, stripeAccountId, customerEmail }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -106,7 +108,7 @@ function CheckoutForm({ totalPrice, stripeAccountId, onSuccess, onBack }: {
   )
 }
 
-export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, onSuccess, onBack }: Props) {
+export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, onSuccess, onBack }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -175,7 +177,7 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
         },
       }}
     >
-      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} onSuccess={onSuccess} onBack={onBack} />
+      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} customerEmail={customerEmail} onSuccess={onSuccess} onBack={onBack} />
     </Elements>
   )
 }

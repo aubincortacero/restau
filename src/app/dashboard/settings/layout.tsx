@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SettingsNavLink from '@/components/SettingsNavLink'
+import Link from 'next/link'
 
 const SETTINGS_NAV = [
   { href: '/dashboard/settings', label: 'Profil', exact: true },
@@ -42,6 +43,13 @@ export default async function SettingsLayout({
         <div className="flex-1 min-w-0">
           {children}
         </div>
+      </div>
+
+      {/* Liens légaux */}
+      <div className="mt-12 pt-6 border-t border-zinc-800 flex gap-4 text-xs text-zinc-600">
+        <Link href="/legal/cgu" className="hover:text-zinc-400 transition-colors">CGU</Link>
+        <Link href="/legal/privacy" className="hover:text-zinc-400 transition-colors">Politique de confidentialité</Link>
+        <span className="ml-auto">© {new Date().getFullYear()} Qomand</span>
       </div>
     </div>
   )

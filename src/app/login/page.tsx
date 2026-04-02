@@ -40,7 +40,9 @@ export default function LoginPage({
 
           <p className="text-xs text-zinc-500 text-center mt-5 leading-relaxed">
             En vous connectant, vous acceptez nos{' '}
-            <span className="text-zinc-400 underline underline-offset-2 cursor-pointer">conditions d&apos;utilisation</span>.
+            <a href="/legal/cgu" className="text-zinc-400 underline underline-offset-2 hover:text-zinc-300 transition-colors">conditions d&apos;utilisation</a>
+            {' '}et notre{' '}
+            <a href="/legal/privacy" className="text-zinc-400 underline underline-offset-2 hover:text-zinc-300 transition-colors">politique de confidentialité</a>.
           </p>
         </div>
 
