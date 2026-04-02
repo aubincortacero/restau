@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Stripe from 'stripe'
 
 function slugify(str: string) {
@@ -502,7 +503,8 @@ export async function placeOrder(payload: {
     }
   }
 
-  const supabase = await createClient()
+  // Client admin (service role) car le client est non authentifié
+  const supabase = createAdminClient()
 
   // Verify restaurant exists + get HH config
   const { data: restaurant } = await supabase

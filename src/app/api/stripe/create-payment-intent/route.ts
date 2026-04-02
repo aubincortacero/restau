@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Vérifier que le restaurant accepte le paiement en ligne
     const { data: restaurant } = await supabase
