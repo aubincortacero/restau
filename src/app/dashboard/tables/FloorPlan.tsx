@@ -237,12 +237,11 @@ export default function FloorPlan({
       </div>
 
       {/* Canvas */}
-      <div className="overflow-auto rounded-2xl border border-zinc-800 shadow-inner">
+      <div className="rounded-2xl border border-zinc-800 shadow-inner overflow-hidden">
         <div
           ref={canvasRef}
-          className="relative bg-zinc-900 select-none"
+          className="relative bg-zinc-900 select-none w-full"
           style={{
-            width: CW,
             height: CH,
             backgroundImage: 'radial-gradient(circle, #3f3f46 1.5px, transparent 1.5px)',
             backgroundSize: '32px 32px',
