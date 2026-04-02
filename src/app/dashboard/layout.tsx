@@ -1,0 +1,122 @@
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { signOut } from '@/app/actions/auth'
+import { NavDesktop, MobileNav } from '@/components/NavLinks'
+import UserMenu from '@/components/UserMenu'
+
+type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
+type HappyHour = { enabled: boolean; start: string; end: string; days: string[] }
+
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+function parseTime(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+function computePills(
+  opening_hours: OpeningHours | null,
+  happy_hour: HappyHour | null,
+): { open: boolean; happyHour: boolean } {
+  const now = new Date()
+  const dayKey = DAY_KEYS[now.getDay()]
+  const todayMins = now.getHours() * 60 + now.getMinutes()
+
+  let openNow: boolean
+  if (opening_hours && opening_hours[dayKey]) {
+    const { open, close, closed } = opening_hours[dayKey]
+    openNow = !closed && todayMins >= parseTime(open) && todayMins < parseTime(close)
+  } else {
+    // Pas d'horaires configurés → ouvert par défaut
+    openNow = true
+  }
+
+  let happyHourNow = false
+  if (happy_hour?.enabled && happy_hour.days.includes(dayKey)) {
+    happyHourNow = todayMins >= parseTime(happy_hour.start) && todayMins < parseTime(happy_hour.end)
+  }
+
+  return { open: openNow, happyHour: happyHourNow }
+}
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const [profileRes, restaurantRes] = await Promise.all([
+    supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
+    supabase.from('restaurants').select('id, opening_hours, happy_hour').eq('owner_id', user.id).single(),
+  ])
+
+  const profile = profileRes.data
+  const restaurant = restaurantRes.data
+
+  const displayName = profile?.full_name ?? user.email?.split('@')[0] ?? 'Utilisateur'
+  const email = user.email ?? ''
+  const avatarUrl = profile?.avatar_url ?? user.user_metadata?.avatar_url
+
+  const pills = restaurant
+    ? computePills(
+        restaurant.opening_hours as OpeningHours | null,
+        restaurant.happy_hour as HappyHour | null,
+      )
+    : null
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+      {/* Top nav */}
+      <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10">
+        <div className="px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <span className="font-semibold text-sm">MenuQR</span>
+            </Link>
+
+            <NavDesktop />
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Pills statut */}
+            {pills && (
+              <div className="hidden sm:flex items-center gap-2">
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${pills.open ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                  {pills.open ? '● Ouvert' : '● Fermé'}
+                </span>
+                {pills.happyHour && (
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
+                    🍹 Happy Hour !
+                  </span>
+                )}
+              </div>
+            )}
+
+            <UserMenu
+              displayName={displayName}
+              email={email}
+              avatarUrl={avatarUrl}
+              signOutAction={signOut}
+            />
+          </div>
+        </div>
+
+        <MobileNav />
+      </header>
+
+      <main className="flex-1 w-full px-4 py-8">
+        {children}
+      </main>
+    </div>
+  )
+}
+
