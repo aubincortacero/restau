@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createTable, deleteTable } from '@/app/actions/restaurant'
 import QRCodeDisplay from './QRCodeDisplay'
 import { IconPlus } from '@/components/icons'
+
+export const dynamic = 'force-dynamic'
 
 export default async function TablesPage() {
   const supabase = await createClient()
@@ -23,7 +26,10 @@ export default async function TablesPage() {
     .eq('restaurant_id', restaurant.id)
     .order('number')
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const headersList = await headers()
+  const host = headersList.get('host') ?? 'localhost:3000'
+  const proto = headersList.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  const siteUrl = `${proto}://${host}`
 
   return (
     <div>
