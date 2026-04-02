@@ -71,16 +71,18 @@ export default function UserMenu({ displayName, email, avatarUrl, signOutAction 
           </div>
 
           <div className="border-t border-zinc-800 py-1">
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
-              >
-                <IconLogout className="w-4 h-4" />
-                Déconnexion
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={async () => {
+                setOpen(false)
+                try { await signOutAction() } catch { /* redirect throws */ }
+                window.location.href = '/login'
+              }}
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
+            >
+              <IconLogout className="w-4 h-4" />
+              Déconnexion
+            </button>
           </div>
         </div>
       )}
