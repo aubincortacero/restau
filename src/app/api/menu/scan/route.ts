@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
+ 
 // ─── Schéma de sortie attendu de l'IA ─────────────────────────
 const ItemSchema = z.object({
   name: z.string().min(1),
