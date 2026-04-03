@@ -35,15 +35,27 @@ export async function createRestaurant(
   const phone = formData.get('phone') as string
   const slug = slugify(name) + '-' + Math.random().toString(36).slice(2, 6)
 
-  const { error } = await supabase.from('restaurants').insert({
+  const { data, error } = await supabase.from('restaurants').insert({
     owner_id: user.id,
     name,
     slug,
     address: address || null,
     phone: phone || null,
-  })
+  }).select('id').single()
 
   if (error) return { error: 'Impossible de créer le restaurant. Réessayez.' }
+
+  // Activer automatiquement le nouveau restaurant
+  if (data?.id) {
+    const cookieStore = await cookies()
+    cookieStore.set(ACTIVE_RESTAURANT_COOKIE, data.id, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+    })
+  }
+
   revalidatePath('/dashboard')
   return { success: true }
 }
@@ -51,7 +63,7 @@ export async function createRestaurant(
 export async function setActiveRestaurant(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) return
 
   const id = formData.get('id') as string
   // Vérifier que le restaurant appartient à l'utilisateur
@@ -69,11 +81,10 @@ export async function setActiveRestaurant(formData: FormData) {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 365, // 1 an
+    maxAge: 60 * 60 * 24 * 365,
   })
 
   revalidatePath('/dashboard', 'layout')
-  redirect('/dashboard')
 }
 
 export async function deleteRestaurant(formData: FormData) {

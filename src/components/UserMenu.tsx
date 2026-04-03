@@ -4,22 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { IconSettings, IconLogout } from './icons'
 
-type RestaurantSummary = { id: string; name: string; slug: string }
-
 interface UserMenuProps {
   displayName: string
   email: string
   avatarUrl?: string | null
   signOutAction: () => Promise<void>
-  restaurants?: RestaurantSummary[]
-  activeRestaurantId?: string | null
-  setActiveAction?: (formData: FormData) => Promise<void>
-  deleteRestaurantAction?: (formData: FormData) => Promise<void>
 }
 
-export default function UserMenu({ displayName, email, avatarUrl, signOutAction, restaurants = [], activeRestaurantId, setActiveAction, deleteRestaurantAction }: UserMenuProps) {
+export default function UserMenu({ displayName, email, avatarUrl, signOutAction }: UserMenuProps) {
   const [open, setOpen] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const initial = displayName.charAt(0).toUpperCase()
 

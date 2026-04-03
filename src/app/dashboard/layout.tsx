@@ -5,6 +5,7 @@ import { signOut } from '@/app/actions/auth'
 import { IconLogo } from '@/components/icons'
 import { NavDesktop, MobileNav } from '@/components/NavLinks'
 import UserMenu from '@/components/UserMenu'
+import RestaurantPicker from '@/components/RestaurantPicker'
 import { getRestaurantsWithActive, ACTIVE_RESTAURANT_COOKIE } from '@/lib/active-restaurant'
 import { setActiveRestaurant, deleteRestaurant } from '@/app/actions/restaurant'
 import OrderNotificationBell from '@/components/OrderNotificationBell'
@@ -119,8 +120,17 @@ export default async function DashboardLayout({
               <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
                 <IconLogo className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-sm">Qomand</span>
+              <span className="font-semibold text-sm hidden sm:block">Qomand</span>
             </Link>
+
+            {restaurants.length > 0 && (
+              <RestaurantPicker
+                restaurants={restaurants}
+                activeId={activeRestaurantId}
+                setActiveAction={setActiveRestaurant}
+                deleteAction={deleteRestaurant}
+              />
+            )}
 
             <NavDesktop />
           </div>
@@ -142,10 +152,6 @@ export default async function DashboardLayout({
               email={email}
               avatarUrl={avatarUrl}
               signOutAction={signOut}
-              restaurants={restaurants}
-              activeRestaurantId={activeRestaurantId}
-              setActiveAction={setActiveRestaurant}
-              deleteRestaurantAction={deleteRestaurant}
             />
           </div>
         </div>
