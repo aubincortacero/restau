@@ -578,6 +578,68 @@ export async function bulkCreateTables(formData: FormData) {
   revalidatePath('/dashboard/tables')
 }
 
+export async function applyGeneratedPlan(
+  restaurantId: string,
+  tables: Array<{ number: number; label: string | null; pos_x: number; pos_y: number }>,
+  walls: Array<{ id: string; x: number; y: number; w: number; h: number }>,
+  replaceExisting: boolean,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', restaurantId)
+    .eq('owner_id', user.id)
+    .maybeSingle()
+  if (!restaurant) return { error: 'Restaurant introuvable' }
+
+  if (replaceExisting) {
+    await supabase.from('tables').delete().eq('restaurant_id', restaurantId)
+  }
+
+  const { count: existingCount } = await supabase
+    .from('tables')
+    .select('*', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId)
+  const offset = replaceExisting ? 0 : (existingCount ?? 0)
+
+  // Renumérote en tenant compte des tables déjà présentes si on n'efface pas
+  const { data: maxRow } = replaceExisting
+    ? { data: null }
+    : await supabase
+        .from('tables')
+        .select('number')
+        .eq('restaurant_id', restaurantId)
+        .order('number', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+  const numberOffset = replaceExisting ? 0 : (maxRow?.number ?? 0)
+
+  const toInsert = tables.map((t, i) => ({
+    restaurant_id: restaurantId,
+    number: t.number + numberOffset,
+    label: t.label,
+    pos_x: t.pos_x,
+    pos_y: t.pos_y,
+  }))
+
+  // Ignore `offset` in table position — positions are already canvas-absolute from IA
+  void offset
+
+  await supabase.from('tables').insert(toInsert)
+
+  await supabase
+    .from('restaurants')
+    .update({ floor_plan: { walls } })
+    .eq('id', restaurantId)
+
+  revalidatePath('/dashboard/tables')
+  return {}
+}
+
 export async function deleteTable(formData: FormData) {
   const supabase = await createClient()
   const id = formData.get('id') as string

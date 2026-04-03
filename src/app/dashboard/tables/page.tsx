@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import FloorPlan, { type Wall } from './FloorPlan'
 import TableAddForm from './TableAddForm'
+import FloorPlanGeneratorTrigger from './FloorPlanGeneratorTrigger'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,10 @@ export default async function TablesPage() {
             Positionnez vos tables, ajoutez des murs, enregistrez le plan.
           </p>
         </div>
+        <FloorPlanGeneratorTrigger
+          restaurantId={restaurant.id}
+          hasExistingTables={(tables?.length ?? 0) > 0}
+        />
       </div>
 
       {/* Ajouter des tables */}
