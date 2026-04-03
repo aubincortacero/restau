@@ -15,17 +15,18 @@ const DAYS = [
 
 type DaySchedule = { open: string; close: string; closed: boolean }
 type OpeningHours = Record<string, DaySchedule>
-type HappyHour = { enabled: boolean; start: string; end: string; days: string[] }
+type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
 
 interface Props {
   restaurantId: string
   opening_hours: OpeningHours
   happy_hour: HappyHour
+  urgencyThreshold: number
 }
 
 const INPUT_TIME = "bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 w-28"
 
-export default function SchedulesForm({ restaurantId, opening_hours, happy_hour }: Props) {
+export default function SchedulesForm({ restaurantId, opening_hours, happy_hour, urgencyThreshold }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
 
@@ -120,6 +121,25 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour 
               </label>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Urgence commandes */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+        <h2 className="text-sm font-semibold text-white mb-1">⏱ Alertes commandes</h2>
+        <p className="text-xs text-zinc-500 mb-4">
+          Un bandeau d&apos;urgence s&apos;affiche quand une commande est en attente depuis plus longtemps que ce seuil.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            name="urgency_threshold"
+            min={1}
+            max={60}
+            defaultValue={urgencyThreshold}
+            className={INPUT_TIME + ' w-20'}
+          />
+          <span className="text-sm text-zinc-400">minutes</span>
         </div>
       </div>
 

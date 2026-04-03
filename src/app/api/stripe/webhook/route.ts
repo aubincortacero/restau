@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -90,6 +91,49 @@ export async function POST(req: NextRequest) {
         stripe_details_submitted: account.details_submitted,
       })
       .eq('stripe_account_id', account.id)
+  }
+
+  // ─── Abonnements plateforme ────────────────────────────────────
+  const admin = createAdminClient()
+
+  if (
+    event.type === 'customer.subscription.created' ||
+    event.type === 'customer.subscription.updated'
+  ) {
+    const sub = event.data.object as Stripe.Subscription
+    const userId = sub.metadata?.supabase_user_id
+    if (userId) {
+      const isActive = sub.status === 'active' || sub.status === 'trialing'
+      await admin
+        .from('profiles')
+        .update({
+          subscription_status: isActive ? 'active' : 'expired',
+          stripe_subscription_id: sub.id,
+        })
+        .eq('id', userId)
+    }
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object as Stripe.Subscription
+    const userId = sub.metadata?.supabase_user_id
+    if (userId) {
+      await admin
+        .from('profiles')
+        .update({ subscription_status: 'expired' })
+        .eq('id', userId)
+    }
+  }
+
+  if (event.type === 'invoice.payment_failed') {
+    const inv = event.data.object as Stripe.Invoice
+    const customerId = typeof inv.customer === 'string' ? inv.customer : inv.customer?.id
+    if (customerId) {
+      await admin
+        .from('profiles')
+        .update({ subscription_status: 'expired' })
+        .eq('stripe_customer_id', customerId)
+    }
   }
 
   return NextResponse.json({ received: true })

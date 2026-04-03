@@ -6,9 +6,11 @@ import { NavDesktop, MobileNav } from '@/components/NavLinks'
 import UserMenu from '@/components/UserMenu'
 import OrderNotificationBell from '@/components/OrderNotificationBell'
 import PendingOrdersFloat from '@/components/PendingOrdersFloat'
+import UrgencyBanner from '@/components/UrgencyBanner'
+import { getSubscriptionStatus, isAccessGranted } from '@/lib/subscription'
 
 type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
-type HappyHour = { enabled: boolean; start: string; end: string; days: string[] }
+type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
@@ -67,6 +69,10 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // ── Vérification de l'abonnement ──────────────────────────
+  const { status: subStatus } = await getSubscriptionStatus(user.id)
+  if (!isAccessGranted(subStatus)) redirect('/subscribe')
+
   const [profileRes, restaurantRes] = await Promise.all([
     supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
     supabase.from('restaurants').select('id, opening_hours, happy_hour').eq('owner_id', user.id).single(),
@@ -85,6 +91,8 @@ export default async function DashboardLayout({
         restaurant.happy_hour as HappyHour | null,
       )
     : null
+
+  const urgencyThreshold = (restaurant?.happy_hour as HappyHour | null)?.urgency_threshold ?? 5
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
@@ -125,16 +133,26 @@ export default async function DashboardLayout({
           </div>
         </div>
 
-        <MobileNav />
       </header>
 
-      <main className="flex-1 w-full px-4 py-8">
+      {/* Bandeau d'urgence commandes */}
+      {restaurant && (
+        <UrgencyBanner
+          restaurantId={restaurant.id}
+          thresholdMinutes={urgencyThreshold}
+        />
+      )}
+
+      <main className="flex-1 w-full px-4 py-8 pb-24 md:pb-8">
         {children}
       </main>
 
       {restaurant && (
         <PendingOrdersFloat restaurantId={restaurant.id} />
       )}
+
+      {/* Bottom tab bar mobile */}
+      <MobileNav />
     </div>
   )
 }

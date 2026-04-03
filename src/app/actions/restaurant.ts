@@ -16,12 +16,19 @@ function slugify(str: string) {
 }
 
 // ─── Restaurant ───────────────────────────────────────────────
-export async function createRestaurant(formData: FormData) {
+type CreateRestaurantState = { error?: string | null }
+
+export async function createRestaurant(
+  _prevState: CreateRestaurantState,
+  formData: FormData,
+): Promise<CreateRestaurantState> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const name = formData.get('name') as string
+  const name = (formData.get('name') as string)?.trim()
+  if (!name) return { error: 'Le nom du restaurant est requis.' }
+
   const address = formData.get('address') as string
   const phone = formData.get('phone') as string
   const slug = slugify(name) + '-' + Math.random().toString(36).slice(2, 6)
@@ -34,7 +41,7 @@ export async function createRestaurant(formData: FormData) {
     phone: phone || null,
   })
 
-  if (error) redirect('/dashboard/new?error=1')
+  if (error) return { error: 'Impossible de créer le restaurant. Réessayez.' }
   revalidatePath('/dashboard')
   redirect('/dashboard')
 }
@@ -98,11 +105,13 @@ export async function updateSchedules(formData: FormData) {
 
   // Happy hour
   const happy_hour_enabled = formData.getAll('hh_enabled').includes('1')
-  const happy_hour: { enabled: boolean; start: string; end: string; days: string[] } = {
+  const urgency_threshold = parseInt(formData.get('urgency_threshold') as string) || 5
+  const happy_hour: { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold: number } = {
     enabled: happy_hour_enabled,
     start: (formData.get('hh_start') as string) || '17:00',
     end: (formData.get('hh_end') as string) || '19:00',
     days: DAYS.filter((d) => formData.get(`hh_day_${d}`) === '1'),
+    urgency_threshold,
   }
 
   await supabase

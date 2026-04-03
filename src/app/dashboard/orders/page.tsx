@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import TicketActions from './TicketActions'
 import { IconCreditCard, IconBanknote } from '@/components/icons'
 import { updateOrderStatus, archiveOrder } from '@/app/actions/restaurant'
+import OrderTimer from '@/components/OrderTimer'
+
+type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
 
 const TVA_RATE = 0.10
 
@@ -39,6 +42,14 @@ export default async function OrdersPage() {
     .single()
 
   if (!restaurant) redirect('/dashboard/new')
+
+  const { data: restaurantFull } = await supabase
+    .from('restaurants')
+    .select('happy_hour')
+    .eq('id', restaurant.id)
+    .single()
+
+  const urgencyThreshold = (restaurantFull?.happy_hour as HappyHour | null)?.urgency_threshold ?? 5
 
   const { data: orders } = await supabase
     .from('orders')
@@ -114,7 +125,12 @@ export default async function OrdersPage() {
                       <p className={`text-xl font-bold leading-tight ${isPending ? 'text-white' : 'text-white'}`}>
                         {table ? `Table ${table.number}${table.label ? ` — ${table.label}` : ''}` : 'Table inconnue'}
                       </p>
-                      <p className={`text-sm mt-0.5 ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}>{formatDate(order.created_at)}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className={`text-sm ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}>{formatDate(order.created_at)}</p>
+                        {isPending && (
+                          <OrderTimer createdAt={order.created_at} thresholdMinutes={urgencyThreshold} />
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${isPending ? 'text-orange-400 bg-orange-500/15' : statusInfo.color}`}>

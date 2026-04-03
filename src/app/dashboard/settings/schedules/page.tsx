@@ -4,7 +4,7 @@ import SchedulesForm from '@/components/SchedulesForm'
 
 type DaySchedule = { open: string; close: string; closed: boolean }
 type OpeningHours = Record<string, DaySchedule>
-type HappyHour = { enabled: boolean; start: string; end: string; days: string[] }
+type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
 
 export default async function SettingsSchedulesPage() {
   const supabase = await createClient()
@@ -35,6 +35,7 @@ export default async function SettingsSchedulesPage() {
       restaurantId={restaurant.id}
       opening_hours={opening_hours}
       happy_hour={happy_hour}
+      urgencyThreshold={happy_hour.urgency_threshold ?? 5}
     />
   )
 }

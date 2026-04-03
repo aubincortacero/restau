@@ -43,14 +43,14 @@ export function NavDesktop() {
   )
 }
 
-/** Barre de navigation mobile (md:hidden, border-t) */
+/** Barre de navigation mobile fixe en bas — style appli native */
 export function MobileNav() {
   const pathname = usePathname()
   const [activePath, setActivePath] = useState<string | null>(null)
   useEffect(() => { setActivePath(pathname) }, [pathname])
 
   return (
-    <div className="md:hidden border-t border-zinc-800 flex overflow-x-auto">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950 border-t border-zinc-800 flex safe-area-pb">
       {navItems.map(({ href, label, icon: Icon }) => {
         const isActive = activePath !== null && (
           href === '/dashboard' ? activePath === '/dashboard' : activePath.startsWith(href)
@@ -59,16 +59,18 @@ export function MobileNav() {
           <Link
             key={href}
             href={href}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2.5 shrink-0 transition-colors ${
-              isActive ? 'text-black bg-orange-500' : 'text-zinc-400 hover:text-white'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-2.5 pb-4 transition-colors ${
+              isActive ? 'text-orange-500' : 'text-zinc-500 active:text-zinc-300'
             }`}
           >
-            <Icon className="w-4 h-4" />
-            <span className="text-[10px] font-medium">{label}</span>
+            <div className={`flex items-center justify-center w-10 h-7 rounded-xl transition-colors ${isActive ? 'bg-orange-500/15' : ''}`}>
+              <Icon className="w-5 h-5" />
+            </div>
+            <span className={`text-[10px] font-medium leading-none ${isActive ? 'text-orange-400' : 'text-zinc-500'}`}>{label}</span>
           </Link>
         )
       })}
-    </div>
+    </nav>
   )
 }
 
