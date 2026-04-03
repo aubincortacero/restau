@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import { createTable } from '@/app/actions/restaurant'
 import FloorPlan, { type Wall } from './FloorPlan'
 import { IconPlus } from '@/components/icons'
@@ -12,11 +13,11 @@ export default async function TablesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id, name, slug, floor_plan')
-    .eq('owner_id', user.id)
-    .single()
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
+  const { data: restaurant } = activeRestaurantId
+    ? await supabase.from('restaurants').select('id, name, slug, floor_plan').eq('id', activeRestaurantId).maybeSingle()
+    : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 

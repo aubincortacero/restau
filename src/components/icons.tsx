@@ -1,6 +1,15 @@
 // Icônes SVG outline — style SaaS cohérent
 // Toutes en 24x24, strokeWidth 1.5
 
+/** Logo Qomand — icône soleil/éclat, utilisée dans tous les headers */
+export function IconLogo({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.5 0-2.75.75-3.5 1.9M12 8c1.5 0 2.75.75 3.5 1.9M12 8V5m0 13v-2m-6.5-3H3m18 0h-2.5M6.34 17.66l-1.42 1.42M19.08 5.92l-1.42 1.42M17.66 17.66l1.42 1.42M4.92 5.92l1.42 1.42" />
+    </svg>
+  )
+}
+
 export function IconHome({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

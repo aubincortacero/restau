@@ -2,8 +2,10 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ACTIVE_RESTAURANT_COOKIE } from '@/lib/active-restaurant'
 import Stripe from 'stripe'
 
 function slugify(str: string) {
@@ -44,6 +46,63 @@ export async function createRestaurant(
   if (error) return { error: 'Impossible de créer le restaurant. Réessayez.' }
   revalidatePath('/dashboard')
   return { success: true }
+}
+
+export async function setActiveRestaurant(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  // Vérifier que le restaurant appartient à l'utilisateur
+  const { data } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', id)
+    .eq('owner_id', user.id)
+    .single()
+
+  if (!data) return
+
+  const cookieStore = await cookies()
+  cookieStore.set(ACTIVE_RESTAURANT_COOKIE, id, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365, // 1 an
+  })
+
+  revalidatePath('/dashboard', 'layout')
+  redirect('/dashboard')
+}
+
+export async function deleteRestaurant(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+
+  // Vérifier propriété avant suppression
+  const { data } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', id)
+    .eq('owner_id', user.id)
+    .single()
+
+  if (!data) return
+
+  await supabase.from('restaurants').delete().eq('id', id)
+
+  // Effacer le cookie si c'était le restaurant actif
+  const cookieStore = await cookies()
+  if (cookieStore.get(ACTIVE_RESTAURANT_COOKIE)?.value === id) {
+    cookieStore.delete(ACTIVE_RESTAURANT_COOKIE)
+  }
+
+  revalidatePath('/dashboard', 'layout')
+  redirect('/dashboard')
 }
 
 export async function updateRestaurant(formData: FormData) {

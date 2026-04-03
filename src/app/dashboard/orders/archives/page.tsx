@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import TicketActions from '../TicketActions'
 import { IconCreditCard, IconBanknote } from '@/components/icons'
 import { unarchiveOrder } from '@/app/actions/restaurant'
@@ -43,11 +44,11 @@ export default async function ArchivesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id, name')
-    .eq('owner_id', user.id)
-    .single()
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
+  const { data: restaurant } = activeRestaurantId
+    ? await supabase.from('restaurants').select('id, name').eq('id', activeRestaurantId).maybeSingle()
+    : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 

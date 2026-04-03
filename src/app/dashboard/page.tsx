@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import { IconSettings } from '@/components/icons'
 import StatsPeriodSelector from '@/components/StatsPeriodSelector'
 
@@ -152,11 +153,15 @@ export default async function DashboardPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id, name, slug, opening_hours, happy_hour')
-    .eq('owner_id', user.id)
-    .single()
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
+  const { data: restaurant } = activeRestaurantId
+    ? await supabase
+        .from('restaurants')
+        .select('id, name, slug, opening_hours, happy_hour')
+        .eq('id', activeRestaurantId)
+        .maybeSingle()
+    : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import { deleteCategory, deleteItem, updateItemFlags } from '@/app/actions/restaurant'
 import { CATEGORY_TYPE_COLORS, CATEGORY_TYPES } from '@/lib/category-types'
 import type { CategoryTypeId } from '@/lib/category-types'
@@ -48,11 +49,11 @@ export default async function MenuPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id, name')
-    .eq('owner_id', user.id)
-    .single()
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
+  const { data: restaurant } = activeRestaurantId
+    ? await supabase.from('restaurants').select('id, name').eq('id', activeRestaurantId).maybeSingle()
+    : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 

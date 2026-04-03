@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import { updateRestaurant, updatePaymentMethods } from '@/app/actions/restaurant'
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
@@ -9,11 +10,11 @@ export default async function SettingsRestaurantPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id, name, slug, address, phone, accepted_payment_methods')
-    .eq('owner_id', user.id)
-    .single()
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
+  const { data: restaurant } = activeRestaurantId
+    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods').eq('id', activeRestaurantId).maybeSingle()
+    : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 

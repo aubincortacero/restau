@@ -6,6 +6,7 @@ import {
   isAccessGranted,
 } from '@/lib/subscription'
 import { adminSkipSubscription } from '@/app/actions/subscription'
+import { IconLogo } from '@/components/icons'
 import PricingToggle from './PricingToggle'
 import Link from 'next/link'
 
@@ -50,9 +51,7 @@ export default async function SubscribePage() {
       <header className="relative z-10 px-6 pt-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.5 0-2.75.75-3.5 1.9M12 8c1.5 0 2.75.75 3.5 1.9M12 8V5m0 13v-2m-6.5-3H3m18 0h-2.5M6.34 17.66l-1.42 1.42M19.08 5.92l-1.42 1.42M17.66 17.66l1.42 1.42M4.92 5.92l1.42 1.42" />
-            </svg>
+            <IconLogo className="w-4 h-4 text-white" />
           </div>
           <span className="font-bold text-lg tracking-tight">Qomand</span>
         </div>

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import Stripe from 'stripe'
 import {
   createConnectOnboardingLink,
@@ -31,11 +32,11 @@ export default async function SettingsStripePage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant, error: restaurantError } = await supabase
-    .from('restaurants')
-    .select('id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted')
-    .eq('owner_id', user.id)
-    .single()
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
+  const { data: restaurant, error: restaurantError } = activeRestaurantId
+    ? await supabase.from('restaurants').select('id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted').eq('id', activeRestaurantId).maybeSingle()
+    : { data: null, error: null }
 
   if (restaurantError?.message?.includes('column') || restaurantError?.code === '42703') {
     return (

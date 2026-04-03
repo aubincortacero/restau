@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import SchedulesForm from '@/components/SchedulesForm'
 
 type DaySchedule = { open: string; close: string; closed: boolean }
@@ -11,12 +12,12 @@ export default async function SettingsSchedulesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const activeRestaurantId = await getActiveRestaurantId(user.id)
+
   // On récupère d'abord les champs de base garantis d'exister
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single()
+  const { data: restaurant } = activeRestaurantId
+    ? await supabase.from('restaurants').select('id').eq('id', activeRestaurantId).maybeSingle()
+    : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 
