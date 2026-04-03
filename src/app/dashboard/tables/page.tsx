@@ -2,9 +2,8 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import { createTable } from '@/app/actions/restaurant'
 import FloorPlan, { type Wall } from './FloorPlan'
-import { IconPlus } from '@/components/icons'
+import TableAddForm from './TableAddForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +38,11 @@ export default async function TablesPage() {
     pos_y: t.pos_y ?? 50 + Math.floor(i / 4) * 140,
   }))
 
+  // Zones existantes (distinct, non nulles) pour l'autocomplete
+  const existingZones = [...new Set(
+    (tables ?? []).map((t) => t.label).filter((l): l is string => !!l)
+  )]
+
   // Murs depuis restaurant.floor_plan
   const fp = restaurant.floor_plan as { walls?: Wall[] } | null
   const walls: Wall[] = (fp?.walls ?? []).map((w: Wall) => ({
@@ -60,33 +64,8 @@ export default async function TablesPage() {
         </div>
       </div>
 
-      {/* Ajouter une table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-6">
-        <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">Ajouter une table</h2>
-        <form action={createTable} className="flex gap-2 flex-wrap">
-          <input type="hidden" name="restaurant_id" value={restaurant.id} />
-          <input
-            name="number"
-            type="number"
-            min="1"
-            required
-            placeholder="N°"
-            className="w-20 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
-          />
-          <input
-            name="label"
-            placeholder="Libellé (ex: Terrasse 1)"
-            className="flex-1 min-w-40 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
-          />
-          <button
-            type="submit"
-            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
-          >
-            <IconPlus className="w-3.5 h-3.5" />
-            Ajouter
-          </button>
-        </form>
-      </div>
+      {/* Ajouter des tables */}
+      <TableAddForm restaurantId={restaurant.id} existingZones={existingZones} />
 
       {/* Plan de salle */}
       {tablesWithPos.length === 0 ? (

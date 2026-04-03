@@ -21,22 +21,8 @@ export type AttributeFieldDef =
 
 export const CATEGORY_ATTRIBUTES: Record<CategoryTypeId, AttributeFieldDef[]> = {
   standard: [],
-  meat: [
-    {
-      type: 'multiselect',
-      key: 'cuissons',
-      label: 'Cuissons proposées',
-      options: ['Bleu', 'Saignant', 'À point', 'Bien cuit'],
-    },
-  ],
-  fish: [
-    {
-      type: 'multiselect',
-      key: 'cuissons',
-      label: 'Modes de cuisson',
-      options: ['Vapeur', 'Grillé', 'Poêlé', 'Cru / Tartare'],
-    },
-  ],
+  meat: [],
+  fish: [],
   pizza: [
     {
       type: 'multiselect',
@@ -45,14 +31,7 @@ export const CATEGORY_ATTRIBUTES: Record<CategoryTypeId, AttributeFieldDef[]> = 
       options: ['S (26 cm)', 'M (30 cm)', 'L (35 cm)', 'XL (40 cm)'],
     },
   ],
-  burger: [
-    {
-      type: 'multiselect',
-      key: 'cuissons',
-      label: 'Cuissons proposées',
-      options: ['Rosé', 'Bien cuit'],
-    },
-  ],
+  burger: [],
   tapas: [],
   alcohol: [
     {

@@ -496,10 +496,18 @@ export async function bulkImportMenu(
 export async function createTable(formData: FormData) {
   const supabase = await createClient()
   const restaurant_id = formData.get('restaurant_id') as string
-  const number = parseInt(formData.get('number') as string)
-  const label = formData.get('label') as string
+  const zone = (formData.get('zone') as string) || null
 
-  // Calcule une position par défaut visible basée sur le nombre de tables existantes
+  // Numéro auto = max existant + 1
+  const { data: maxRow } = await supabase
+    .from('tables')
+    .select('number')
+    .eq('restaurant_id', restaurant_id)
+    .order('number', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const nextNumber = (maxRow?.number ?? 0) + 1
+
   const { count } = await supabase
     .from('tables')
     .select('*', { count: 'exact', head: true })
@@ -510,11 +518,46 @@ export async function createTable(formData: FormData) {
 
   await supabase.from('tables').insert({
     restaurant_id,
-    number,
-    label: label || null,
+    number: nextNumber,
+    label: zone,
     pos_x,
     pos_y,
   })
+
+  revalidatePath('/dashboard/tables')
+}
+
+export async function bulkCreateTables(formData: FormData) {
+  const supabase = await createClient()
+  const restaurant_id = formData.get('restaurant_id') as string
+  const zone = (formData.get('zone') as string) || null
+  const countRaw = parseInt(formData.get('count') as string)
+  const count = Math.min(Math.max(2, isNaN(countRaw) ? 2 : countRaw), 50)
+
+  const { data: maxRow } = await supabase
+    .from('tables')
+    .select('number')
+    .eq('restaurant_id', restaurant_id)
+    .order('number', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const baseNumber = (maxRow?.number ?? 0) + 1
+
+  const { count: existingCount } = await supabase
+    .from('tables')
+    .select('*', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurant_id)
+  const startIndex = existingCount ?? 0
+
+  const tablesToInsert = Array.from({ length: count }, (_, i) => ({
+    restaurant_id,
+    number: baseNumber + i,
+    label: zone,
+    pos_x: 50 + ((startIndex + i) % 5) * 160,
+    pos_y: 50 + Math.floor((startIndex + i) / 5) * 120,
+  }))
+
+  await supabase.from('tables').insert(tablesToInsert)
 
   revalidatePath('/dashboard/tables')
 }
