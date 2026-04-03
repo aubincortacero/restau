@@ -13,20 +13,25 @@ export default function TableAddForm({
 }) {
   const [mode, setMode] = useState<'single' | 'bulk'>('single')
   const [zone, setZone] = useState('')
+  const [number, setNumber] = useState('')
   const [count, setCount] = useState(2)
+  const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const listId = useId()
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setError(null)
     const fd = new FormData(e.currentTarget)
     startTransition(async () => {
       if (mode === 'single') {
-        await createTable(fd)
+        const res = await createTable(fd)
+        if (res?.error) { setError(res.error); return }
       } else {
         await bulkCreateTables(fd)
       }
       setZone('')
+      setNumber('')
       setCount(2)
     })
   }
@@ -41,7 +46,7 @@ export default function TableAddForm({
         <div className="flex bg-zinc-800 rounded-lg p-0.5">
           <button
             type="button"
-            onClick={() => setMode('single')}
+            onClick={() => { setMode('single'); setError(null) }}
             className={`text-xs px-3 py-1 rounded-md transition-colors cursor-pointer ${
               mode === 'single' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
             }`}
@@ -50,7 +55,7 @@ export default function TableAddForm({
           </button>
           <button
             type="button"
-            onClick={() => setMode('bulk')}
+            onClick={() => { setMode('bulk'); setError(null) }}
             className={`text-xs px-3 py-1 rounded-md transition-colors cursor-pointer ${
               mode === 'bulk' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
             }`}
@@ -62,6 +67,21 @@ export default function TableAddForm({
 
       <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap items-center">
         <input type="hidden" name="restaurant_id" value={restaurantId} />
+
+        {/* Numéro (mode single uniquement) */}
+        {mode === 'single' && (
+          <input
+            name="number"
+            type="number"
+            min="1"
+            value={number}
+            onChange={(e) => { setNumber(e.target.value); setError(null) }}
+            placeholder="N° (auto)"
+            className={`w-24 bg-zinc-800 border rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 shrink-0 ${
+              error ? 'border-red-500/60' : 'border-zinc-700'
+            }`}
+          />
+        )}
 
         {/* Zone — combobox libre avec suggestions */}
         <div className="relative flex-1 min-w-40">
@@ -110,6 +130,9 @@ export default function TableAddForm({
             : 'Ajouter'}
         </button>
       </form>
+
+      {/* Erreur */}
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
 
       {/* Zones existantes : badges cliquables */}
       {existingZones.length > 0 && (

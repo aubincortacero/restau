@@ -493,20 +493,35 @@ export async function bulkImportMenu(
 }
 
 // ─── Tables ───────────────────────────────────────────────────
-export async function createTable(formData: FormData) {
+export async function createTable(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const restaurant_id = formData.get('restaurant_id') as string
   const zone = (formData.get('zone') as string) || null
+  const numberRaw = formData.get('number') as string
 
-  // Numéro auto = max existant + 1
-  const { data: maxRow } = await supabase
-    .from('tables')
-    .select('number')
-    .eq('restaurant_id', restaurant_id)
-    .order('number', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  const nextNumber = (maxRow?.number ?? 0) + 1
+  let number: number
+  if (numberRaw && numberRaw.trim() !== '') {
+    number = parseInt(numberRaw)
+    if (isNaN(number) || number < 1) return { error: 'Numéro invalide' }
+    // Vérifier l'unicité
+    const { data: existing } = await supabase
+      .from('tables')
+      .select('id')
+      .eq('restaurant_id', restaurant_id)
+      .eq('number', number)
+      .maybeSingle()
+    if (existing) return { error: `La table n°${number} existe déjà` }
+  } else {
+    // Numéro auto = max existant + 1
+    const { data: maxRow } = await supabase
+      .from('tables')
+      .select('number')
+      .eq('restaurant_id', restaurant_id)
+      .order('number', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    number = (maxRow?.number ?? 0) + 1
+  }
 
   const { count } = await supabase
     .from('tables')
@@ -518,13 +533,14 @@ export async function createTable(formData: FormData) {
 
   await supabase.from('tables').insert({
     restaurant_id,
-    number: nextNumber,
+    number,
     label: zone,
     pos_x,
     pos_y,
   })
 
   revalidatePath('/dashboard/tables')
+  return {}
 }
 
 export async function bulkCreateTables(formData: FormData) {
