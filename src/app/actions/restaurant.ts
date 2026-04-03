@@ -421,6 +421,77 @@ export async function deleteItem(formData: FormData) {
   revalidatePath('/dashboard/menu')
 }
 
+// ─── Import IA ────────────────────────────────────────────────
+export type BulkImportCategory = {
+  name: string
+  category_type: string
+  items: {
+    name: string
+    description: string
+    price: number
+  }[]
+}
+
+export async function bulkImportMenu(
+  restaurantId: string,
+  categories: BulkImportCategory[],
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  // Vérifier que le restaurant appartient à l'utilisateur
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', restaurantId)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return { error: 'Restaurant introuvable' }
+
+  // Position de départ (après les catégories existantes)
+  const { data: existing } = await supabase
+    .from('categories')
+    .select('position')
+    .eq('restaurant_id', restaurantId)
+    .order('position', { ascending: false })
+    .limit(1)
+  let nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0
+
+  for (const cat of categories) {
+    const { data: newCat, error: catError } = await supabase
+      .from('categories')
+      .insert({
+        restaurant_id: restaurantId,
+        name: cat.name,
+        position: nextPosition++,
+        category_type: cat.category_type || 'standard',
+      })
+      .select('id')
+      .single()
+
+    if (catError || !newCat) continue
+
+    const itemsToInsert = cat.items.map((item) => ({
+      category_id: newCat.id,
+      name: item.name,
+      description: item.description || null,
+      price: item.price,
+      is_available: true,
+      is_vegetarian: false,
+      is_vegan: false,
+      allergens: [],
+    }))
+
+    if (itemsToInsert.length > 0) {
+      await supabase.from('items').insert(itemsToInsert)
+    }
+  }
+
+  revalidatePath('/dashboard/menu')
+  return {}
+}
+
 // ─── Tables ───────────────────────────────────────────────────
 export async function createTable(formData: FormData) {
   const supabase = await createClient()

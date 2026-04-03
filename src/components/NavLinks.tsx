@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { IconHome, IconMenu, IconTable, IconOrders } from './icons'
+import { IconHome, IconMenu, IconTable, IconOrders, IconEye } from './icons'
 
 export const navItems = [
   { href: '/dashboard', label: 'Accueil', icon: IconHome },
@@ -44,7 +44,7 @@ export function NavDesktop() {
 }
 
 /** Barre de navigation mobile fixe en bas — style appli native */
-export function MobileNav() {
+export function MobileNav({ restaurantSlug }: { restaurantSlug?: string }) {
   const pathname = usePathname()
   const [activePath, setActivePath] = useState<string | null>(null)
   useEffect(() => { setActivePath(pathname) }, [pathname])
@@ -70,6 +70,19 @@ export function MobileNav() {
           </Link>
         )
       })}
+      {restaurantSlug && (
+        <a
+          href={`/menu/${restaurantSlug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center justify-center gap-1 flex-1 py-2.5 pb-4 text-zinc-500 active:text-zinc-300 transition-colors"
+        >
+          <div className="flex items-center justify-center w-10 h-7 rounded-xl">
+            <IconEye className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] font-medium leading-none text-zinc-500">Vitrine</span>
+        </a>
+      )}
     </nav>
   )
 }

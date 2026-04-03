@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateProfile } from '@/app/actions/restaurant'
+import { getActiveRestaurantId } from '@/lib/active-restaurant'
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
 
@@ -9,16 +10,37 @@ export default async function SettingsProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, avatar_url')
-    .eq('id', user.id)
-    .single()
+  const [profileRes, activeId] = await Promise.all([
+    supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
+    getActiveRestaurantId(user.id),
+  ])
 
+  const profile = profileRes.data
   const avatarUrl = profile?.avatar_url ?? user.user_metadata?.avatar_url
+
+  const { data: restaurant } = activeId
+    ? await supabase.from('restaurants').select('slug, name').eq('id', activeId).single()
+    : { data: null }
 
   return (
     <div className="max-w-xl space-y-6">
+      {/* Lien vitrine */}
+      {restaurant?.slug && (
+        <a
+          href={`/menu/${restaurant.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-orange-500 hover:bg-orange-400 transition-colors group"
+        >
+          <div>
+            <p className="text-sm font-semibold text-white">Voir ma vitrine client</p>
+            <p className="text-xs text-orange-100/80 mt-0.5 truncate">{`qomand.fr/menu/${restaurant.slug}`}</p>
+          </div>
+          <svg className="w-5 h-5 text-white shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+          </svg>
+        </a>
+      )}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
         <h2 className="text-sm font-semibold text-white mb-5">Profil</h2>
         <form action={updateProfile} className="space-y-5">

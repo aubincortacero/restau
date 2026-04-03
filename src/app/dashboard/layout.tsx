@@ -170,7 +170,7 @@ export default async function DashboardLayout({
       )}
 
       {/* Bottom tab bar mobile */}
-      <MobileNav />
+      <MobileNav restaurantSlug={restaurants.find((r) => r.id === activeRestaurantId)?.slug} />
     </div>
   )
 }
