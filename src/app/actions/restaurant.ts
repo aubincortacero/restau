@@ -16,7 +16,7 @@ function slugify(str: string) {
 }
 
 // ─── Restaurant ───────────────────────────────────────────────
-type CreateRestaurantState = { error?: string | null }
+type CreateRestaurantState = { error?: string | null; success?: boolean }
 
 export async function createRestaurant(
   _prevState: CreateRestaurantState,
@@ -43,7 +43,7 @@ export async function createRestaurant(
 
   if (error) return { error: 'Impossible de créer le restaurant. Réessayez.' }
   revalidatePath('/dashboard')
-  redirect('/dashboard')
+  return { success: true }
 }
 
 export async function updateRestaurant(formData: FormData) {

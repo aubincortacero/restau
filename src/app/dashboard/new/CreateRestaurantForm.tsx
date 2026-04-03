@@ -1,10 +1,11 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import { createRestaurant } from '@/app/actions/restaurant'
 
-type State = { error?: string | null }
+type State = { error?: string | null; success?: boolean }
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -28,7 +29,12 @@ function SubmitButton() {
 const INPUT = 'w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500'
 
 export default function CreateRestaurantForm() {
-  const [state, action] = useActionState<State, FormData>(createRestaurant, { error: null })
+  const router = useRouter()
+  const [state, action] = useActionState<State, FormData>(createRestaurant, {})
+
+  useEffect(() => {
+    if (state.success) router.push('/dashboard')
+  }, [state.success, router])
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
