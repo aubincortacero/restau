@@ -123,15 +123,6 @@ export default async function DashboardLayout({
               <span className="font-semibold text-sm hidden sm:block">Qomand</span>
             </Link>
 
-            {restaurants.length > 0 && (
-              <RestaurantPicker
-                restaurants={restaurants}
-                activeId={activeRestaurantId}
-                setActiveAction={setActiveRestaurant}
-                deleteAction={deleteRestaurant}
-              />
-            )}
-
             <NavDesktop />
           </div>
 
@@ -152,6 +143,10 @@ export default async function DashboardLayout({
               email={email}
               avatarUrl={avatarUrl}
               signOutAction={signOut}
+              restaurants={restaurants}
+              activeRestaurantId={activeRestaurantId}
+              setActiveAction={setActiveRestaurant}
+              deleteAction={deleteRestaurant}
             />
           </div>
         </div>
