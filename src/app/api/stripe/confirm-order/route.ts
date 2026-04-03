@@ -17,10 +17,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Récupérer le PI sur le bon compte (direct charge = compte connecté)
-    const retrieveOptions = stripeAccountId && typeof stripeAccountId === 'string'
-      ? { stripeAccount: stripeAccountId }
-      : {}
-    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {}, retrieveOptions)
+    const pi = stripeAccountId && typeof stripeAccountId === 'string'
+      ? await stripe.paymentIntents.retrieve(paymentIntentId, {}, { stripeAccount: stripeAccountId })
+      : await stripe.paymentIntents.retrieve(paymentIntentId)
     if (pi.status !== 'succeeded') {
       return NextResponse.json({ error: 'Paiement non confirmé' }, { status: 400 })
     }
@@ -132,7 +131,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ orderId: order.id })
-  } catch {
+  } catch (err) {
+    console.error('[confirm-order] Erreur inattendue:', err)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
