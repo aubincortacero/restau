@@ -117,76 +117,87 @@ export default async function OrdersPage() {
             return (
               <div
                 key={order.id}
-                className={`rounded-2xl overflow-hidden flex flex-col shadow-lg ${isPending ? 'bg-zinc-900 border-[3px] border-orange-500 shadow-orange-900/20' : 'bg-zinc-900 border border-zinc-800 shadow-transparent'}`}
+                className={`rounded-2xl overflow-hidden flex flex-col ${isPending ? 'bg-zinc-900 border-[2.5px] border-orange-500 shadow-lg shadow-orange-950/40' : 'bg-zinc-900 border border-zinc-800'}`}
               >
                 {/* En-tête */}
-                <div className="px-5 pt-5 pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className={`text-xl font-bold leading-tight ${isPending ? 'text-white' : 'text-white'}`}>
-                        {table ? `Table ${table.number}${table.label ? ` — ${table.label}` : ''}` : 'Table inconnue'}
+                <div className="px-5 pt-5 pb-4 flex items-center gap-4">
+                  {/* Numéro de table — très visible */}
+                  <div className={`text-5xl font-black tabular-nums leading-none shrink-0 ${isPending ? 'text-orange-400' : 'text-zinc-500'}`}>
+                    {table?.number ?? '?'}
+                  </div>
+
+                  {/* Infos centrales */}
+                  <div className="flex-1 min-w-0">
+                    {table?.label && (
+                      <p className={`text-base font-semibold leading-tight truncate ${isPending ? 'text-white' : 'text-zinc-300'}`}>
+                        {table.label}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className={`text-sm ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}>{formatDate(order.created_at)}</p>
-                        {isPending && (
-                          <OrderTimer createdAt={order.created_at} thresholdMinutes={urgencyThreshold} />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${isPending ? 'text-orange-400 bg-orange-500/15' : statusInfo.color}`}>
-                        {statusInfo.label}
-                      </span>
-                      <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${isPending ? payInfo.color : payInfo.color}`}>
+                    )}
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                      {isPending ? (
+                        <OrderTimer createdAt={order.created_at} thresholdMinutes={urgencyThreshold} />
+                      ) : (
+                        <span className="text-xs text-zinc-600">{formatDate(order.created_at)}</span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${payInfo.color}`}>
                         {payInfo.label}
                       </span>
+                      {!isPending && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
+                          {statusInfo.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className={`flex items-center gap-1 mt-1 text-xs ${isPending ? 'text-zinc-500' : 'text-zinc-600'}`}>
+                      {order.payment_method === 'online'
+                        ? <><IconCreditCard className="w-3.5 h-3.5" /> En ligne</>
+                        : <><IconBanknote className="w-3.5 h-3.5" /> Caisse</>
+                      }
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`flex items-center gap-1 text-sm ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                      {order.payment_method === 'online'
-                        ? <><IconCreditCard className="w-4 h-4" /> En ligne</>
-                        : <><IconBanknote className="w-4 h-4" /> Caisse</>
-                      }
-                    </span>
-                    <span className={isPending ? 'text-zinc-700' : 'text-zinc-700'}>·</span>
-                    <span className={`text-base font-bold ${isPending ? 'text-white' : 'text-white'}`}>{order.ttc.toFixed(2)} €</span>
-                    <span className={`text-sm ${isPending ? 'text-zinc-500' : 'text-zinc-600'}`}>TTC</span>
+
+                  {/* Montant */}
+                  <div className={`text-2xl font-bold tabular-nums shrink-0 ${isPending ? 'text-white' : 'text-zinc-400'}`}>
+                    {order.ttc.toFixed(2)} €
                   </div>
-                  {order.customer_note && (
-                    <p className={`text-sm mt-2 italic rounded-xl px-3 py-2 ${isPending ? 'text-zinc-400 bg-zinc-800/60' : 'text-zinc-500 bg-zinc-800/60'}`}>
-                      &ldquo;{order.customer_note}&rdquo;
-                    </p>
-                  )}
                 </div>
 
-                {/* Articles */}
+                {/* Note client */}
+                {order.customer_note && (
+                  <div className={`mx-5 mb-3 text-sm italic rounded-xl px-3 py-2 ${isPending ? 'text-zinc-400 bg-zinc-800/60' : 'text-zinc-500 bg-zinc-800/60'}`}>
+                    &ldquo;{order.customer_note}&rdquo;
+                  </div>
+                )}
+
+                {/* Séparateur + Articles */}
                 {items.length > 0 && (
-                  <div className="px-5 pb-4 space-y-1.5">
+                  <div className={`mx-5 mb-4 rounded-xl overflow-hidden border ${isPending ? 'border-zinc-800' : 'border-zinc-800/60'}`}>
                     {items.map((oi, i) => (
-                      <div key={i} className="flex justify-between text-base">
-                        <span className={`font-medium ${isPending ? 'text-white' : 'text-zinc-200'}`}>
-                          <span className={`mr-1 ${isPending ? 'text-orange-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
+                      <div key={i} className={`flex justify-between items-baseline px-3 py-2 text-sm ${i > 0 ? 'border-t border-zinc-800' : ''}`}>
+                        <span className={isPending ? 'text-white' : 'text-zinc-300'}>
+                          <span className={`font-bold mr-1.5 ${isPending ? 'text-orange-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
                           {(oi.items as { name: string } | null)?.name ?? '—'}
-                          {oi.note && <span className={`font-normal ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}> ({oi.note})</span>}
+                          {oi.note && <span className="text-zinc-500 font-normal"> · {oi.note}</span>}
                         </span>
-                        <span className={`shrink-0 ml-2 ${isPending ? 'text-zinc-300' : 'text-zinc-400'}`}>{(oi.quantity * Number(oi.unit_price)).toFixed(2)} €</span>
+                        <span className={`shrink-0 ml-3 tabular-nums ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                          {(oi.quantity * Number(oi.unit_price)).toFixed(2)} €
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {/* Actions */}
-                <div className="mt-auto px-4 pb-4 pt-2 flex flex-col gap-2">
+                <div className="mt-auto px-4 pb-4 flex flex-col gap-2">
                   {isPending && (
                     <form action={updateOrderStatus}>
                       <input type="hidden" name="id" value={order.id} />
                       <input type="hidden" name="status" value="done" />
                       <button
                         type="submit"
-                        className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold text-lg py-5 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                        className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold text-base py-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                       >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
                         </svg>
                         Commande envoyée
@@ -198,14 +209,14 @@ export default async function OrdersPage() {
                       <form action={updateOrderStatus}>
                         <input type="hidden" name="id" value={order.id} />
                         <input type="hidden" name="status" value="cancelled" />
-                        <button type="submit" className="text-sm text-zinc-500 hover:text-red-400 border border-zinc-700 hover:border-red-500/30 px-3 py-2 rounded-xl transition-colors cursor-pointer">
+                        <button type="submit" className="text-xs text-zinc-600 hover:text-red-400 transition-colors cursor-pointer">
                           Annuler
                         </button>
                       </form>
                     ) : (
                       <form action={archiveOrder}>
                         <input type="hidden" name="id" value={order.id} />
-                        <button type="submit" className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-400 transition-colors cursor-pointer">
+                        <button type="submit" className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors cursor-pointer">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
                           </svg>
