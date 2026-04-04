@@ -492,6 +492,7 @@ export default function MenuAccordion({
                   customerEmail={customerEmail || undefined}
                   fulfillmentType={fulfillmentType}
                   pickupCode={pickupCode || undefined}
+                  brandColor={brandColor}
                   onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail(''); setPickupCode(null) }}
                   onBack={() => setCartStep('email')}
                 />

@@ -19,16 +19,18 @@ type Props = {
   customerEmail?: string
   fulfillmentType?: 'table' | 'pickup'
   pickupCode?: string
+  brandColor?: string
   onSuccess: () => void
   onBack: () => void
 }
 
-function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentType, pickupCode, onSuccess, onBack }: {
+function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentType, pickupCode, brandColor, onSuccess, onBack }: {
   totalPrice: number
   stripeAccountId: string | null
   customerEmail?: string
   fulfillmentType?: 'table' | 'pickup'
   pickupCode?: string
+  brandColor: string
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -95,7 +97,8 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentT
         <button
           type="submit"
           disabled={isPending || !stripe}
-          className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-2xl transition-colors text-base"
+          style={{ backgroundColor: brandColor }}
+          className="w-full disabled:opacity-60 text-white font-bold py-4 rounded-2xl transition-colors text-base"
         >
           {isPending ? 'Paiement en cours…' : `Payer ${fmt(totalPrice)}`}
         </button>
@@ -112,7 +115,7 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentT
   )
 }
 
-export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, fulfillmentType, pickupCode, onSuccess, onBack }: Props) {
+export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, fulfillmentType, pickupCode, brandColor = '#f97316', onSuccess, onBack }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -171,7 +174,7 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
         appearance: {
           theme: 'night',
           variables: {
-            colorPrimary: '#f97316',
+            colorPrimary: brandColor,
             colorBackground: '#1c1917',
             colorText: '#e7e5e4',
             colorDanger: '#f87171',
@@ -181,7 +184,7 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
         },
       }}
     >
-      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} customerEmail={customerEmail} fulfillmentType={fulfillmentType} pickupCode={pickupCode} onSuccess={onSuccess} onBack={onBack} />
+      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} customerEmail={customerEmail} fulfillmentType={fulfillmentType} pickupCode={pickupCode} brandColor={brandColor} onSuccess={onSuccess} onBack={onBack} />
     </Elements>
   )
 }
