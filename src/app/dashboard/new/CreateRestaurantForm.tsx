@@ -164,22 +164,41 @@ export default function CreateRestaurantForm() {
   if (step === 'stripe') {
     return (
       <div className="flex flex-col items-center text-center px-2">
-        <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-5">
-          <svg className="w-8 h-8 text-zinc-300" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
-          </svg>
+        {/* Logo pairing */}
+        <div className="flex items-center gap-3 mb-8">
+          {/* Qomand */}
+          <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+            </svg>
+          </div>
+          {/* Lien */}
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-0.5 bg-zinc-600 rounded-full" />
+            <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+            </svg>
+            <div className="w-2 h-0.5 bg-zinc-600 rounded-full" />
+          </div>
+          {/* Stripe */}
+          <div className="w-14 h-14 rounded-2xl bg-[#635bff] flex items-center justify-center shadow-lg shadow-[#635bff]/30">
+            <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+            </svg>
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Connectez Stripe</h2>
+
+        <h2 className="text-xl font-bold text-white mb-2">Qomand × Stripe</h2>
         <p className="text-sm text-zinc-400 mb-8 max-w-xs leading-relaxed">
-          Stripe vous permet d'accepter les paiements par carte directement à table. Vous pouvez le configurer maintenant ou plus tard depuis les paramètres.
+          Liez votre compte Stripe pour accepter les paiements par carte directement à table. Les fonds arrivent sur votre IBAN sous 2 jours.
         </p>
         <div className="w-full flex flex-col gap-3 max-w-sm">
           <form action={createConnectOnboardingLink} className="w-full">
             <button
               type="submit"
-              className="w-full bg-[#635bff] hover:bg-[#4f46e5] text-white font-bold py-4 rounded-2xl transition-colors text-sm cursor-pointer"
+              className="w-full bg-[#635bff] hover:bg-[#4f46e5] text-white font-bold py-4 rounded-2xl transition-colors text-sm cursor-pointer shadow-lg shadow-[#635bff]/20"
             >
-              Connecter mon compte Stripe
+              Lier mon compte Stripe
             </button>
           </form>
           <button
