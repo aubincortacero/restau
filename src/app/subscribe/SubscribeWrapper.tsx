@@ -5,34 +5,6 @@ import Link from 'next/link'
 import OnboardingSlider from '@/components/OnboardingSlider'
 import { startTrial, createCheckoutSession, adminSkipSubscription } from '@/app/actions/subscription'
 
-const OFFER_TTL_MS = 60 * 60 * 1000 // 1 heure
-const SESSION_KEY = 'qomand_offer_expires'
-
-function useCountdown() {
-  const [seconds, setSeconds] = useState<number | null>(null)
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem(SESSION_KEY)
-    let expiresAt = stored ? parseInt(stored, 10) : NaN
-    if (isNaN(expiresAt) || expiresAt < Date.now()) {
-      expiresAt = Date.now() + OFFER_TTL_MS
-      sessionStorage.setItem(SESSION_KEY, String(expiresAt))
-    }
-    function tick() {
-      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
-      setSeconds(remaining)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  if (seconds === null) return '--:--'
-  const m = Math.floor(seconds / 60).toString().padStart(2, '0')
-  const s = (seconds % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
-
 interface Props {
   expired: boolean
   isAdmin: boolean
@@ -43,7 +15,6 @@ interface Props {
 export default function SubscribeWrapper({ expired, isAdmin, email, trialAlreadyUsed }: Props) {
   const [ready, setReady] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
-  const countdown = useCountdown()
 
   const onboardingKey = `qomand_onboarding_done_${email}`
 
@@ -105,17 +76,6 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
 
       {/* ── Contenu bas de page ── */}
       <div className="relative z-10 mt-auto px-6 pb-10 flex flex-col items-center">
-
-        {/* Timer pill */}
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/20 bg-black/30 backdrop-blur-sm text-white text-sm mb-7 tabular-nums">
-          <svg className="w-4 h-4 text-white/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-          {expired
-            ? 'Reprenez votre activité maintenant'
-            : <>Cette offre expire dans <strong className="font-semibold">{countdown}</strong></>
-          }
-        </div>
 
         {/* Headline */}
         <h1 className="text-[2.6rem] leading-[1.1] font-extrabold text-center text-white mb-3 max-w-xs">
