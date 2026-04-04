@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import OnboardingSlider from '@/components/OnboardingSlider'
 import { startTrial, createCheckoutSession, adminSkipSubscription } from '@/app/actions/subscription'
+import { signOut } from '@/app/actions/auth'
 
 interface Props {
   expired: boolean
@@ -70,7 +71,12 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
       </div>
 
       {/* ── Bouton fermer (comme HingeX) ── */}
-      <div className="relative z-10 flex justify-end px-5 pt-5">
+      <div className="relative z-10 flex justify-between items-center px-5 pt-5">
+        <form action={signOut}>
+          <button type="submit" className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer">
+            Se déconnecter
+          </button>
+        </form>
         <span className="text-xs text-white/40">{email}</span>
       </div>
 
