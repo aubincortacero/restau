@@ -56,14 +56,22 @@ function TimeBar({ open, close }: { open: string; close: string }) {
     const [h, m] = t.split(':').map(Number)
     return ((h * 60 + m) / (24 * 60)) * 100
   }
-  const left = toPercent(open)
-  const width = Math.max(0, toPercent(close) - left)
+  const leftPct = toPercent(open)
+  const closePct = toPercent(close)
+  const crossesMidnight = closePct < leftPct
   return (
     <div className="relative h-1.5 bg-zinc-700 rounded-full my-2">
       {[0, 6, 12, 18, 24].map(h => (
         <div key={h} className="absolute top-0 h-full w-px bg-zinc-600" style={{ left: `${(h / 24) * 100}%` }} />
       ))}
-      <div className="absolute top-0 h-full bg-orange-500 rounded-full transition-all duration-200" style={{ left: `${left}%`, width: `${width}%` }} />
+      {crossesMidnight ? (
+        <>
+          <div className="absolute top-0 h-full bg-orange-500 rounded-l-full transition-all duration-200" style={{ left: `${leftPct}%`, width: `${100 - leftPct}%` }} />
+          <div className="absolute top-0 h-full bg-orange-400/50 rounded-r-full transition-all duration-200" style={{ left: 0, width: `${closePct}%` }} />
+        </>
+      ) : (
+        <div className="absolute top-0 h-full bg-orange-500 rounded-full transition-all duration-200" style={{ left: `${leftPct}%`, width: `${Math.max(0, closePct - leftPct)}%` }} />
+      )}
     </div>
   )
 }
@@ -370,6 +378,13 @@ export default function CreateRestaurantForm() {
                           }))}
                           className={TIME_INPUT}
                         />
+                        {(() => {
+                          const [oh, om] = h.open.split(':').map(Number)
+                          const [ch, cm] = h.close.split(':').map(Number)
+                          return (oh * 60 + om) > (ch * 60 + cm) ? (
+                            <span className="text-[10px] font-semibold text-orange-400 shrink-0" title="Fermeture le lendemain">+1</span>
+                          ) : null
+                        })()}
                         <button
                           type="button"
                           onClick={() => applyHoursToAll(d.key)}

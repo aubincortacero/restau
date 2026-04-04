@@ -29,6 +29,12 @@ const INPUT_TIME = "bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 te
 export default function SchedulesForm({ restaurantId, opening_hours, happy_hour, urgencyThreshold }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
+  const [hours, setHours] = useState<OpeningHours>(() =>
+    DAYS.reduce((acc, { key }) => ({
+      ...acc,
+      [key]: opening_hours[key] ?? { open: '12:00', close: '22:00', closed: false },
+    }), {} as OpeningHours)
+  )
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -49,7 +55,10 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
         <h2 className="text-sm font-semibold text-white mb-5">Horaires d&apos;ouverture</h2>
         <div className="space-y-3">
           {DAYS.map(({ key, label }) => {
-            const day = opening_hours[key] ?? { open: '12:00', close: '22:00', closed: false }
+            const day = hours[key] ?? { open: '12:00', close: '22:00', closed: false }
+            const [oh, om] = day.open.split(':').map(Number)
+            const [ch, cm] = day.close.split(':').map(Number)
+            const crossesMidnight = (oh * 60 + om) > (ch * 60 + cm)
             return (
               <div key={key} className="flex items-center gap-3">
                 {/* Ouvert toggle — checked = ouvert, unchecked = fermé */}
@@ -65,9 +74,16 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
                   <span className="text-sm text-zinc-300">{label}</span>
                 </label>
 
-                <input type="time" name={`oh_${key}_open_time`} defaultValue={day.open} className={INPUT_TIME} />
+                <input type="time" name={`oh_${key}_open_time`} value={day.open}
+                  onChange={e => setHours(p => ({ ...p, [key]: { ...p[key], open: e.target.value } }))}
+                  className={INPUT_TIME} />
                 <span className="text-zinc-600 text-xs">→</span>
-                <input type="time" name={`oh_${key}_close`} defaultValue={day.close} className={INPUT_TIME} />
+                <input type="time" name={`oh_${key}_close`} value={day.close}
+                  onChange={e => setHours(p => ({ ...p, [key]: { ...p[key], close: e.target.value } }))}
+                  className={INPUT_TIME} />
+                {crossesMidnight && (
+                  <span className="text-[10px] font-semibold text-orange-400 shrink-0" title="Fermeture le lendemain">+1</span>
+                )}
               </div>
             )
           })}
