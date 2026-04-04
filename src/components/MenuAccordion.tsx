@@ -57,6 +57,7 @@ export default function MenuAccordion({
   const [fulfillmentType, setFulfillmentType] = useState<'table' | 'pickup'>('table')
   const [pickupCode, setPickupCode] = useState<string | null>(null)
   const [successPickupCode, setSuccessPickupCode] = useState<string | null>(null)
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'online'>('online')
 
   function toggleCat(id: string) {
     setOpenIds(prev =>
@@ -100,9 +101,12 @@ export default function MenuAccordion({
     if (hasOnline && hasCash) {
       setCartStep('payment-choice')
     } else if (hasTable && hasPickup) {
+      // Un seul mode de paiement disponible : le mémoriser avant le choix de service
+      setPendingPaymentMethod(hasOnline ? 'online' : 'cash')
       setCartStep('fulfillment-choice')
     } else if (hasPickup) {
       // Seul pickup disponible : générer code, forcer email
+      setPendingPaymentMethod(hasOnline ? 'online' : 'cash')
       setFulfillmentType('pickup')
       setPickupCode(genPickupCode())
       setCartStep('email')
@@ -271,6 +275,7 @@ export default function MenuAccordion({
                 <div className="flex-1 px-5 pb-4 flex flex-col gap-3">
                   <button
                     onClick={() => {
+                      setPendingPaymentMethod('online')
                       const hasPickup = fulfillmentModes.includes('pickup')
                       const hasTable = fulfillmentModes.includes('table')
                       if (hasPickup && hasTable) setCartStep('fulfillment-choice')
@@ -290,6 +295,7 @@ export default function MenuAccordion({
 
                   <button
                     onClick={() => {
+                      setPendingPaymentMethod('cash')
                       const hasPickup = fulfillmentModes.includes('pickup')
                       const hasTable = fulfillmentModes.includes('table')
                       if (hasPickup && hasTable) {
@@ -339,9 +345,8 @@ export default function MenuAccordion({
                       onClick={() => {
                         setFulfillmentType('table')
                         setPickupCode(null)
-                        const hasOnline = acceptedPaymentMethods.includes('online')
-                        if (hasOnline) setCartStep('email')
-                        else placeCashOrder()
+                        if (pendingPaymentMethod === 'cash') placeCashOrder()
+                        else setCartStep('email')
                       }}
                       className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
                     >
@@ -418,11 +423,14 @@ export default function MenuAccordion({
                   <button
                     onClick={() => {
                       if (fulfillmentType === 'pickup' && !customerEmail.includes('@')) return
-                      setCartStep('stripe-form')
+                      if (pendingPaymentMethod === 'cash') placeCashOrder()
+                      else setCartStep('stripe-form')
                     }}
                     className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-4 rounded-2xl transition-colors text-base"
                   >
-                    {fulfillmentType === 'pickup' ? 'Recevoir mon code et payer' : 'Continuer vers le paiement'}
+                    {fulfillmentType === 'pickup'
+                      ? pendingPaymentMethod === 'cash' ? 'Confirmer ma commande' : 'Recevoir mon code et payer'
+                      : 'Continuer vers le paiement'}
                   </button>
                   {fulfillmentType !== 'pickup' && (
                     <button
