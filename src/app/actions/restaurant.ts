@@ -159,6 +159,7 @@ export async function updatePaymentMethods(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/settings/restaurant')
+  redirect('/dashboard/settings/restaurant?saved=payment')
 }
 
 export async function updateFulfillmentModes(formData: FormData) {
@@ -179,6 +180,7 @@ export async function updateFulfillmentModes(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/settings/restaurant')
+  redirect('/dashboard/settings/restaurant?saved=fulfillment')
 }
 
 export async function updateSchedules(formData: FormData) {

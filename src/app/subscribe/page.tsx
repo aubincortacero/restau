@@ -7,7 +7,12 @@ import {
 } from '@/lib/subscription'
 import SubscribeWrapper from './SubscribeWrapper'
 
-export default async function SubscribePage() {
+export default async function SubscribePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trial_error?: string }>
+}) {
+  const { trial_error } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -25,6 +30,7 @@ export default async function SubscribePage() {
       expired={expired}
       isAdmin={admin}
       email={user.email ?? ''}
+      trialError={trial_error}
     />
   )
 }

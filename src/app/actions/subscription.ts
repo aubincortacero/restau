@@ -42,10 +42,27 @@ export async function startTrial() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const email = user.email?.toLowerCase().trim()
+  if (!email) redirect('/subscribe?trial_error=no_email')
+
+  const admin = createAdminClient()
+
+  // Vérifier si cet email a déjà utilisé un essai
+  const { data: existing } = await admin
+    .from('trial_emails')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (existing) redirect('/subscribe?trial_error=already_used')
+
   const trialEndsAt = new Date()
   trialEndsAt.setDate(trialEndsAt.getDate() + 7)
 
-  await createAdminClient()
+  // Enregistrer l'email avant d'activer le trial
+  await admin.from('trial_emails').insert({ email })
+
+  await admin
     .from('profiles')
     .update({
       subscription_status: 'trialing',

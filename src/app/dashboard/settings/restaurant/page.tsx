@@ -5,7 +5,12 @@ import { updateRestaurant, updatePaymentMethods, updateFulfillmentModes } from '
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
 
-export default async function SettingsRestaurantPage() {
+export default async function SettingsRestaurantPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string }>
+}) {
+  const { saved } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -42,9 +47,17 @@ export default async function SettingsRestaurantPage() {
 
           <div className="pt-1">
             <p className="text-xs text-zinc-500 mb-3">Slug public : <span className="text-zinc-300">/{restaurant.slug}</span></p>
-            <button type="submit" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
-              Enregistrer
-            </button>
+            <div className="flex items-center gap-3">
+              <button type="submit" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
+                Enregistrer
+              </button>
+              {saved === 'info' && (
+                <span className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                  Enregistré
+                </span>
+              )}
+            </div>
           </div>
         </form>
       </div>
@@ -80,10 +93,16 @@ export default async function SettingsRestaurantPage() {
               className="w-4 h-4 accent-orange-500 cursor-pointer"
             />
           </label>
-          <div className="pt-1">
+          <div className="pt-1 flex items-center gap-3">
             <button type="submit" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
               Enregistrer
             </button>
+            {saved === 'payment' && (
+              <span className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                Enregistré
+              </span>
+            )}
           </div>
         </form>
       </div>
@@ -119,10 +138,16 @@ export default async function SettingsRestaurantPage() {
               className="w-4 h-4 accent-orange-500 cursor-pointer"
             />
           </label>
-          <div className="pt-1">
+          <div className="pt-1 flex items-center gap-3">
             <button type="submit" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
               Enregistrer
             </button>
+            {saved === 'fulfillment' && (
+              <span className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                Enregistré
+              </span>
+            )}
           </div>
         </form>
       </div>
