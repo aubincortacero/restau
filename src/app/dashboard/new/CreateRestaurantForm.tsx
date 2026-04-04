@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { createRestaurantFull } from '@/app/actions/restaurant'
 import { createConnectOnboardingLink } from '@/app/actions/stripe-connect'
+import { IconLogo } from '@/components/icons'
 
 const DAYS = [
   { key: 'mon', label: 'Lun' },
@@ -39,7 +40,13 @@ type WizardData = {
 
 type Step = 'info' | 'payment' | 'service' | 'hours' | 'happyhour' | 'stripe'
 const STEPS: Step[] = ['info', 'payment', 'service', 'hours', 'happyhour', 'stripe']
-const STEP_LABELS = ['Infos', 'Paiement', 'Service', 'Horaires', 'Happy hour', 'Stripe']
+const STEP_DESCRIPTIONS = [
+  'Donnez un nom et une adresse à votre restaurant.',
+  'Choisissez comment vos clients règlent leur commande.',
+  'Comment vos clients récupèrent leur commande ?',
+  'Définissez vos horaires d\'ouverture.',
+  'Activez une période Happy Hour si vous le souhaitez.',
+]
 
 const INPUT = 'w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500'
 const TIME_INPUT = 'bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 w-20 text-center tabular-nums'
@@ -218,10 +225,19 @@ export default function CreateRestaurantForm() {
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* Header dynamique */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-500 mb-4">
+          <IconLogo className="w-7 h-7 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-white">Créer votre restaurant</h1>
+        <p className="text-sm text-zinc-400 mt-1">{STEP_DESCRIPTIONS[visibleIdx]}</p>
+      </div>
+
       {/* Progress */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-center mb-8">
         {visibleSteps.map((s, i) => (
-          <div key={s} className="flex items-center flex-1">
+          <Fragment key={s}>
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
               i < visibleIdx ? 'bg-orange-500 text-white' :
               i === visibleIdx ? 'bg-orange-500 text-white ring-4 ring-orange-500/20' :
@@ -233,12 +249,11 @@ export default function CreateRestaurantForm() {
               }
             </div>
             {i < visibleSteps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1 transition-colors ${i < visibleIdx ? 'bg-orange-500' : 'bg-zinc-700'}`} />
+              <div className={`w-10 h-0.5 transition-colors ${i < visibleIdx ? 'bg-orange-500' : 'bg-zinc-700'}`} />
             )}
-          </div>
+          </Fragment>
         ))}
       </div>
-      <p className="text-xs text-zinc-500 text-center mb-6 -mt-4">{STEP_LABELS[visibleIdx]}</p>
 
       {/* Error */}
       {error && (
