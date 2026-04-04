@@ -433,6 +433,9 @@ export default function FloorPlan({
                     {tablesCount(tables, floor.id)}
                   </span>
                 )}
+                {tables.some((t) => t.floor === floor.id && activeIds.has(t.id)) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shrink-0" />
+                )}
               </button>
             )}
           </div>
