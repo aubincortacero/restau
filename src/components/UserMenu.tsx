@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { IconSettings, IconLogout } from './icons'
 
 type RestaurantSummary = { id: string; name: string; slug: string }
+type SubStatus = 'active' | 'trialing' | 'expired' | 'none'
 
 interface UserMenuProps {
   displayName: string
@@ -16,6 +17,8 @@ interface UserMenuProps {
   activeRestaurantId?: string | null
   setActiveAction?: (formData: FormData) => Promise<void>
   deleteAction?: (formData: FormData) => Promise<void>
+  subStatus?: SubStatus
+  trialEndsAt?: string | null
 }
 
 export default function UserMenu({
@@ -27,6 +30,8 @@ export default function UserMenu({
   activeRestaurantId,
   setActiveAction,
   deleteAction,
+  subStatus,
+  trialEndsAt,
 }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -75,6 +80,33 @@ export default function UserMenu({
           <div className="px-4 py-3 border-b border-zinc-800">
             <p className="text-xs font-semibold text-white truncate">{displayName}</p>
             <p className="text-xs text-zinc-500 truncate mt-0.5">{email}</p>
+            {/* Badge plan */}
+            {subStatus === 'trialing' && trialEndsAt && (() => {
+              const days = Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+              return (
+                <div className="mt-2.5 flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-amber-500/15 text-amber-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    Essai — {days} jour{days !== 1 ? 's' : ''} restant{days !== 1 ? 's' : ''}
+                  </span>
+                  <a
+                    href="/subscribe"
+                    onClick={() => setOpen(false)}
+                    className="text-[10px] font-semibold text-orange-400 hover:text-orange-300 transition-colors shrink-0"
+                  >
+                    S&apos;abonner →
+                  </a>
+                </div>
+              )
+            })()}
+            {subStatus === 'active' && (
+              <div className="mt-2.5">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  Plan Pro
+                </span>
+              </div>
+            )}
           </div>
 
           {/* ── Lien vitrine ── */}

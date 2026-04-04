@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateProfile } from '@/app/actions/restaurant'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
+import { getSubscriptionStatus } from '@/lib/subscription'
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
 
@@ -10,9 +11,10 @@ export default async function SettingsProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileRes, activeId] = await Promise.all([
+  const [profileRes, activeId, { status: subStatus, trialEndsAt }] = await Promise.all([
     supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
     getActiveRestaurantId(user.id),
+    getSubscriptionStatus(user.id),
   ])
 
   const profile = profileRes.data
@@ -24,7 +26,33 @@ export default async function SettingsProfilePage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      {/* Lien vitrine */}
+      {/* Plan actuel */}
+      {subStatus === 'trialing' && trialEndsAt && (() => {
+        const days = Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+        return (
+          <div className="flex items-center justify-between gap-4 px-5 py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+            <div>
+              <p className="text-sm font-semibold text-amber-400">Période d&apos;essai</p>
+              <p className="text-xs text-amber-400/70 mt-0.5">{days} jour{days !== 1 ? 's' : ''} restant{days !== 1 ? 's' : ''}</p>
+            </div>
+            <a
+              href="/subscribe"
+              className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors"
+            >
+              S&apos;abonner
+            </a>
+          </div>
+        )
+      })()}
+      {subStatus === 'active' && (
+        <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-400">Plan Pro</p>
+            <p className="text-xs text-emerald-400/70 mt-0.5">Abonnement actif</p>
+          </div>
+        </div>
+      )}
       {restaurant?.slug && (
         <a
           href={`/menu/${restaurant.slug}`}

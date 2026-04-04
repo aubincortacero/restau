@@ -75,7 +75,7 @@ export default async function DashboardLayout({
   if (!user) redirect('/login')
 
   // ── Vérification de l'abonnement ──────────────────────────
-  const { status: subStatus } = await getSubscriptionStatus(user.id)
+  const { status: subStatus, trialEndsAt } = await getSubscriptionStatus(user.id)
   if (!isAccessGranted(subStatus)) redirect('/subscribe')
 
   const [profileRes, { restaurants, activeId }] = await Promise.all([
@@ -148,6 +148,8 @@ export default async function DashboardLayout({
               activeRestaurantId={activeRestaurantId}
               setActiveAction={setActiveRestaurant}
               deleteAction={deleteRestaurant}
+              subStatus={subStatus}
+              trialEndsAt={trialEndsAt?.toISOString() ?? null}
             />
           </div>
         </div>
