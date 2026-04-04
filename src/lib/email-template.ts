@@ -41,7 +41,7 @@ export function renderOrderEmail(data: OrderEmailData): string {
               <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
                 <tr>
                   <td style="background-color:#f97316;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
-                    <span style="color:white;font-size:22px;font-weight:bold;line-height:44px;">Q</span>
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgOGMtMS41IDAtMi43NS43NS0zLjUgMS45TTEyIDhjMS41IDAgMi43NS43NSAzLjUgMS45TTEyIDhWNW0wIDEzdi0ybS02LjUtM0gzbTE4IDBoLTIuNU02LjM0IDE3LjY2bC0xLjQyIDEuNDJNMTkuMDggNS45MmwtMS40MiAxLjQyTTE3LjY2IDE3LjY2bDEuNDIgMS40Mk00LjkyIDUuOTJsMS40MiAxLjQyIi8+PC9zdmc+" alt="Qomand" width="28" height="28" style="display:block;margin:8px auto;" />
                   </td>
                 </tr>
               </table>
@@ -154,7 +154,7 @@ export function renderPickupReadyEmail(data: PickupReadyEmailData): string {
               <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
                 <tr>
                   <td style="background-color:#f97316;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
-                    <span style="color:white;font-size:22px;font-weight:bold;line-height:44px;">Q</span>
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgOGMtMS41IDAtMi43NS43NS0zLjUgMS45TTEyIDhjMS41IDAgMi43NS43NSAzLjUgMS45TTEyIDhWNW0wIDEzdi0ybS02LjUtM0gzbTE4IDBoLTIuNU02LjM0IDE3LjY2bC0xLjQyIDEuNDJNMTkuMDggNS45MmwtMS40MiAxLjQyTTE3LjY2IDE3LjY2bDEuNDIgMS40Mk00LjkyIDUuOTJsMS40MiAxLjQyIi8+PC9zdmc+" alt="Qomand" width="28" height="28" style="display:block;margin:8px auto;" />
                   </td>
                 </tr>
               </table>
