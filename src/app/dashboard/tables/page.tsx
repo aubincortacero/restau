@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import FloorPlan, { type Wall, type Floor } from './FloorPlan'
 import TableAddForm from './TableAddForm'
+import QRExportButton from './QRExportButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,20 +59,31 @@ export default async function TablesPage() {
     floors = [{ id: 0, name: 'RDC', walls: oldWalls }]
   }
 
+  const hasTables = tablesWithPos.length > 0
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Plan de salle</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          Positionnez vos tables, ajoutez des murs et des niveaux, enregistrez le plan.
-        </p>
+      <div className="flex items-center gap-3 mb-6">
+        <h1 className="text-2xl font-semibold flex-1">Plan de salle</h1>
+        {hasTables && (
+          <QRExportButton
+            tables={tablesWithPos.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
+            siteUrl={siteUrl}
+            restaurantSlug={restaurant.slug}
+          />
+        )}
       </div>
 
       {/* Ajouter des tables */}
-      <TableAddForm restaurantId={restaurant.id} existingZones={existingZones} floors={floors} />
+      <TableAddForm
+        restaurantId={restaurant.id}
+        existingZones={existingZones}
+        floors={floors}
+        defaultOpen={!hasTables}
+      />
 
       {/* Plan de salle */}
-      {tablesWithPos.length === 0 ? (
+      {!hasTables ? (
         <div className="text-center py-20 text-zinc-500 text-sm border border-zinc-800 rounded-2xl">
           Ajoutez votre première table pour commencer à construire votre plan.
         </div>

@@ -8,11 +8,14 @@ export default function TableAddForm({
   restaurantId,
   existingZones,
   floors,
+  defaultOpen = true,
 }: {
   restaurantId: string
   existingZones: string[]
   floors: { id: number; name: string }[]
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const [mode, setMode] = useState<'single' | 'bulk'>('single')
   const [zone, setZone] = useState('')
   const [number, setNumber] = useState('')
@@ -46,7 +49,19 @@ export default function TableAddForm({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-6">
+    <div className="mb-5">
+      {/* Toggle */}
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 bg-zinc-900 px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+        >
+          <IconPlus className="w-3 h-3" />
+          Ajouter des tables
+        </button>
+      ) : (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
       {/* Header + toggle mode */}
       <div className="flex items-center gap-2 mb-3">
         <h2 className="text-xs font-medium text-zinc-500 uppercase tracking-widest flex-1">
@@ -178,6 +193,19 @@ export default function TableAddForm({
           ))}
         </div>
       )}
+
+      {/* Réduire */}
+      <div className="flex justify-end mt-3">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors cursor-pointer"
+        >
+          Réduire ↑
+        </button>
+      </div>
+    </div>
+    )}
     </div>
   )
 }
