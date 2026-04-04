@@ -26,6 +26,52 @@ function slugify(str: string) {
 // ─── Restaurant ───────────────────────────────────────────────
 type CreateRestaurantState = { error?: string | null; success?: boolean }
 
+type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
+
+export async function createRestaurantFull(payload: {
+  name: string
+  address?: string
+  phone?: string
+  paymentMethods: string[]
+  fulfillmentModes: string[]
+  openingHours: OpeningHours
+  happyHour: { enabled: boolean; start: string; end: string; days: string[] }
+}): Promise<{ error?: string; restaurantId?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const name = payload.name?.trim()
+  if (!name) return { error: 'Le nom du restaurant est requis.' }
+
+  const slug = slugify(name) + '-' + Math.random().toString(36).slice(2, 6)
+
+  const { data, error } = await supabase.from('restaurants').insert({
+    owner_id: user.id,
+    name,
+    slug,
+    address: payload.address || null,
+    phone: payload.phone || null,
+    accepted_payment_methods: payload.paymentMethods,
+    fulfillment_modes: payload.fulfillmentModes,
+    opening_hours: payload.openingHours,
+    happy_hour: payload.happyHour,
+  }).select('id').single()
+
+  if (error) return { error: 'Impossible de créer le restaurant. Réessayez.' }
+
+  const cookieStore = await cookies()
+  cookieStore.set(ACTIVE_RESTAURANT_COOKIE, data.id, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  })
+
+  revalidatePath('/dashboard')
+  return { restaurantId: data.id }
+}
+
 export async function createRestaurant(
   _prevState: CreateRestaurantState,
   formData: FormData,
