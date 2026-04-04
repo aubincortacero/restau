@@ -37,10 +37,10 @@ interface Props {
   expired: boolean
   isAdmin: boolean
   email: string
-  trialError?: string
+  trialAlreadyUsed: boolean
 }
 
-export default function SubscribeWrapper({ expired, isAdmin, email, trialError }: Props) {
+export default function SubscribeWrapper({ expired, isAdmin, email, trialAlreadyUsed }: Props) {
   const [ready, setReady] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
   const countdown = useCountdown()
@@ -136,24 +136,24 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialError }
         {/* CTA principal */}
         <div className="w-full max-w-sm flex flex-col gap-3">
           {!expired && (
-            <form action={startTrial} className="w-full">
-              {trialError === 'already_used' ? (
-                <div className="w-full flex items-start gap-3 bg-red-950/40 border border-red-800/50 rounded-2xl px-4 py-3.5 text-left">
-                  <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-                  <div>
-                    <p className="text-sm font-semibold text-red-300">Essai gratuit déjà utilisé</p>
-                    <p className="text-xs text-red-400/80 mt-0.5">Cet email a déjà bénéficié d&apos;un essai. Abonnez-vous pour continuer.</p>
-                  </div>
+            trialAlreadyUsed ? (
+              <div className="w-full flex items-start gap-3 bg-red-950/40 border border-red-800/50 rounded-2xl px-4 py-3.5 text-left mb-1">
+                <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                <div>
+                  <p className="text-sm font-semibold text-red-300">Essai gratuit déjà utilisé</p>
+                  <p className="text-xs text-red-400/80 mt-0.5">Cet email a déjà bénéficié d&apos;un essai gratuit.</p>
                 </div>
-              ) : (
+              </div>
+            ) : (
+              <form action={startTrial} className="w-full">
                 <button
                   type="submit"
                   className="w-full bg-white hover:bg-zinc-100 active:bg-zinc-200 text-zinc-950 font-bold text-base py-4 rounded-2xl transition-colors shadow-xl cursor-pointer"
                 >
                   Démarrer gratuitement
                 </button>
-              )}
-            </form>
+              </form>
+            )
           )}
 
           <form action={createCheckoutSession} className="w-full">
