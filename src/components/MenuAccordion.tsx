@@ -34,6 +34,7 @@ export default function MenuAccordion({
   tableLabel,
   restaurantId,
   acceptedPaymentMethods,
+  onlineBlocked,
   fulfillmentModes,
 }: {
   categories: PublicCategory[]
@@ -42,6 +43,7 @@ export default function MenuAccordion({
   tableLabel: string | null
   restaurantId: string
   acceptedPaymentMethods: string[]
+  onlineBlocked: boolean
   fulfillmentModes: string[]
 }) {
   const [openIds, setOpenIds] = useState<string[]>(
@@ -53,6 +55,7 @@ export default function MenuAccordion({
   const [isPending, startTransition] = useTransition()
   const [cartStep, setCartStep] = useState<CartStep>('cart')
   const [orderError, setOrderError] = useState<string | null>(null)
+  const [successWasCash, setSuccessWasCash] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
   const [fulfillmentType, setFulfillmentType] = useState<'table' | 'pickup'>('table')
   const [pickupCode, setPickupCode] = useState<string | null>(null)
@@ -132,6 +135,7 @@ export default function MenuAccordion({
       })
       if (result.success) {
         setSuccessPickupCode(result.pickupCode ?? null)
+        setSuccessWasCash(true)
         setCartStep('success')
         setCart({})
         setNote('')
@@ -240,6 +244,12 @@ export default function MenuAccordion({
                 </div>
                 <h3 className="text-xl font-bold text-stone-100 mb-2">Commande envoyée !</h3>
                 {tableLabel && !successPickupCode && <p className="text-xs text-stone-500 mb-2 font-medium">{tableLabel}</p>}
+                {successWasCash && !successPickupCode && (
+                  <div className="flex items-center gap-2 bg-stone-800/60 border border-stone-700/50 rounded-2xl px-4 py-3 mb-4 text-sm text-stone-300">
+                    <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
+                    Pensez à régler votre addition à la caisse.
+                  </div>
+                )}
                 {successPickupCode ? (
                   <>
                     <p className="text-stone-400 text-sm mb-4 leading-relaxed">
@@ -256,7 +266,7 @@ export default function MenuAccordion({
                     Votre commande a bien été transmise. Le service va s&apos;en occuper dans quelques instants.
                   </p>
                 )}
-                <button onClick={() => { setCartOpen(false); setSuccessPickupCode(null) }} className="bg-stone-800 hover:bg-stone-700 text-stone-100 font-semibold px-8 py-3 rounded-2xl transition-colors">
+                <button onClick={() => { setCartOpen(false); setSuccessPickupCode(null); setSuccessWasCash(false) }} className="bg-stone-800 hover:bg-stone-700 text-stone-100 font-semibold px-8 py-3 rounded-2xl transition-colors">
                   Fermer
                 </button>
               </div>
@@ -526,13 +536,30 @@ export default function MenuAccordion({
                 {orderError && <p className="text-xs text-red-400 text-center px-5 pb-2">{orderError}</p>}
 
                 <div className="px-5 py-4 shrink-0 border-t border-stone-800/60">
-                  <button
-                    onClick={handleOrder}
-                    disabled={isPending}
-                    className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-2xl transition-colors text-base"
-                  >
-                    {isPending ? 'Envoi…' : `Commander · ${fmt(totalPrice)}`}
-                  </button>
+                  {acceptedPaymentMethods.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 py-2 text-center">
+                      <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center mb-1">
+                        <svg className="w-5 h-5 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                      </div>
+                      <p className="text-stone-300 font-semibold text-sm">Commande en ligne indisponible</p>
+                      <p className="text-stone-500 text-xs leading-relaxed">Le paiement en ligne n&apos;est pas encore configuré par ce restaurant. Veuillez commander directement auprès du service.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {onlineBlocked && (
+                        <p className="text-xs text-amber-500/80 text-center mb-3">
+                          Paiement en ligne indisponible — règlement à la caisse uniquement.
+                        </p>
+                      )}
+                      <button
+                        onClick={handleOrder}
+                        disabled={isPending}
+                        className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-2xl transition-colors text-base"
+                      >
+                        {isPending ? 'Envoi…' : `Commander · ${fmt(totalPrice)}`}
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}

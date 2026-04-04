@@ -195,6 +195,10 @@ export default async function PublicMenuPage({
               (restaurant.accepted_payment_methods as string[] | null ?? ['online', 'cash'])
                 .filter(m => m !== 'online' || !!restaurant.stripe_charges_enabled)
             }
+            onlineBlocked={
+              !!(restaurant.accepted_payment_methods as string[] | null ?? ['online', 'cash']).includes('online')
+              && !restaurant.stripe_charges_enabled
+            }
             fulfillmentModes={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
           />
         )}

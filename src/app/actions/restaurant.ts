@@ -878,7 +878,6 @@ export async function placeOrder(payload: {
     .single()
 
   if (orderError || !order) {
-    console.error('[placeOrder] orderError:', JSON.stringify(orderError))
     return { success: false, error: 'Erreur lors de la création de la commande' }
   }
 
