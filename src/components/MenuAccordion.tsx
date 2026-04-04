@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { CATEGORY_TYPES } from '@/lib/category-types'
 import type { PublicCategory } from '@/app/menu/[slug]/page'
 import { placeOrder } from '@/app/actions/restaurant'
@@ -51,7 +51,15 @@ export default function MenuAccordion({
   const [openIds, setOpenIds] = useState<string[]>(
     categories.length > 0 ? [categories[0].id] : []
   )
-  const [cart, setCart] = useState<Record<string, CartItem>>({})
+  const cartKey = `cart_${restaurantId}`
+  const [cart, setCart] = useState<Record<string, CartItem>>(() => {
+    if (typeof window === 'undefined') return {}
+    try { return JSON.parse(localStorage.getItem(cartKey) ?? '{}') } catch { return {} }
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem(cartKey, JSON.stringify(cart)) } catch { /* ignore */ }
+  }, [cart, cartKey])
   const [cartOpen, setCartOpen] = useState(false)
   const [note, setNote] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -143,6 +151,7 @@ export default function MenuAccordion({
         setNote('')
         setCustomerEmail('')
         setPickupCode(null)
+        try { localStorage.removeItem(cartKey) } catch { /* ignore */ }
       } else {
         setOrderError(result.error)
       }
@@ -493,7 +502,7 @@ export default function MenuAccordion({
                   fulfillmentType={fulfillmentType}
                   pickupCode={pickupCode || undefined}
                   brandColor={brandColor}
-                  onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail(''); setPickupCode(null) }}
+                  onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail(''); setPickupCode(null); try { localStorage.removeItem(cartKey) } catch { /* ignore */ } }}
                   onBack={() => setCartStep('email')}
                 />
               </>

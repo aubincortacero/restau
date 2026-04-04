@@ -24,3 +24,60 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Light mode dashboard ───────────────────────────────── */
+html.theme-light {
+  color-scheme: light;
+}
+
+/* Fonds */
+html.theme-light .bg-zinc-950 { background-color: #f4f4f5 !important; }
+html.theme-light .bg-zinc-900 { background-color: #ffffff !important; }
+html.theme-light .bg-zinc-800 { background-color: #e4e4e7 !important; }
+html.theme-light .bg-zinc-700 { background-color: #d4d4d8 !important; }
+html.theme-light .bg-zinc-800\/40 { background-color: #e4e4e766 !important; }
+html.theme-light .bg-zinc-800\/60 { background-color: #e4e4e799 !important; }
+html.theme-light .bg-zinc-900\/50 { background-color: #ffffff80 !important; }
+html.theme-light .bg-zinc-900\/80 { background-color: #ffffffcc !important; }
+html.theme-light .bg-stone-900 { background-color: #ffffff !important; }
+html.theme-light .bg-stone-900\/95 { background-color: #fffffff2 !important; }
+html.theme-light .bg-stone-800 { background-color: #e4e4e7 !important; }
+html.theme-light .bg-stone-800\/60 { background-color: #e4e4e799 !important; }
+html.theme-light .bg-stone-950 { background-color: #f4f4f5 !important; }
+
+/* Textes principaux */
+html.theme-light .text-white { color: #18181b !important; }
+html.theme-light .text-zinc-100 { color: #27272a !important; }
+html.theme-light .text-zinc-200 { color: #3f3f46 !important; }
+html.theme-light .text-zinc-300 { color: #52525b !important; }
+html.theme-light .text-zinc-400 { color: #71717a !important; }
+html.theme-light .text-zinc-500 { color: #a1a1aa !important; }
+html.theme-light .text-stone-100 { color: #27272a !important; }
+html.theme-light .text-stone-200 { color: #3f3f46 !important; }
+html.theme-light .text-stone-300 { color: #52525b !important; }
+html.theme-light .text-stone-400 { color: #71717a !important; }
+html.theme-light .text-stone-500 { color: #a1a1aa !important; }
+
+/* Hover textes */
+html.theme-light .hover\:text-white:hover { color: #18181b !important; }
+html.theme-light .hover\:text-zinc-200:hover { color: #3f3f46 !important; }
+html.theme-light .hover\:text-zinc-300:hover { color: #52525b !important; }
+html.theme-light .hover\:text-stone-200:hover { color: #3f3f46 !important; }
+html.theme-light .hover\:text-stone-300:hover { color: #52525b !important; }
+
+/* Bordures */
+html.theme-light .border-zinc-800 { border-color: #d4d4d8 !important; }
+html.theme-light .border-zinc-700 { border-color: #a1a1aa !important; }
+html.theme-light .border-zinc-800\/60 { border-color: #d4d4d899 !important; }
+html.theme-light .border-stone-800 { border-color: #d4d4d8 !important; }
+html.theme-light .border-stone-800\/60 { border-color: #d4d4d899 !important; }
+html.theme-light .border-stone-700 { border-color: #a1a1aa !important; }
+
+/* Hover fonds */
+html.theme-light .hover\:bg-zinc-800:hover { background-color: #e4e4e7 !important; }
+html.theme-light .hover\:bg-zinc-700:hover { background-color: #d4d4d8 !important; }
+html.theme-light .hover\:bg-stone-800:hover { background-color: #e4e4e7 !important; }
+html.theme-light .hover\:bg-stone-800\/60:hover { background-color: #e4e4e799 !important; }
+
+/* Sticky header */
+html.theme-light header.border-b { border-color: #d4d4d8 !important; }
