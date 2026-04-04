@@ -15,16 +15,21 @@ function getOrigin(headersList: Awaited<ReturnType<typeof headers>>) {
   return headersList.get('origin') ?? 'http://localhost:3000'
 }
 
-export async function createConnectOnboardingLink() {
+export async function createConnectOnboardingLink(formData?: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: restaurant } = await supabase
+  const explicitId = formData?.get('restaurantId')?.toString() ?? null
+
+  const query = supabase
     .from('restaurants')
     .select('id, stripe_account_id')
     .eq('owner_id', user.id)
-    .single()
+
+  const { data: restaurant } = explicitId
+    ? await query.eq('id', explicitId).single()
+    : await query.order('created_at', { ascending: false }).limit(1).single()
 
   if (!restaurant) redirect('/dashboard/new')
 

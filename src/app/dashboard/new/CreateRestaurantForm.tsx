@@ -122,6 +122,7 @@ export default function CreateRestaurantForm() {
   const [isPending, startTransition] = useTransition()
   const [step, setStep] = useState<Step>('info')
   const [error, setError] = useState<string | null>(null)
+  const [createdRestaurantId, setCreatedRestaurantId] = useState<string | null>(null)
 
   const [data, setData] = useState<WizardData>({
     name: '',
@@ -154,6 +155,7 @@ export default function CreateRestaurantForm() {
       if (result.error) {
         setError(result.error)
       } else {
+        if (result.restaurantId) setCreatedRestaurantId(result.restaurantId)
         setStep('stripe')
       }
     })
@@ -209,6 +211,9 @@ export default function CreateRestaurantForm() {
         </p>
         <div className="w-full flex flex-col gap-3 max-w-sm">
           <form action={createConnectOnboardingLink} className="w-full">
+            {createdRestaurantId && (
+              <input type="hidden" name="restaurantId" value={createdRestaurantId} />
+            )}
             <button
               type="submit"
               className="w-full bg-[#635bff] hover:bg-[#4f46e5] text-white font-bold py-4 rounded-2xl transition-colors text-sm cursor-pointer shadow-lg shadow-[#635bff]/20"

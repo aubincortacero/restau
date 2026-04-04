@@ -68,7 +68,9 @@ export async function createRestaurantFull(payload: {
     maxAge: 60 * 60 * 24 * 365,
   })
 
-  revalidatePath('/dashboard')
+  // Pas de revalidatePath ici — ça déclencherait un router.refresh() côté client
+  // qui remonterait le wizard et réinitialiserait le state. La navigation
+  // vers /dashboard après la step Stripe suffit à charger les données fraîches.
   return { restaurantId: data.id }
 }
 

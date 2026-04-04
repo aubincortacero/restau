@@ -131,6 +131,7 @@ ADD COLUMN IF NOT EXISTS stripe_details_submitted boolean DEFAULT false;`}
               Une fois connecté, les paiements de vos clients seront automatiquement virés sur votre compte bancaire via Stripe.
             </div>
             <form action={createConnectOnboardingLink}>
+              <input type="hidden" name="restaurantId" value={restaurant.id} />
               <button
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 bg-[#635BFF] hover:bg-[#5851DB] text-white text-sm font-semibold px-5 py-3 rounded-xl transition-colors cursor-pointer"
@@ -147,6 +148,7 @@ ADD COLUMN IF NOT EXISTS stripe_details_submitted boolean DEFAULT false;`}
               Votre inscription Stripe est incomplète. Finalisez-la pour commencer à encaisser.
             </div>
             <form action={createConnectOnboardingLink}>
+              <input type="hidden" name="restaurantId" value={restaurant.id} />
               <button
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 bg-[#635BFF] hover:bg-[#5851DB] text-white text-sm font-semibold px-5 py-3 rounded-xl transition-colors cursor-pointer"
