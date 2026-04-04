@@ -44,16 +44,18 @@ export default function SubscribeWrapper({ expired, isAdmin, email }: Props) {
   const [showPricing, setShowPricing] = useState(false)
   const countdown = useCountdown()
 
+  const onboardingKey = `qomand_onboarding_done_${email}`
+
   useEffect(() => {
-    const done = expired || localStorage.getItem('qomand_onboarding_done') === '1'
+    const done = expired || localStorage.getItem(onboardingKey) === '1'
     setShowPricing(done)
     setReady(true)
-  }, [expired])
+  }, [expired, onboardingKey])
 
   const handleOnboardingComplete = useCallback(() => {
-    localStorage.setItem('qomand_onboarding_done', '1')
+    localStorage.setItem(onboardingKey, '1')
     setShowPricing(true)
-  }, [])
+  }, [onboardingKey])
 
   if (!ready) {
     return (
@@ -126,7 +128,7 @@ export default function SubscribeWrapper({ expired, isAdmin, email }: Props) {
         <p className="text-white/60 text-center text-sm max-w-xs mb-8 leading-relaxed">
           {expired
             ? '20 €/mois · abonnez-vous pour continuer à recevoir vos commandes.'
-            : '14 jours offerts, puis 20 €/mois. Menus, tables, paiements et commandes depuis un QR code.'
+            : '7 jours offerts, puis 20 €/mois. Menus, tables, paiements et commandes depuis un QR code.'
           }
         </p>
 
