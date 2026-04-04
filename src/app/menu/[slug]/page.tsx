@@ -82,7 +82,7 @@ export default async function PublicMenuPage({
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, name, logo_url, address, happy_hour, accepted_payment_methods, fulfillment_modes')
+    .select('id, name, logo_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled')
     .eq('slug', slug)
     .single()
 
@@ -191,7 +191,10 @@ export default async function PublicMenuPage({
             tableId={tableId ?? null}
             tableLabel={tableLabel}
             restaurantId={restaurant.id}
-            acceptedPaymentMethods={(restaurant.accepted_payment_methods as string[] | null) ?? ['online', 'cash']}
+            acceptedPaymentMethods={
+              (restaurant.accepted_payment_methods as string[] | null ?? ['online', 'cash'])
+                .filter(m => m !== 'online' || !!restaurant.stripe_charges_enabled)
+            }
             fulfillmentModes={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
           />
         )}
