@@ -81,3 +81,37 @@ html.theme-light .hover\:bg-stone-800\/60:hover { background-color: #e4e4e799 !i
 
 /* Sticky header */
 html.theme-light header.border-b { border-color: #d4d4d8 !important; }
+
+/* ── Accent light mode : #F1895C ───────────────────────────── */
+html.theme-light .bg-orange-500 { background-color: #F1895C !important; }
+html.theme-light .bg-orange-400 { background-color: #f4a07f !important; }
+html.theme-light .hover\:bg-orange-500:hover { background-color: #F1895C !important; }
+html.theme-light .hover\:bg-orange-400:hover { background-color: #f4a07f !important; }
+html.theme-light .active\:bg-orange-600:active { background-color: #d96b40 !important; }
+html.theme-light .bg-orange-500\/10,
+html.theme-light .bg-orange-500\/8,
+html.theme-light .bg-orange-500\/15,
+html.theme-light .bg-orange-500\/20 { background-color: #F1895C22 !important; }
+html.theme-light .text-orange-500 { color: #F1895C !important; }
+html.theme-light .text-orange-400 { color: #e07040 !important; }
+html.theme-light .hover\:text-orange-400:hover { color: #e07040 !important; }
+html.theme-light .hover\:text-orange-300:hover { color: #c85c28 !important; }
+html.theme-light .border-orange-500 { border-color: #F1895C !important; }
+html.theme-light .border-orange-500\/30 { border-color: #F1895C4d !important; }
+html.theme-light .border-orange-500\/20 { border-color: #F1895C33 !important; }
+html.theme-light .hover\:border-orange-500\/50:hover { border-color: #F1895C80 !important; }
+html.theme-light .ring-orange-500\/50 { --tw-ring-color: #F1895C80 !important; }
+html.theme-light .focus\:ring-orange-500\/50:focus { --tw-ring-color: #F1895C80 !important; }
+html.theme-light .focus\:border-orange-500:focus { border-color: #F1895C !important; }
+
+/* ── Popups / overlays en light mode ───────────────────────── */
+html.theme-light .popup-panel {
+  background-color: #ffffff !important;
+  border-color: #d4d4d8 !important;
+}
+html.theme-light .popup-panel .border-b,
+html.theme-light .popup-panel .border-zinc-800 { border-color: #e4e4e7 !important; }
+html.theme-light .popup-panel .bg-zinc-800 { background-color: #f4f4f5 !important; }
+html.theme-light .popup-panel .bg-zinc-800\/40,
+html.theme-light .popup-panel .bg-zinc-800\/60 { background-color: #f4f4f566 !important; }
+html.theme-light .bg-zinc-800.rounded-full { background-color: #e4e4e7 !important; }

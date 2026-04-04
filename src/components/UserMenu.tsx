@@ -75,7 +75,7 @@ export default function UserMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl shadow-black/40 z-50 overflow-hidden">
+        <div className="popup-panel absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl shadow-black/40 z-50 overflow-hidden">
           {/* Infos utilisateur */}
           <div className="px-4 py-3 border-b border-zinc-800">
             <p className="text-xs font-semibold text-white truncate">{displayName}</p>

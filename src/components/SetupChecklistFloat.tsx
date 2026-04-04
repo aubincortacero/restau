@@ -37,7 +37,7 @@ export default function SetupChecklistFloat({ items }: Props) {
   // Tout fait ET déjà fermé → rien (géré ci-dessus)
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 w-64 rounded-2xl border border-zinc-800 bg-zinc-900/95 shadow-2xl shadow-black/40 backdrop-blur-sm">
+    <div className="popup-panel fixed bottom-6 right-6 z-40 w-64 rounded-2xl border border-zinc-800 bg-zinc-900/95 shadow-2xl shadow-black/40 backdrop-blur-sm">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
         <button
