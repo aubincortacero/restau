@@ -11,6 +11,7 @@ import { setActiveRestaurant, deleteRestaurant } from '@/app/actions/restaurant'
 import OrderNotificationBell from '@/components/OrderNotificationBell'
 import PendingOrdersFloat from '@/components/PendingOrdersFloat'
 import UrgencyBanner from '@/components/UrgencyBanner'
+import SetupChecklist from '@/components/SetupChecklist'
 import { getSubscriptionStatus, isAccessGranted } from '@/lib/subscription'
 
 type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
@@ -168,6 +169,8 @@ export default async function DashboardLayout({
       {restaurant && (
         <PendingOrdersFloat restaurantId={restaurant.id} />
       )}
+
+      <SetupChecklist />
 
       {/* Bottom tab bar mobile */}
       <MobileNav restaurantSlug={restaurants.find((r) => r.id === activeRestaurantId)?.slug} />
