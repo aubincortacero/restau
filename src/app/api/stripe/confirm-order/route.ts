@@ -9,9 +9,16 @@ const resend = process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.include
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
+function generatePickupCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const rand = (n: number) =>
+    Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return `${rand(3)} ${rand(3)}`
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { paymentIntentId, stripeAccountId, customerEmail } = await req.json()
+    const { paymentIntentId, stripeAccountId, customerEmail, fulfillmentType: clientFulfillmentType, pickupCode: clientPickupCode } = await req.json()
     if (!paymentIntentId || typeof paymentIntentId !== 'string') {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
     }
@@ -37,6 +44,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { restaurantId, tableId, note, items: itemsJson } = pi.metadata
+    const fulfillmentType = (pi.metadata.fulfillmentType === 'pickup' || clientFulfillmentType === 'pickup') ? 'pickup' : 'table'
+    const pickupCode = fulfillmentType === 'pickup'
+      ? (pi.metadata.pickupCode || clientPickupCode || generatePickupCode())
+      : null
     if (!restaurantId || !itemsJson) {
       return NextResponse.json({ error: 'Metadata manquante' }, { status: 400 })
     }
@@ -53,6 +64,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Articles introuvables' }, { status: 400 })
     }
 
+    // Résoudre email avant l'insert (nécessaire pour customer_email)
+    const email = customerEmail && typeof customerEmail === 'string' && customerEmail.includes('@')
+      ? customerEmail.trim()
+      : null
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -63,6 +79,9 @@ export async function POST(req: NextRequest) {
         payment_status: 'paid',
         customer_note: note || null,
         stripe_payment_intent_id: pi.id,
+        fulfillment_type: fulfillmentType,
+        pickup_code: pickupCode,
+        customer_email: email,
       })
       .select('id, created_at')
       .single()
@@ -83,11 +102,6 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('order_items').insert(orderItemsToInsert)
 
-    // Envoi email de confirmation si email fourni et Resend configuré
-    const email = customerEmail && typeof customerEmail === 'string' && customerEmail.includes('@')
-      ? customerEmail.trim()
-      : null
-
     if (email && resend) {
       const { data: restaurant } = await supabase
         .from('restaurants')
@@ -99,9 +113,11 @@ export async function POST(req: NextRequest) {
         ? await supabase.from('tables').select('number, label').eq('id', tableId).single()
         : { data: null }
 
-      const tableLabel = tableData
-        ? `Table ${tableData.number}${tableData.label ? ` — ${tableData.label}` : ''}`
-        : 'Commande sur place'
+      const tableLabel = fulfillmentType === 'pickup'
+        ? 'Retrait au comptoir'
+        : tableData
+          ? `Table ${tableData.number}${tableData.label ? ` — ${tableData.label}` : ''}`
+          : 'Commande sur place'
 
       const emailItems = items.map((pi_item) => {
         const dbItem = dbItems.find((i) => i.id === pi_item.itemId)!
@@ -126,6 +142,7 @@ export async function POST(req: NextRequest) {
           total,
           orderId: order.id,
           createdAt,
+          pickupCode: pickupCode ?? undefined,
         }),
       }).catch(() => { /* email non bloquant */ })
     }

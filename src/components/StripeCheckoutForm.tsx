@@ -17,14 +17,18 @@ type Props = {
   note: string
   totalPrice: number
   customerEmail?: string
+  fulfillmentType?: 'table' | 'pickup'
+  pickupCode?: string
   onSuccess: () => void
   onBack: () => void
 }
 
-function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, onSuccess, onBack }: {
+function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentType, pickupCode, onSuccess, onBack }: {
   totalPrice: number
   stripeAccountId: string | null
   customerEmail?: string
+  fulfillmentType?: 'table' | 'pickup'
+  pickupCode?: string
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -68,7 +72,7 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, onSuccess, o
       const res = await fetch('/api/stripe/confirm-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentIntentId: paymentIntent.id, stripeAccountId, customerEmail }),
+        body: JSON.stringify({ paymentIntentId: paymentIntent.id, stripeAccountId, customerEmail, fulfillmentType, pickupCode }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -108,7 +112,7 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, onSuccess, o
   )
 }
 
-export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, onSuccess, onBack }: Props) {
+export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, fulfillmentType, pickupCode, onSuccess, onBack }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -128,7 +132,7 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
     fetch('/api/stripe/create-payment-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restaurantId, tableId, items, note }),
+      body: JSON.stringify({ restaurantId, tableId, items, note, fulfillmentType: fulfillmentType ?? 'table', pickupCode }),
     })
       .then(res => res.json())
       .then(data => {
@@ -177,7 +181,7 @@ export default function StripeCheckoutForm({ restaurantId, tableId, items, note,
         },
       }}
     >
-      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} customerEmail={customerEmail} onSuccess={onSuccess} onBack={onBack} />
+      <CheckoutForm totalPrice={totalPrice} stripeAccountId={stripeAccountId} customerEmail={customerEmail} fulfillmentType={fulfillmentType} pickupCode={pickupCode} onSuccess={onSuccess} onBack={onBack} />
     </Elements>
   )
 }

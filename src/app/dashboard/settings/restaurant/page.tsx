@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import { updateRestaurant, updatePaymentMethods } from '@/app/actions/restaurant'
+import { updateRestaurant, updatePaymentMethods, updateFulfillmentModes } from '@/app/actions/restaurant'
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
 
@@ -13,7 +13,7 @@ export default async function SettingsRestaurantPage() {
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
@@ -77,6 +77,45 @@ export default async function SettingsRestaurantPage() {
               name="cash"
               value="1"
               defaultChecked={(restaurant.accepted_payment_methods ?? ['online', 'cash']).includes('cash')}
+              className="w-4 h-4 accent-orange-500 cursor-pointer"
+            />
+          </label>
+          <div className="pt-1">
+            <button type="submit" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
+              Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+        <h2 className="text-sm font-semibold text-white mb-1">Modes de service</h2>
+        <p className="text-xs text-zinc-500 mb-5">Comment vos clients récupèrent leur commande.</p>
+        <form action={updateFulfillmentModes} className="space-y-3">
+          <input type="hidden" name="id" value={restaurant.id} />
+          <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer">
+            <div>
+              <p className="text-sm font-medium text-white">Livré à la table</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Le serveur apporte la commande à la table</p>
+            </div>
+            <input
+              type="checkbox"
+              name="table"
+              value="1"
+              defaultChecked={(restaurant.fulfillment_modes as string[] | null ?? ['table']).includes('table')}
+              className="w-4 h-4 accent-orange-500 cursor-pointer"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer">
+            <div>
+              <p className="text-sm font-medium text-white">Retrait au comptoir</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Le client récupère sa commande avec un code</p>
+            </div>
+            <input
+              type="checkbox"
+              name="pickup"
+              value="1"
+              defaultChecked={(restaurant.fulfillment_modes as string[] | null ?? ['table']).includes('pickup')}
               className="w-4 h-4 accent-orange-500 cursor-pointer"
             />
           </label>

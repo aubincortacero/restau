@@ -7,6 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ACTIVE_RESTAURANT_COOKIE } from '@/lib/active-restaurant'
 import Stripe from 'stripe'
+import { Resend } from 'resend'
+import { renderOrderEmail, renderPickupReadyEmail } from '@/lib/email-template'
+
+const resend = process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.includes('votre_cle')
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null
 
 function slugify(str: string) {
   return str
@@ -149,6 +155,26 @@ export async function updatePaymentMethods(formData: FormData) {
   await supabase
     .from('restaurants')
     .update({ accepted_payment_methods: methods })
+    .eq('id', id)
+    .eq('owner_id', user.id)
+
+  revalidatePath('/dashboard/settings/restaurant')
+}
+
+export async function updateFulfillmentModes(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  const modes: string[] = []
+  if (formData.get('table') === '1') modes.push('table')
+  if (formData.get('pickup') === '1') modes.push('pickup')
+  if (modes.length === 0) return // Au moins un mode requis
+
+  await supabase
+    .from('restaurants')
+    .update({ fulfillment_modes: modes })
     .eq('id', id)
     .eq('owner_id', user.id)
 
@@ -760,13 +786,23 @@ function checkHHActive(hh: HHData | null): boolean {
   return now >= toMins(hh.start) && now < toMins(hh.end)
 }
 
+function generatePickupCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const rand = (n: number) =>
+    Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return `${rand(3)} ${rand(3)}`
+}
+
 export async function placeOrder(payload: {
   restaurantId: string
   tableId: string | null
   items: Array<{ itemId: string; quantity: number }>
   note: string
   paymentMethod?: 'cash' | 'online'
-}): Promise<{ success: true; orderId: string } | { success: false; error: string }> {
+  fulfillmentType?: 'table' | 'pickup'
+  customerEmail?: string
+  pickupCode?: string
+}): Promise<{ success: true; orderId: string; pickupCode?: string } | { success: false; error: string }> {
   // Validate input
   if (!payload.restaurantId || !Array.isArray(payload.items) || payload.items.length === 0) {
     return { success: false, error: 'Panier vide ou données invalides' }
@@ -785,7 +821,7 @@ export async function placeOrder(payload: {
   // Verify restaurant exists + get HH config
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, happy_hour')
+    .select('id, name, happy_hour')
     .eq('id', payload.restaurantId)
     .single()
   if (!restaurant) return { success: false, error: 'Restaurant introuvable' }
@@ -796,7 +832,7 @@ export async function placeOrder(payload: {
   const itemIds = payload.items.map(i => i.itemId)
   const { data: dbItems } = await supabase
     .from('items')
-    .select('id, price, happy_hour_price, is_available, category_id')
+    .select('id, name, price, happy_hour_price, is_available, category_id')
     .in('id', itemIds)
 
   if (!dbItems || dbItems.length !== itemIds.length) {
@@ -819,6 +855,12 @@ export async function placeOrder(payload: {
   }
 
   // Create order
+  const fulfillmentType = payload.fulfillmentType ?? 'table'
+  const customerEmail = payload.customerEmail?.trim() || null
+  const pickupCode = fulfillmentType === 'pickup'
+    ? (payload.pickupCode?.trim() || generatePickupCode())
+    : null
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -828,6 +870,9 @@ export async function placeOrder(payload: {
       payment_method: payload.paymentMethod ?? 'cash',
       payment_status: 'unpaid',
       customer_note: payload.note.trim() || null,
+      fulfillment_type: fulfillmentType,
+      pickup_code: pickupCode,
+      customer_email: customerEmail,
     })
     .select('id')
     .single()
@@ -854,6 +899,80 @@ export async function placeOrder(payload: {
     return { success: false, error: "Erreur lors de l'enregistrement des articles" }
   }
 
+  // Envoi email de confirmation pickup si email fourni
+  if (fulfillmentType === 'pickup' && pickupCode && customerEmail && resend) {
+    const itemsForEmail = payload.items.map(pi => {
+      const dbItem = dbItems.find(i => i.id === pi.itemId)!
+      const unitPrice = isHH && dbItem.happy_hour_price != null
+        ? Number(dbItem.happy_hour_price)
+        : Number(dbItem.price)
+      return { name: dbItem.name ?? '', quantity: pi.quantity, unit_price: unitPrice }
+    })
+    const total = itemsForEmail.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    const createdAt = new Date().toLocaleString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+      timeZone: 'Europe/Paris',
+    })
+    await resend.emails.send({
+      from: 'Qomand <noreply@qomand.fr>',
+      to: customerEmail,
+      subject: `Votre commande chez ${restaurant.name}`,
+      html: renderOrderEmail({
+        restaurantName: restaurant.name,
+        tableLabel: 'Retrait au comptoir',
+        items: itemsForEmail,
+        total,
+        orderId: order.id,
+        createdAt,
+        pickupCode,
+      }),
+    }).catch(() => { /* email non bloquant */ })
+  }
+
   revalidatePath('/dashboard/orders')
-  return { success: true, orderId: order.id }
+  return { success: true, orderId: order.id, pickupCode: pickupCode ?? undefined }
+}
+
+export async function markOrderReady(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  if (!id) return
+
+  // Vérifier que la commande appartient au restaurant de l'utilisateur
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, restaurant_id, pickup_code, customer_email')
+    .eq('id', id)
+    .single()
+  if (!order) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id, name')
+    .eq('id', order.restaurant_id)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  await supabase.from('orders').update({ status: 'ready' }).eq('id', id)
+
+  // Envoyer email "commande prête" si le client a un email et un code
+  if (order.customer_email && order.pickup_code && resend) {
+    await resend.emails.send({
+      from: 'Qomand <noreply@qomand.fr>',
+      to: order.customer_email,
+      subject: `Votre commande est prête chez ${restaurant.name}`,
+      html: renderPickupReadyEmail({
+        restaurantName: restaurant.name,
+        pickupCode: order.pickup_code,
+        orderId: order.id,
+      }),
+    }).catch(() => { /* email non bloquant */ })
+  }
+
+  revalidatePath('/dashboard/orders')
 }

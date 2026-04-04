@@ -8,7 +8,7 @@ import StripeCheckoutForm from '@/components/StripeCheckoutForm'
 
 type Item = PublicCategory['items'][number]
 type CartItem = { id: string; name: string; price: number; quantity: number }
-type CartStep = 'cart' | 'payment-choice' | 'email' | 'stripe-form' | 'success'
+type CartStep = 'cart' | 'payment-choice' | 'fulfillment-choice' | 'email' | 'stripe-form' | 'success'
 
 const CATEGORY_CIRCLE: Record<string, string> = {
   standard: 'bg-stone-800 text-stone-300',
@@ -34,6 +34,7 @@ export default function MenuAccordion({
   tableLabel,
   restaurantId,
   acceptedPaymentMethods,
+  fulfillmentModes,
 }: {
   categories: PublicCategory[]
   hhActive: boolean
@@ -41,6 +42,7 @@ export default function MenuAccordion({
   tableLabel: string | null
   restaurantId: string
   acceptedPaymentMethods: string[]
+  fulfillmentModes: string[]
 }) {
   const [openIds, setOpenIds] = useState<string[]>(
     categories.length > 0 ? [categories[0].id] : []
@@ -52,6 +54,9 @@ export default function MenuAccordion({
   const [cartStep, setCartStep] = useState<CartStep>('cart')
   const [orderError, setOrderError] = useState<string | null>(null)
   const [customerEmail, setCustomerEmail] = useState('')
+  const [fulfillmentType, setFulfillmentType] = useState<'table' | 'pickup'>('table')
+  const [pickupCode, setPickupCode] = useState<string | null>(null)
+  const [successPickupCode, setSuccessPickupCode] = useState<string | null>(null)
 
   function toggleCat(id: string) {
     setOpenIds(prev =>
@@ -78,12 +83,29 @@ export default function MenuAccordion({
   const totalQty = cartItems.reduce((s, i) => s + i.quantity, 0)
   const totalPrice = cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
 
+  function genPickupCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const rand = (n: number) =>
+      Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+    return `${rand(3)} ${rand(3)}`
+  }
+
   function handleOrder() {
     setOrderError(null)
     const hasOnline = acceptedPaymentMethods.includes('online')
     const hasCash = acceptedPaymentMethods.includes('cash')
+    const hasTable = fulfillmentModes.includes('table')
+    const hasPickup = fulfillmentModes.includes('pickup')
+
     if (hasOnline && hasCash) {
       setCartStep('payment-choice')
+    } else if (hasTable && hasPickup) {
+      setCartStep('fulfillment-choice')
+    } else if (hasPickup) {
+      // Seul pickup disponible : générer code, forcer email
+      setFulfillmentType('pickup')
+      setPickupCode(genPickupCode())
+      setCartStep('email')
     } else if (hasOnline) {
       setCartStep('email')
     } else {
@@ -100,11 +122,17 @@ export default function MenuAccordion({
         items: cartItems.map(i => ({ itemId: i.id, quantity: i.quantity })),
         note,
         paymentMethod: 'cash',
+        fulfillmentType,
+        customerEmail: customerEmail || undefined,
+        pickupCode: pickupCode || undefined,
       })
       if (result.success) {
+        setSuccessPickupCode(result.pickupCode ?? null)
         setCartStep('success')
         setCart({})
         setNote('')
+        setCustomerEmail('')
+        setPickupCode(null)
       } else {
         setOrderError(result.error)
       }
@@ -200,18 +228,31 @@ export default function MenuAccordion({
             </div>
 
             {cartStep === 'success' ? (
-              <div className="flex flex-col items-center justify-center py-12 px-8 text-center">
+              <div className="flex flex-col items-center justify-center py-10 px-8 text-center">
                 <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-800/40">
                   <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold text-stone-100 mb-2">Commande envoyée !</h3>
-                {tableLabel && <p className="text-xs text-stone-500 mb-2 font-medium">{tableLabel}</p>}
-                <p className="text-stone-400 text-sm mb-8 leading-relaxed">
-                  Votre commande a bien été transmise. Le service va s&apos;en occuper dans quelques instants.
-                </p>
-                <button onClick={() => setCartOpen(false)} className="bg-stone-800 hover:bg-stone-700 text-stone-100 font-semibold px-8 py-3 rounded-2xl transition-colors">
+                {tableLabel && !successPickupCode && <p className="text-xs text-stone-500 mb-2 font-medium">{tableLabel}</p>}
+                {successPickupCode ? (
+                  <>
+                    <p className="text-stone-400 text-sm mb-4 leading-relaxed">
+                      Votre commande est en cours de préparation. Récupérez-la au comptoir avec ce code :
+                    </p>
+                    <div className="w-full bg-stone-900 border-2 border-orange-500 rounded-2xl px-6 py-5 mb-6 text-center">
+                      <p className="text-xs text-stone-500 uppercase tracking-widest mb-1 font-medium">Code de retrait</p>
+                      <p className="text-4xl font-black text-orange-400 tracking-widest font-mono">{successPickupCode}</p>
+                      <p className="text-xs text-stone-600 mt-2">Un email de confirmation vous a été envoyé</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-stone-400 text-sm mb-8 leading-relaxed">
+                    Votre commande a bien été transmise. Le service va s&apos;en occuper dans quelques instants.
+                  </p>
+                )}
+                <button onClick={() => { setCartOpen(false); setSuccessPickupCode(null) }} className="bg-stone-800 hover:bg-stone-700 text-stone-100 font-semibold px-8 py-3 rounded-2xl transition-colors">
                   Fermer
                 </button>
               </div>
@@ -229,7 +270,12 @@ export default function MenuAccordion({
                 </div>
                 <div className="flex-1 px-5 pb-4 flex flex-col gap-3">
                   <button
-                    onClick={() => setCartStep('email')}
+                    onClick={() => {
+                      const hasPickup = fulfillmentModes.includes('pickup')
+                      const hasTable = fulfillmentModes.includes('table')
+                      if (hasPickup && hasTable) setCartStep('fulfillment-choice')
+                      else setCartStep('email')
+                    }}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
                   >
                     <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
@@ -243,7 +289,20 @@ export default function MenuAccordion({
                   </button>
 
                   <button
-                    onClick={placeCashOrder}
+                    onClick={() => {
+                      const hasPickup = fulfillmentModes.includes('pickup')
+                      const hasTable = fulfillmentModes.includes('table')
+                      if (hasPickup && hasTable) {
+                        setCartStep('fulfillment-choice')
+                      } else if (hasPickup) {
+                        setFulfillmentType('pickup')
+                        const code = genPickupCode()
+                        setPickupCode(code)
+                        setCartStep('email')
+                      } else {
+                        placeCashOrder()
+                      }
+                    }}
                     disabled={isPending}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-stone-600 bg-stone-900 hover:bg-stone-800/60 transition-all text-left active:scale-[0.99] disabled:opacity-60"
                   >
@@ -260,18 +319,91 @@ export default function MenuAccordion({
                 </div>
               </>
 
-            ) : cartStep === 'email' ? (
+            ) : cartStep === 'fulfillment-choice' ? (
               <>
                 <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
                   <button
-                    onClick={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
+                    onClick={() => setCartStep(acceptedPaymentMethods.includes('online') && acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
                     className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
                   </button>
                   <div>
-                    <h2 className="text-lg font-bold text-stone-100">Reçu par email</h2>
-                    <p className="text-xs text-stone-500 mt-0.5">Optionnel — aucune pub, juste la confirmation</p>
+                    <h2 className="text-lg font-bold text-stone-100">Comment récupérer votre commande ?</h2>
+                    {tableLabel && <p className="text-xs text-stone-500 mt-0.5">{tableLabel}</p>}
+                  </div>
+                </div>
+                <div className="flex-1 px-5 pb-4 flex flex-col gap-3">
+                  {fulfillmentModes.includes('table') && (
+                    <button
+                      onClick={() => {
+                        setFulfillmentType('table')
+                        setPickupCode(null)
+                        const hasOnline = acceptedPaymentMethods.includes('online')
+                        if (hasOnline) setCartStep('email')
+                        else placeCashOrder()
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0 text-2xl">
+                        🍽️
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-stone-100">Livré à la table</p>
+                        <p className="text-xs text-stone-500 mt-0.5">Le service apporte votre commande</p>
+                      </div>
+                    </button>
+                  )}
+                  {fulfillmentModes.includes('pickup') && (
+                    <button
+                      onClick={() => {
+                        setFulfillmentType('pickup')
+                        const code = genPickupCode()
+                        setPickupCode(code)
+                        setCartStep('email')
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-stone-600 bg-stone-900 hover:bg-stone-800/60 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="w-11 h-11 rounded-2xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0 text-2xl">
+                        🛍️
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-stone-100">Récupérer au comptoir</p>
+                        <p className="text-xs text-stone-500 mt-0.5">Vous récupérez votre commande au comptoir</p>
+                      </div>
+                    </button>
+                  )}
+                  {orderError && <p className="text-xs text-red-400 text-center">{orderError}</p>}
+                </div>
+              </>
+
+            ) : cartStep === 'email' ? (
+              <>
+                <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const hasBothPayments = acceptedPaymentMethods.includes('online') && acceptedPaymentMethods.includes('cash')
+                      const hasBothFulfillments = fulfillmentModes.includes('table') && fulfillmentModes.includes('pickup')
+                      if (hasBothFulfillments) setCartStep('fulfillment-choice')
+                      else if (hasBothPayments) setCartStep('payment-choice')
+                      else setCartStep('cart')
+                    }}
+                    className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                  </button>
+                  <div>
+                    {fulfillmentType === 'pickup' ? (
+                      <>
+                        <h2 className="text-lg font-bold text-stone-100">Votre email</h2>
+                        <p className="text-xs text-stone-500 mt-0.5">Pour recevoir votre code de retrait</p>
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="text-lg font-bold text-stone-100">Reçu par email</h2>
+                        <p className="text-xs text-stone-500 mt-0.5">Optionnel — aucune pub, juste la confirmation</p>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex-1 px-5 pb-6 flex flex-col gap-4">
@@ -280,20 +412,26 @@ export default function MenuAccordion({
                     value={customerEmail}
                     onChange={e => setCustomerEmail(e.target.value)}
                     placeholder="votre@email.com"
+                    required={fulfillmentType === 'pickup'}
                     className="w-full bg-stone-900 border border-stone-700 rounded-2xl px-4 py-3 text-sm text-stone-100 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                   />
                   <button
-                    onClick={() => setCartStep('stripe-form')}
+                    onClick={() => {
+                      if (fulfillmentType === 'pickup' && !customerEmail.includes('@')) return
+                      setCartStep('stripe-form')
+                    }}
                     className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-4 rounded-2xl transition-colors text-base"
                   >
-                    Continuer vers le paiement
+                    {fulfillmentType === 'pickup' ? 'Recevoir mon code et payer' : 'Continuer vers le paiement'}
                   </button>
-                  <button
-                    onClick={() => { setCustomerEmail(''); setCartStep('stripe-form') }}
-                    className="text-sm text-stone-500 hover:text-stone-300 text-center py-1 transition-colors"
-                  >
-                    Passer sans email
-                  </button>
+                  {fulfillmentType !== 'pickup' && (
+                    <button
+                      onClick={() => { setCustomerEmail(''); setCartStep('stripe-form') }}
+                      className="text-sm text-stone-500 hover:text-stone-300 text-center py-1 transition-colors"
+                    >
+                      Passer sans email
+                    </button>
+                  )}
                 </div>
               </>
 
@@ -301,7 +439,7 @@ export default function MenuAccordion({
               <>
                 <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
                   <button
-                    onClick={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'cart')}
+                    onClick={() => setCartStep('email')}
                     className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
@@ -318,8 +456,10 @@ export default function MenuAccordion({
                   note={note}
                   totalPrice={totalPrice}
                   customerEmail={customerEmail || undefined}
-                  onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail('') }}
-                  onBack={() => setCartStep(acceptedPaymentMethods.includes('cash') ? 'payment-choice' : 'email')}
+                  fulfillmentType={fulfillmentType}
+                  pickupCode={pickupCode || undefined}
+                  onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail(''); setPickupCode(null) }}
+                  onBack={() => setCartStep('email')}
                 />
               </>
 

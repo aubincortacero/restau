@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import TicketActions from './TicketActions'
 import { IconCreditCard, IconBanknote } from '@/components/icons'
-import { updateOrderStatus, archiveOrder } from '@/app/actions/restaurant'
+import { updateOrderStatus, archiveOrder, markOrderReady } from '@/app/actions/restaurant'
 import OrderTimer from '@/components/OrderTimer'
 
 type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
@@ -21,6 +21,7 @@ function formatDate(iso: string) {
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending:   { label: 'En attente',  color: 'text-yellow-400 bg-yellow-400/10' },
+  ready:     { label: 'Prête',       color: 'text-emerald-400 bg-emerald-400/10' },
   done:      { label: 'Envoyée',     color: 'text-zinc-400 bg-zinc-800' },
   cancelled: { label: 'Annulée',     color: 'text-red-400 bg-red-400/10' },
 }
@@ -57,6 +58,7 @@ export default async function OrdersPage() {
     .select(`
       id, status, payment_method, payment_status,
       customer_note, created_at,
+      fulfillment_type, pickup_code, customer_email,
       tables(number, label),
       order_items(
         quantity, unit_price, note,
@@ -113,28 +115,31 @@ export default async function OrdersPage() {
             const table = order.tables as unknown as { number: number; label: string | null } | null
             const items = order.order_items as unknown as OrderItem[]
             const isPending = order.status === 'pending'
+            const isReady = order.status === 'ready'
+            const isActive = isPending || isReady
+            const isPickup = order.fulfillment_type === 'pickup'
 
             return (
               <div
                 key={order.id}
-                className={`rounded-2xl overflow-hidden flex flex-col ${isPending ? 'bg-zinc-900 border-[2.5px] border-orange-500 shadow-lg shadow-orange-950/40' : 'bg-zinc-900 border border-zinc-800'}`}
+                className={`rounded-2xl overflow-hidden flex flex-col ${isPending ? 'bg-zinc-900 border-[2.5px] border-orange-500 shadow-lg shadow-orange-950/40' : isReady ? 'bg-zinc-900 border-[2.5px] border-blue-500 shadow-lg shadow-blue-950/40' : 'bg-zinc-900 border border-zinc-800'}`}
               >
                 {/* En-tête */}
                 <div className="px-5 pt-5 pb-4 flex items-center gap-4">
                   {/* Numéro de table — très visible */}
-                  <div className={`text-5xl font-black tabular-nums leading-none shrink-0 ${isPending ? 'text-orange-400' : 'text-zinc-500'}`}>
+                  <div className={`text-5xl font-black tabular-nums leading-none shrink-0 ${isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'}`}>
                     {table?.number ?? '?'}
                   </div>
 
                   {/* Infos centrales */}
                   <div className="flex-1 min-w-0">
                     {table?.label && (
-                      <p className={`text-base font-semibold leading-tight truncate ${isPending ? 'text-white' : 'text-zinc-300'}`}>
+                      <p className={`text-base font-semibold leading-tight truncate ${isActive ? 'text-white' : 'text-zinc-300'}`}>
                         {table.label}
                       </p>
                     )}
                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                      {isPending ? (
+                      {isActive ? (
                         <OrderTimer createdAt={order.created_at} thresholdMinutes={urgencyThreshold} />
                       ) : (
                         <span className="text-xs text-zinc-600">{formatDate(order.created_at)}</span>
@@ -142,44 +147,49 @@ export default async function OrdersPage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${payInfo.color}`}>
                         {payInfo.label}
                       </span>
-                      {!isPending && (
+                      {!isActive && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
                           {statusInfo.label}
                         </span>
                       )}
                     </div>
-                    <div className={`flex items-center gap-1 mt-1 text-xs ${isPending ? 'text-zinc-500' : 'text-zinc-600'}`}>
+                    <div className={`flex items-center gap-1 mt-1 text-xs ${isActive ? 'text-zinc-500' : 'text-zinc-600'}`}>
                       {order.payment_method === 'online'
                         ? <><IconCreditCard className="w-3.5 h-3.5" /> En ligne</>
                         : <><IconBanknote className="w-3.5 h-3.5" /> Caisse</>
                       }
+                      {isPickup && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-medium text-[11px]">
+                          🛍️ Comptoir
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   {/* Montant */}
-                  <div className={`text-2xl font-bold tabular-nums shrink-0 ${isPending ? 'text-white' : 'text-zinc-400'}`}>
+                  <div className={`text-2xl font-bold tabular-nums shrink-0 ${isActive ? 'text-white' : 'text-zinc-400'}`}>
                     {order.ttc.toFixed(2)} €
                   </div>
                 </div>
 
                 {/* Note client */}
                 {order.customer_note && (
-                  <div className={`mx-5 mb-3 text-sm italic rounded-xl px-3 py-2 ${isPending ? 'text-zinc-400 bg-zinc-800/60' : 'text-zinc-500 bg-zinc-800/60'}`}>
+                  <div className={`mx-5 mb-3 text-sm italic rounded-xl px-3 py-2 ${isActive ? 'text-zinc-400 bg-zinc-800/60' : 'text-zinc-500 bg-zinc-800/60'}`}>
                     &ldquo;{order.customer_note}&rdquo;
                   </div>
                 )}
 
                 {/* Séparateur + Articles */}
                 {items.length > 0 && (
-                  <div className={`mx-5 mb-4 rounded-xl overflow-hidden border ${isPending ? 'border-zinc-800' : 'border-zinc-800/60'}`}>
+                  <div className={`mx-5 mb-4 rounded-xl overflow-hidden border ${isActive ? 'border-zinc-800' : 'border-zinc-800/60'}`}>
                     {items.map((oi, i) => (
                       <div key={i} className={`flex justify-between items-baseline px-3 py-2 text-sm ${i > 0 ? 'border-t border-zinc-800' : ''}`}>
-                        <span className={isPending ? 'text-white' : 'text-zinc-300'}>
-                          <span className={`font-bold mr-1.5 ${isPending ? 'text-orange-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
+                        <span className={isActive ? 'text-white' : 'text-zinc-300'}>
+                          <span className={`font-bold mr-1.5 ${isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
                           {(oi.items as { name: string } | null)?.name ?? '—'}
                           {oi.note && <span className="text-zinc-500 font-normal"> · {oi.note}</span>}
                         </span>
-                        <span className={`shrink-0 ml-3 tabular-nums ${isPending ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                        <span className={`shrink-0 ml-3 tabular-nums ${isActive ? 'text-zinc-400' : 'text-zinc-500'}`}>
                           {(oi.quantity * Number(oi.unit_price)).toFixed(2)} €
                         </span>
                       </div>
@@ -187,25 +197,66 @@ export default async function OrdersPage() {
                   </div>
                 )}
 
+                {/* Code retrait */}
+                {isPickup && order.pickup_code && (
+                  <div className={`mx-5 mb-4 rounded-xl border-2 px-4 py-3 text-center ${isActive ? 'border-blue-500/50 bg-blue-500/5' : 'border-zinc-700 bg-zinc-800/40'}`}>
+                    <p className="text-[11px] text-zinc-500 uppercase tracking-widest mb-1 font-medium">Code de retrait</p>
+                    <p className={`text-2xl font-black tracking-widest font-mono ${isActive ? 'text-blue-300' : 'text-zinc-400'}`}>{order.pickup_code}</p>
+                    {order.customer_email && (
+                      <p className="text-[11px] text-zinc-600 mt-1 truncate">{order.customer_email}</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="mt-auto px-4 pb-4 flex flex-col gap-2">
                   {isPending && (
+                    isPickup ? (
+                      <form action={markOrderReady}>
+                        <input type="hidden" name="id" value={order.id} />
+                        <button
+                          type="submit"
+                          className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-base py-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                          Commande prête
+                        </button>
+                      </form>
+                    ) : (
+                      <form action={updateOrderStatus}>
+                        <input type="hidden" name="id" value={order.id} />
+                        <input type="hidden" name="status" value="done" />
+                        <button
+                          type="submit"
+                          className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold text-base py-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                          </svg>
+                          Commande envoyée
+                        </button>
+                      </form>
+                    )
+                  )}
+                  {isReady && isPickup && (
                     <form action={updateOrderStatus}>
                       <input type="hidden" name="id" value={order.id} />
                       <input type="hidden" name="status" value="done" />
                       <button
                         type="submit"
-                        className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold text-base py-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                        className="w-full bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-base py-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
-                        Commande envoyée
+                        Récupérée ✓
                       </button>
                     </form>
                   )}
                   <div className="flex items-center justify-between gap-2">
-                    {isPending ? (
+                    {isActive ? (
                       <form action={updateOrderStatus}>
                         <input type="hidden" name="id" value={order.id} />
                         <input type="hidden" name="status" value="cancelled" />
@@ -225,7 +276,7 @@ export default async function OrdersPage() {
                       </form>
                     )}
                     <TicketActions
-                      inverted={isPending}
+                      inverted={isActive}
                       order={{
                         id: order.id,
                         status: order.status,

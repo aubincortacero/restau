@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(req: NextRequest) {
   try {
-    const { restaurantId, tableId, items, note } = await req.json()
+    const { restaurantId, tableId, items, note, fulfillmentType, pickupCode } = await req.json()
 
     if (!restaurantId || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
@@ -87,6 +87,8 @@ export async function POST(req: NextRequest) {
         tableId: tableId ?? '',
         note: (note ?? '').slice(0, 500),
         items: JSON.stringify(items),
+        fulfillmentType: fulfillmentType === 'pickup' ? 'pickup' : 'table',
+        pickupCode: (fulfillmentType === 'pickup' && pickupCode) ? String(pickupCode) : '',
       },
     }
 

@@ -5,10 +5,11 @@ export type OrderEmailData = {
   total: number
   orderId: string
   createdAt: string
+  pickupCode?: string
 }
 
 export function renderOrderEmail(data: OrderEmailData): string {
-  const { restaurantName, tableLabel, items, total, orderId, createdAt } = data
+  const { restaurantName, tableLabel, items, total, orderId, createdAt, pickupCode } = data
 
   const itemRows = items
     .map(
@@ -85,6 +86,15 @@ export function renderOrderEmail(data: OrderEmailData): string {
               <!-- Divider -->
               <hr style="border:none;border-top:1px solid #27272a;margin:20px 0;" />
 
+              ${pickupCode ? `<!-- Code retrait -->
+              <div style="background-color:#1c1917;border:2px solid #f97316;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
+                <p style="margin:0 0 6px;font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Votre code de retrait</p>
+                <p style="margin:0;font-size:34px;font-weight:900;color:#f97316;letter-spacing:0.2em;font-family:monospace;">${pickupCode}</p>
+                <p style="margin:8px 0 0;font-size:12px;color:#71717a;">Présentez ce code au comptoir pour récupérer votre commande</p>
+              </div>
+              <hr style="border:none;border-top:1px solid #27272a;margin:20px 0;" />
+              ` : ''}
+
               <!-- Meta -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -105,6 +115,88 @@ export function renderOrderEmail(data: OrderEmailData): string {
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0;font-size:12px;color:#3f3f46;">
                 Paiement sécurisé par Stripe · Propulsé par Qomand
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+export type PickupReadyEmailData = {
+  restaurantName: string
+  pickupCode: string
+  orderId: string
+}
+
+export function renderPickupReadyEmail(data: PickupReadyEmailData): string {
+  const { restaurantName, pickupCode, orderId } = data
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Votre commande est prête — ${restaurantName}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#09090b;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding-bottom:32px;text-align:center;">
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
+                <tr>
+                  <td style="background-color:#f97316;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+                    <span style="color:white;font-size:22px;font-weight:bold;line-height:44px;">Q</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:20px;font-weight:700;color:#ffffff;">Qomand</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#71717a;">Votre commande est prête !</p>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background-color:#18181b;border:1px solid #27272a;border-radius:16px;padding:28px;">
+
+              <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#ffffff;">
+                Passez au comptoir 🎉
+              </p>
+              <p style="margin:0 0 24px;font-size:13px;color:#71717a;">
+                ${restaurantName} a préparé votre commande. Rendez-vous au comptoir pour la récupérer.
+              </p>
+
+              <!-- Code retrait -->
+              <div style="background-color:#1c1917;border:2px solid #f97316;border-radius:12px;padding:24px;text-align:center;margin-bottom:20px;">
+                <p style="margin:0 0 6px;font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Votre code de retrait</p>
+                <p style="margin:0;font-size:38px;font-weight:900;color:#f97316;letter-spacing:0.2em;font-family:monospace;">${pickupCode}</p>
+                <p style="margin:8px 0 0;font-size:12px;color:#71717a;">Présentez ce code au comptoir</p>
+              </div>
+
+              <!-- Meta -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:12px;color:#52525b;">Réf. commande</td>
+                  <td style="font-size:12px;color:#71717a;text-align:right;font-family:monospace;">#${orderId.slice(0, 8).toUpperCase()}</td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding-top:24px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#3f3f46;">
+                Propulsé par Qomand
               </p>
             </td>
           </tr>
