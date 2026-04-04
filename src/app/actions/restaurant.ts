@@ -231,6 +231,29 @@ export async function updateFulfillmentModes(formData: FormData) {
   redirect('/dashboard/settings/restaurant?saved=fulfillment')
 }
 
+export async function updateAppearance(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  const brand_color = (formData.get('brand_color') as string) || '#f97316'
+  const menu_button_radius = (formData.get('menu_button_radius') as string) || 'rounded'
+  const menu_header_style = (formData.get('menu_header_style') as string) || 'dark'
+
+  // Validation hex color
+  if (!/^#[0-9a-fA-F]{6}$/.test(brand_color)) return
+
+  await supabase
+    .from('restaurants')
+    .update({ brand_color, menu_button_radius, menu_header_style })
+    .eq('id', id)
+    .eq('owner_id', user.id)
+
+  revalidatePath('/dashboard/settings/restaurant')
+  redirect('/dashboard/settings/restaurant?saved=appearance')
+}
+
 export async function updateSchedules(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import { updateRestaurant } from '@/app/actions/restaurant'
 import { PaymentMethodsForm, FulfillmentModesForm } from './PaymentSettingsForm'
+import AppearanceForm from './AppearanceForm'
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
 
@@ -19,7 +20,7 @@ export default async function SettingsRestaurantPage({
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes, brand_color, menu_button_radius, menu_header_style').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
@@ -74,6 +75,19 @@ export default async function SettingsRestaurantPage({
         initial={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
         saved={saved === 'fulfillment'}
       />
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+        <h2 className="text-sm font-semibold text-white mb-5">Apparence</h2>
+        <AppearanceForm
+          restaurantId={restaurant.id}
+          initial={{
+            brand_color: (restaurant.brand_color as string | null) ?? '#f97316',
+            menu_button_radius: (restaurant.menu_button_radius as string | null) ?? 'rounded',
+            menu_header_style: (restaurant.menu_header_style as string | null) ?? 'dark',
+          }}
+          saved={saved === 'appearance'}
+        />
+      </div>
     </div>
   )
 }

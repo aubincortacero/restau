@@ -36,6 +36,7 @@ export default function MenuAccordion({
   acceptedPaymentMethods,
   onlineBlocked,
   fulfillmentModes,
+  brandColor = '#f97316',
 }: {
   categories: PublicCategory[]
   hhActive: boolean
@@ -45,6 +46,7 @@ export default function MenuAccordion({
   acceptedPaymentMethods: string[]
   onlineBlocked: boolean
   fulfillmentModes: string[]
+  brandColor?: string
 }) {
   const [openIds, setOpenIds] = useState<string[]>(
     categories.length > 0 ? [categories[0].id] : []
@@ -149,6 +151,20 @@ export default function MenuAccordion({
 
   return (
     <>
+      <style>{`
+        .menu-btn-primary { background-color: var(--brand); border-radius: var(--btn-radius, 12px); }
+        .menu-btn-primary:hover { filter: brightness(1.1); }
+        .menu-btn-primary:active { filter: brightness(0.9); }
+        .menu-add-btn:hover { background-color: color-mix(in srgb, var(--brand) 20%, transparent); color: var(--brand); border-color: color-mix(in srgb, var(--brand) 50%, transparent); }
+        .menu-choice-btn:hover { border-color: color-mix(in srgb, var(--brand) 60%, transparent); background-color: color-mix(in srgb, var(--brand) 6%, #1c1917); }
+        .menu-choice-icon { background-color: color-mix(in srgb, var(--brand) 12%, transparent) !important; border-color: color-mix(in srgb, var(--brand) 25%, transparent) !important; }
+        .menu-choice-icon svg { color: var(--brand) !important; }
+        .menu-cart-badge { background-color: var(--brand); }
+        .menu-pickup-code { border-color: var(--brand); }
+        .menu-pickup-text { color: var(--brand); }
+        .menu-item-plus { background-color: var(--brand); border-radius: 10px; }
+        .menu-item-plus:hover { filter: brightness(1.1); }
+      `}</style>
       <div className="pb-32">
         {categories.map(cat => {
           const isOpen = openIds.includes(cat.id)
@@ -166,7 +182,7 @@ export default function MenuAccordion({
                 <span className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0 relative ${circleClass}`}>
                   {emoji}
                   {catCartQty > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                    <span className="menu-cart-badge absolute -top-1 -right-1 w-5 h-5 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
                       {catCartQty}
                     </span>
                   )}
@@ -213,7 +229,7 @@ export default function MenuAccordion({
         <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-8 bg-gradient-to-t from-[#0a0908] via-[#0a0908]/95 to-transparent pointer-events-none">
           <button
             onClick={() => { setCartOpen(true); setCartStep('cart'); setOrderError(null) }}
-            className="pointer-events-auto w-full max-w-lg mx-auto flex items-center justify-between bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-2xl px-5 py-4 shadow-xl shadow-orange-900/30 transition-colors"
+            className="pointer-events-auto w-full max-w-lg mx-auto flex items-center justify-between menu-btn-primary text-white px-5 py-4 shadow-xl transition-colors"
           >
             <div className="flex items-center gap-3">
               <span className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center text-sm font-bold shrink-0">
@@ -255,9 +271,9 @@ export default function MenuAccordion({
                     <p className="text-stone-400 text-sm mb-4 leading-relaxed">
                       Votre commande est en cours de préparation. Récupérez-la au comptoir avec ce code :
                     </p>
-                    <div className="w-full bg-stone-900 border-2 border-orange-500 rounded-2xl px-6 py-5 mb-6 text-center">
+                    <div className="menu-pickup-code w-full bg-stone-900 border-2 rounded-2xl px-6 py-5 mb-6 text-center">
                       <p className="text-xs text-stone-500 uppercase tracking-widest mb-1 font-medium">Code de retrait</p>
-                      <p className="text-4xl font-black text-orange-400 tracking-widest font-mono">{successPickupCode}</p>
+                      <p className="menu-pickup-text text-4xl font-black tracking-widest font-mono">{successPickupCode}</p>
                       <p className="text-xs text-stone-600 mt-2">Un email de confirmation vous a été envoyé</p>
                     </div>
                   </>
@@ -291,10 +307,10 @@ export default function MenuAccordion({
                       if (hasPickup && hasTable) setCartStep('fulfillment-choice')
                       else setCartStep('email')
                     }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
+                    className="menu-choice-btn w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 bg-stone-900 transition-all text-left active:scale-[0.99]"
                   >
-                    <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                    <div className="menu-choice-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-stone-100">Payer maintenant</p>
@@ -358,9 +374,9 @@ export default function MenuAccordion({
                         if (pendingPaymentMethod === 'cash') placeCashOrder()
                         else setCartStep('email')
                       }}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-orange-500/50 bg-stone-900 hover:bg-orange-500/5 transition-all text-left active:scale-[0.99]"
+                      className="menu-choice-btn w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 bg-stone-900 transition-all text-left active:scale-[0.99]"
                     >
-                      <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0 text-2xl">
+                      <div className="menu-choice-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-2xl">
                         🍽️
                       </div>
                       <div className="flex-1">
@@ -428,7 +444,7 @@ export default function MenuAccordion({
                     onChange={e => setCustomerEmail(e.target.value)}
                     placeholder="votre@email.com"
                     required={fulfillmentType === 'pickup'}
-                    className="w-full bg-stone-900 border border-stone-700 rounded-2xl px-4 py-3 text-sm text-stone-100 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    className="w-full bg-stone-900 border border-stone-700 rounded-2xl px-4 py-3 text-sm text-stone-100 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/40"
                   />
                   <button
                     onClick={() => {
@@ -436,7 +452,7 @@ export default function MenuAccordion({
                       if (pendingPaymentMethod === 'cash') placeCashOrder()
                       else setCartStep('stripe-form')
                     }}
-                    className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-4 rounded-2xl transition-colors text-base"
+                    className="w-full menu-btn-primary text-white font-bold py-4 transition-colors text-base"
                   >
                     {fulfillmentType === 'pickup'
                       ? pendingPaymentMethod === 'cash' ? 'Confirmer ma commande' : 'Recevoir mon code et payer'
@@ -528,7 +544,7 @@ export default function MenuAccordion({
                       placeholder="Ex : sans oignons, allergie gluten…"
                       rows={2}
                       maxLength={300}
-                      className="w-full bg-stone-900 border border-stone-800 rounded-2xl px-4 py-3 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-500/40 resize-none"
+                      className="w-full bg-stone-900 border border-stone-800 rounded-2xl px-4 py-3 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/40 resize-none"
                     />
                   </div>
                 </div>
@@ -554,7 +570,7 @@ export default function MenuAccordion({
                       <button
                         onClick={handleOrder}
                         disabled={isPending}
-                        className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-2xl transition-colors text-base"
+                        className="w-full menu-btn-primary disabled:opacity-60 text-white font-bold py-4 transition-colors text-base"
                       >
                         {isPending ? 'Envoi…' : `Commander · ${fmt(totalPrice)}`}
                       </button>
@@ -627,7 +643,7 @@ function ItemRow({
           {qty === 0 ? (
             <button
               onClick={onAdd}
-              className="flex items-center gap-1.5 bg-stone-800/80 hover:bg-orange-500/20 hover:text-orange-400 active:scale-95 text-stone-300 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all border border-stone-700/50 hover:border-orange-500/30"
+              className="menu-add-btn flex items-center gap-1.5 bg-stone-800/80 active:scale-95 text-stone-300 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all border border-stone-700/50"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -640,7 +656,7 @@ function ItemRow({
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
               </button>
               <span className="text-stone-100 font-bold text-sm w-5 text-center">{qty}</span>
-              <button onClick={onAdd} className="w-8 h-8 rounded-xl bg-orange-500 hover:bg-orange-400 active:scale-95 text-white flex items-center justify-center transition-all">
+              <button onClick={onAdd} className="menu-item-plus w-8 h-8 active:scale-95 text-white flex items-center justify-center transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               </button>
             </div>

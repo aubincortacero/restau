@@ -90,7 +90,7 @@ export default async function DashboardLayout({
   const restaurantData = activeRestaurantId
     ? await supabase
         .from('restaurants')
-        .select('id, opening_hours, happy_hour')
+        .select('id, opening_hours, happy_hour, brand_color')
         .eq('id', activeRestaurantId)
         .single()
         .then((r) => r.data)
@@ -110,15 +110,22 @@ export default async function DashboardLayout({
     : null
 
   const urgencyThreshold = (restaurant?.happy_hour as HappyHour | null)?.urgency_threshold ?? 5
+  const brandColor = (restaurant as { brand_color?: string } | null)?.brand_color ?? '#f97316'
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col" style={{ '--brand': brandColor, '--brand-dark': brandColor } as React.CSSProperties}>
+      <style>{`
+        [data-brand] { background-color: var(--brand) !important; }
+        [data-brand-text] { color: var(--brand) !important; }
+        [data-brand-border] { border-color: var(--brand) !important; }
+        [data-brand-ring] { --tw-ring-color: color-mix(in srgb, var(--brand) 50%, transparent) !important; }
+      `}</style>
       {/* Top nav */}
       <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10">
         <div className="px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
+              <div data-brand className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
                 <IconLogo className="w-4 h-4 text-white" />
               </div>
               <span className="font-semibold text-sm hidden sm:block">Qomand</span>

@@ -82,7 +82,7 @@ export default async function PublicMenuPage({
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, name, logo_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled')
+    .select('id, name, logo_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled, brand_color, menu_button_radius, menu_header_style')
     .eq('slug', slug)
     .single()
 
@@ -126,11 +126,36 @@ export default async function PublicMenuPage({
 
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0)
 
+  const brandColor = (restaurant.brand_color as string | null) ?? '#f97316'
+  const buttonRadius = (restaurant.menu_button_radius as string | null) ?? 'rounded'
+  const headerStyle = (restaurant.menu_header_style as string | null) ?? 'dark'
+
+  const headerBg =
+    headerStyle === 'colored' ? brandColor :
+    headerStyle === 'light' ? '#fafaf9' :
+    '#0a0908'
+  const headerText = headerStyle === 'light' ? '#1c1917' : '#fafaf9'
+  const headerSubText = headerStyle === 'light' ? '#78716c' : '#78716c'
+
+  const btnRadius =
+    buttonRadius === 'pill' ? '9999px' :
+    buttonRadius === 'sharp' ? '4px' :
+    '12px'
+
   return (
-    <div className="min-h-screen bg-[#0a0908] text-stone-100">
+    <div
+      className="min-h-screen bg-[#0a0908] text-stone-100"
+      style={{
+        '--brand': brandColor,
+        '--btn-radius': btnRadius,
+        '--header-bg': headerBg,
+        '--header-text': headerText,
+        '--header-subtext': headerSubText,
+      } as React.CSSProperties}
+    >
       {/* Hero header */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-950/20 to-transparent pointer-events-none" />
+      <div className="relative overflow-hidden" style={{ backgroundColor: 'var(--header-bg)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: headerStyle === 'dark' ? 'linear-gradient(to bottom, color-mix(in srgb, var(--brand) 15%, transparent), transparent)' : 'none' }} />
         <div className="relative px-5 pt-12 pb-8 text-center">
           {restaurant.logo_url && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -140,11 +165,11 @@ export default async function PublicMenuPage({
               className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 border border-stone-700/60"
             />
           )}
-          <h1 className="text-3xl font-bold tracking-tight text-stone-50">
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--header-text)' }}>
             {restaurant.name}
           </h1>
           {restaurant.address && (
-            <p className="text-sm text-stone-500 mt-1.5 flex items-center justify-center gap-1.5">
+            <p className="text-sm mt-1.5 flex items-center justify-center gap-1.5" style={{ color: 'var(--header-subtext)' }}>
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
@@ -200,6 +225,7 @@ export default async function PublicMenuPage({
               && !restaurant.stripe_charges_enabled
             }
             fulfillmentModes={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
+            brandColor={brandColor}
           />
         )}
       </main>
