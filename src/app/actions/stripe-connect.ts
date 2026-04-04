@@ -73,6 +73,8 @@ export async function createConnectOnboardingLink(formData?: FormData) {
 
     redirect(accountLink.url)
   } catch (err: unknown) {
+    // redirect() de Next.js lance une erreur spéciale — ne pas l'intercepter
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'
     redirect(`/dashboard/settings/stripe?error=${encodeURIComponent(msg)}`)
   }
