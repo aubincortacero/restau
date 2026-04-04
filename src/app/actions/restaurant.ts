@@ -531,10 +531,13 @@ export async function createTable(formData: FormData): Promise<{ error?: string 
   const pos_x = 50 + (i % 5) * 160
   const pos_y = 50 + Math.floor(i / 5) * 120
 
+  const floor = parseInt((formData.get('floor') as string) || '0', 10)
+
   await supabase.from('tables').insert({
     restaurant_id,
     number,
     label: zone,
+    floor,
     pos_x,
     pos_y,
   })
@@ -565,10 +568,13 @@ export async function bulkCreateTables(formData: FormData) {
     .eq('restaurant_id', restaurant_id)
   const startIndex = existingCount ?? 0
 
+  const floor = parseInt((formData.get('floor') as string) || '0', 10)
+
   const tablesToInsert = Array.from({ length: count }, (_, i) => ({
     restaurant_id,
     number: baseNumber + i,
     label: zone,
+    floor,
     pos_x: 50 + ((startIndex + i) % 5) * 160,
     pos_y: 50 + Math.floor((startIndex + i) / 5) * 120,
   }))
@@ -576,68 +582,6 @@ export async function bulkCreateTables(formData: FormData) {
   await supabase.from('tables').insert(tablesToInsert)
 
   revalidatePath('/dashboard/tables')
-}
-
-export async function applyGeneratedPlan(
-  restaurantId: string,
-  tables: Array<{ number: number; label: string | null; pos_x: number; pos_y: number }>,
-  walls: Array<{ id: string; x: number; y: number; w: number; h: number }>,
-  replaceExisting: boolean,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié' }
-
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id')
-    .eq('id', restaurantId)
-    .eq('owner_id', user.id)
-    .maybeSingle()
-  if (!restaurant) return { error: 'Restaurant introuvable' }
-
-  if (replaceExisting) {
-    await supabase.from('tables').delete().eq('restaurant_id', restaurantId)
-  }
-
-  const { count: existingCount } = await supabase
-    .from('tables')
-    .select('*', { count: 'exact', head: true })
-    .eq('restaurant_id', restaurantId)
-  const offset = replaceExisting ? 0 : (existingCount ?? 0)
-
-  // Renumérote en tenant compte des tables déjà présentes si on n'efface pas
-  const { data: maxRow } = replaceExisting
-    ? { data: null }
-    : await supabase
-        .from('tables')
-        .select('number')
-        .eq('restaurant_id', restaurantId)
-        .order('number', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-  const numberOffset = replaceExisting ? 0 : (maxRow?.number ?? 0)
-
-  const toInsert = tables.map((t, i) => ({
-    restaurant_id: restaurantId,
-    number: t.number + numberOffset,
-    label: t.label,
-    pos_x: t.pos_x,
-    pos_y: t.pos_y,
-  }))
-
-  // Ignore `offset` in table position — positions are already canvas-absolute from IA
-  void offset
-
-  await supabase.from('tables').insert(toInsert)
-
-  await supabase
-    .from('restaurants')
-    .update({ floor_plan: { walls } })
-    .eq('id', restaurantId)
-
-  revalidatePath('/dashboard/tables')
-  return {}
 }
 
 export async function deleteTable(formData: FormData) {
@@ -665,7 +609,7 @@ export async function deleteTableById(id: string) {
 export async function saveFloorPlan(
   restaurantId: string,
   tables: { id: string; pos_x: number; pos_y: number }[],
-  walls: { id: string; x: number; y: number; w: number; h: number }[],
+  floors: { id: number; name: string; walls: { id: string; x: number; y: number; w: number; h: number }[] }[],
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -690,10 +634,10 @@ export async function saveFloorPlan(
     ),
   )
 
-  // Sauvegarde des murs dans restaurant.floor_plan
+  // Sauvegarde des niveaux et murs dans restaurant.floor_plan
   await supabase
     .from('restaurants')
-    .update({ floor_plan: { walls } })
+    .update({ floor_plan: { floors } })
     .eq('id', restaurantId)
 }
 

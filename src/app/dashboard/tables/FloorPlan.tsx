@@ -22,6 +22,7 @@ export type FloorTable = {
   label: string | null
   pos_x: number
   pos_y: number
+  floor: number
 }
 
 export type Wall = {
@@ -30,6 +31,12 @@ export type Wall = {
   y: number
   w: number
   h: number
+}
+
+export type Floor = {
+  id: number
+  name: string
+  walls: Wall[]
 }
 
 type DragState = {
@@ -41,19 +48,22 @@ type DragState = {
 
 export default function FloorPlan({
   initialTables,
-  initialWalls,
+  initialFloors,
   restaurantId,
   restaurantSlug,
   siteUrl,
 }: {
   initialTables: FloorTable[]
-  initialWalls: Wall[]
+  initialFloors: Floor[]
   restaurantId: string
   restaurantSlug: string
   siteUrl: string
 }) {
+  const seedFloors = initialFloors.length > 0 ? initialFloors : [{ id: 0, name: 'RDC', walls: [] }]
+
   const [tables, setTables] = useState<FloorTable[]>(initialTables)
-  const [walls, setWalls] = useState<Wall[]>(initialWalls)
+  const [floors, setFloors] = useState<Floor[]>(seedFloors)
+  const [activeFloor, setActiveFloorState] = useState<number>(seedFloors[0].id)
   const [drag, setDrag] = useState<DragState>(null)
   const [view, setView] = useState<View>({ scale: 0.6, x: 40, y: 40 })
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
@@ -61,6 +71,8 @@ export default function FloorPlan({
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [flashId, setFlashId] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<number | null>(null)
+  const [renamingValue, setRenamingValue] = useState('')
 
   const dragRef = useRef<DragState>(null)
   const viewRef = useRef<View>({ scale: 0.6, x: 40, y: 40 })
@@ -73,13 +85,36 @@ export default function FloorPlan({
   const pointerScreenRef = useRef({ x: 0, y: 0 })
   const edgePanFrameRef = useRef<number | null>(null)
   const tablesRef = useRef<FloorTable[]>(initialTables)
-  const wallsRef = useRef<Wall[]>(initialWalls)
+  const activeFloorRef = useRef<number>(seedFloors[0].id)
+  // wallsRef tracks the current floor's walls for use inside closures
+  const wallsRef = useRef<Wall[]>(seedFloors[0]?.walls ?? [])
 
-  // Keep mutable refs in sync with state
+  // Derived: walls for the active floor
+  const walls = floors.find((f) => f.id === activeFloor)?.walls ?? []
+
+  // Keep mutable refs in sync
   useEffect(() => { tablesRef.current = tables }, [tables])
   useEffect(() => { wallsRef.current = walls }, [walls])
 
-  // Détecte les nouvelles tables arrivant via le RSC refresh et les affiche
+  function switchFloor(id: number) {
+    activeFloorRef.current = id
+    setActiveFloorState(id)
+  }
+
+  // setWalls updates the current floor's walls inside the floors array
+  function setWalls(updater: Wall[] | ((prev: Wall[]) => Wall[])) {
+    const fid = activeFloorRef.current
+    setFloors((prev) =>
+      prev.map((f) =>
+        f.id !== fid ? f : {
+          ...f,
+          walls: typeof updater === 'function' ? updater(f.walls) : updater,
+        },
+      ),
+    )
+  }
+
+  // Detect newly added tables from RSC refresh
   useEffect(() => {
     const currentIds = new Set(tablesRef.current.map((t) => t.id))
     const newTables = initialTables.filter((t) => !currentIds.has(t.id))
@@ -87,8 +122,10 @@ export default function FloorPlan({
 
     setTables((prev) => [...prev, ...newTables])
 
-    // Pan vers la première nouvelle table + flash temporaire
     const target = newTables[0]
+    // Switch to the new table's floor if needed
+    if (target.floor !== activeFloorRef.current) switchFloor(target.floor)
+
     const el = containerRef.current
     if (el) {
       const { scale } = viewRef.current
@@ -116,8 +153,11 @@ export default function FloorPlan({
     if (!el) return
     const cw = el.clientWidth
     const ch = el.clientHeight
+    const currentFloorId = activeFloorRef.current
     const items = [
-      ...tablesRef.current.map((t) => ({ x: t.pos_x, y: t.pos_y, w: TW, h: TH })),
+      ...tablesRef.current
+        .filter((t) => t.floor === currentFloorId)
+        .map((t) => ({ x: t.pos_x, y: t.pos_y, w: TW, h: TH })),
       ...wallsRef.current.map((w) => ({ x: w.x, y: w.y, w: w.w, h: w.h })),
     ]
     if (items.length === 0) { applyView({ scale: 0.6, x: 40, y: 40 }); return }
@@ -134,7 +174,6 @@ export default function FloorPlan({
     applyView({ scale, x, y })
   }
 
-  // Auto-fit on initial load
   useLayoutEffect(() => { fitToContent() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wheel: Ctrl/Cmd = zoom toward cursor, else = pan
@@ -194,7 +233,7 @@ export default function FloorPlan({
     return () => clearInterval(iv)
   }, [restaurantId])
 
-  // Edge auto-pan while dragging an element
+  // Edge auto-pan while dragging
   useEffect(() => {
     if (!drag) {
       if (edgePanFrameRef.current) { cancelAnimationFrame(edgePanFrameRef.current); edgePanFrameRef.current = null }
@@ -288,7 +327,6 @@ export default function FloorPlan({
     }
   }
 
-  // Canvas pan via Space+drag or middle-mouse
   function onContainerPointerDown(e: React.PointerEvent) {
     if (!spacePanRef.current && e.button !== 1) return
     e.preventDefault()
@@ -302,7 +340,7 @@ export default function FloorPlan({
     const dy = e.clientY - panOriginRef.current.sy
     applyView({ ...viewRef.current, x: panOriginRef.current.vx + dx, y: panOriginRef.current.vy + dy })
   }
-  function onContainerPointerUp(e: React.PointerEvent) {
+  function onContainerPointerUp() {
     if (!panOriginRef.current) return
     panOriginRef.current = null
     if (containerRef.current) containerRef.current.style.cursor = spacePanRef.current ? 'grab' : ''
@@ -316,13 +354,32 @@ export default function FloorPlan({
     setWalls((prev) => [...prev, { id: crypto.randomUUID(), x: Math.round(cx), y: Math.round(cy), w: 180, h: 56 }])
   }
 
+  function addFloor() {
+    const nextId = floors.length === 0 ? 0 : Math.max(...floors.map((f) => f.id)) + 1
+    const name = nextId === 0 ? 'RDC' : `Étage ${nextId}`
+    setFloors((prev) => [...prev, { id: nextId, name, walls: [] }])
+    switchFloor(nextId)
+  }
+
+  function commitRename(floorId: number) {
+    const name = renamingValue.trim()
+    if (name) setFloors((prev) => prev.map((f) => f.id !== floorId ? f : { ...f, name }))
+    setRenaming(null)
+  }
+
+  function floorIcon(idx: number) {
+    if (idx === 0) return '🟫'
+    if (floors.length >= 3 && idx === floors.length - 1) return '🏠'
+    return '🏢'
+  }
+
   async function handleSave() {
     setSaving(true)
     try {
       await saveFloorPlan(
         restaurantId,
         tables.map((t) => ({ id: t.id, pos_x: t.pos_x, pos_y: t.pos_y })),
-        walls.map((w) => ({ id: w.id, x: w.x, y: w.y, w: w.w, h: w.h })),
+        floors.map((f) => ({ id: f.id, name: f.name, walls: f.walls })),
       )
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -338,9 +395,60 @@ export default function FloorPlan({
   }
 
   const scalePct = Math.round(view.scale * 100)
+  const currentFloorTables = tables.filter((t) => t.floor === activeFloor)
 
   return (
     <div className="space-y-4">
+      {/* Sélecteur de niveaux */}
+      <div className="flex items-center gap-1 flex-wrap">
+        {floors.map((floor, i) => (
+          <div key={floor.id} className="inline-flex items-center">
+            {renaming === floor.id ? (
+              <input
+                value={renamingValue}
+                onChange={(e) => setRenamingValue(e.target.value)}
+                onBlur={() => commitRename(floor.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitRename(floor.id)
+                  if (e.key === 'Escape') setRenaming(null)
+                }}
+                autoFocus
+                className="text-xs bg-zinc-700 border border-orange-500/60 text-white px-2 py-1.5 rounded-lg w-28 focus:outline-none"
+              />
+            ) : (
+              <button
+                onClick={() => { switchFloor(floor.id); fitToContent() }}
+                onDoubleClick={() => { setRenaming(floor.id); setRenamingValue(floor.name) }}
+                title="Double-clic pour renommer"
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer border ${
+                  activeFloor === floor.id
+                    ? 'bg-zinc-700 text-white border-zinc-600'
+                    : 'text-zinc-500 hover:text-zinc-300 border-transparent hover:bg-zinc-800'
+                }`}
+              >
+                <span role="img" aria-label="niveau">{floorIcon(i)}</span>
+                <span>{floor.name}</span>
+                {tablesCount(tables, floor.id) > 0 && (
+                  <span className="text-[10px] text-zinc-500 tabular-nums">
+                    {tablesCount(tables, floor.id)}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          onClick={addFloor}
+          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 border border-transparent hover:border-zinc-700 hover:bg-zinc-800 transition-colors cursor-pointer"
+          title="Ajouter un niveau"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Niveau
+        </button>
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
@@ -396,7 +504,7 @@ export default function FloorPlan({
         onPointerMove={onContainerPointerMove}
         onPointerUp={onContainerPointerUp}
       >
-        {/* Grille de fond (suit le pan) */}
+        {/* Grille de fond */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -416,7 +524,7 @@ export default function FloorPlan({
             transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
           }}
         >
-          {/* Murs */}
+          {/* Murs du niveau actif */}
           {walls.map((wall) => (
             <div
               key={wall.id}
@@ -440,8 +548,8 @@ export default function FloorPlan({
             </div>
           ))}
 
-          {/* Tables */}
-          {tables.map((table) => {
+          {/* Tables du niveau actif */}
+          {currentFloorTables.map((table) => {
             const isActive = activeIds.has(table.id)
             const isNew = flashId === table.id
             return (
@@ -474,7 +582,7 @@ export default function FloorPlan({
         </div>
       </div>
 
-      {/* Légende + hint */}
+      {/* Légende */}
       <div className="flex items-center gap-4 text-xs text-zinc-600 flex-wrap">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border-2 border-zinc-700 bg-zinc-800 inline-block" />
@@ -489,7 +597,7 @@ export default function FloorPlan({
           Mur
         </span>
         <span className="ml-auto hidden sm:block">
-          Scroll = déplacer · Ctrl+Scroll = zoom · Espace+glisser = panoramique
+          Scroll = déplacer · Ctrl+Scroll = zoom · Espace+glisser = panoramique · Double-clic sur un niveau = renommer
         </span>
       </div>
 
@@ -506,6 +614,10 @@ export default function FloorPlan({
       )}
     </div>
   )
+}
+
+function tablesCount(tables: FloorTable[], floorId: number) {
+  return tables.filter((t) => t.floor === floorId).length
 }
 
 // ─── QR Modal ─────────────────────────────────────────────────
@@ -579,7 +691,6 @@ function QRModal({
         className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div>
@@ -603,12 +714,10 @@ function QRModal({
           </button>
         </div>
 
-        {/* QR Code */}
         <div className="flex justify-center mb-4">
           <canvas ref={canvasRef} className="rounded-xl" />
         </div>
 
-        {/* Download */}
         <div className="flex gap-2 mb-5">
           <button
             onClick={() => download('white')}
@@ -626,7 +735,6 @@ function QRModal({
 
         <p className="text-xs text-zinc-600 break-all text-center mb-5">{url}</p>
 
-        {/* Supprimer */}
         <div className="border-t border-zinc-800 pt-4">
           <button
             onClick={handleDelete}
@@ -640,3 +748,5 @@ function QRModal({
     </div>
   )
 }
+
+// ─── QR Modal ─────────────────────────────────────────────────

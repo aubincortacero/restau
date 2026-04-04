@@ -7,17 +7,26 @@ import { IconPlus } from '@/components/icons'
 export default function TableAddForm({
   restaurantId,
   existingZones,
+  floors,
 }: {
   restaurantId: string
   existingZones: string[]
+  floors: { id: number; name: string }[]
 }) {
   const [mode, setMode] = useState<'single' | 'bulk'>('single')
   const [zone, setZone] = useState('')
   const [number, setNumber] = useState('')
   const [count, setCount] = useState(2)
+  const [selectedFloor, setSelectedFloor] = useState(floors[0]?.id ?? 0)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const listId = useId()
+
+  function floorIcon(idx: number) {
+    if (idx === 0) return '🟫'
+    if (floors.length >= 3 && idx === floors.length - 1) return '🏠'
+    return '🏢'
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -67,6 +76,22 @@ export default function TableAddForm({
 
       <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap items-center">
         <input type="hidden" name="restaurant_id" value={restaurantId} />
+
+        {/* Sélecteur de niveau (si plusieurs niveaux) */}
+        {floors.length > 1 ? (
+          <select
+            name="floor"
+            value={selectedFloor}
+            onChange={(e) => setSelectedFloor(parseInt(e.target.value))}
+            className="bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 shrink-0"
+          >
+            {floors.map((f, i) => (
+              <option key={f.id} value={f.id}>{floorIcon(i)} {f.name}</option>
+            ))}
+          </select>
+        ) : (
+          <input type="hidden" name="floor" value={floors[0]?.id ?? 0} />
+        )}
 
         {/* Numéro (mode single uniquement) */}
         {mode === 'single' && (

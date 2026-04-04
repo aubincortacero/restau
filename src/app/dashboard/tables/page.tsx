@@ -2,9 +2,8 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import FloorPlan, { type Wall } from './FloorPlan'
+import FloorPlan, { type Wall, type Floor } from './FloorPlan'
 import TableAddForm from './TableAddForm'
-import FloorPlanGeneratorTrigger from './FloorPlanGeneratorTrigger'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +22,7 @@ export default async function TablesPage() {
 
   const { data: tables } = await supabase
     .from('tables')
-    .select('id, number, label, pos_x, pos_y')
+    .select('id, number, label, pos_x, pos_y, floor')
     .eq('restaurant_id', restaurant.id)
     .order('number')
 
@@ -35,6 +34,7 @@ export default async function TablesPage() {
   // Positions par défaut pour les tables sans coordonnées
   const tablesWithPos = (tables ?? []).map((t, i) => ({
     ...t,
+    floor: t.floor ?? 0,
     pos_x: t.pos_x ?? 50 + (i % 4) * 180,
     pos_y: t.pos_y ?? 50 + Math.floor(i / 4) * 140,
   }))
@@ -44,33 +44,31 @@ export default async function TablesPage() {
     (tables ?? []).map((t) => t.label).filter((l): l is string => !!l)
   )]
 
-  // Murs depuis restaurant.floor_plan
-  const fp = restaurant.floor_plan as { walls?: Wall[] } | null
-  const walls: Wall[] = (fp?.walls ?? []).map((w: Wall) => ({
-    id: w.id,
-    x: w.x,
-    y: w.y,
-    w: w.w,
-    h: w.h,
-  }))
+  // Niveaux depuis restaurant.floor_plan (rétro-compat format plat { walls: [] })
+  type FpNew = { floors?: Floor[] }
+  type FpOld = { walls?: Wall[] }
+  const fp = restaurant.floor_plan as FpNew | FpOld | null
+  let floors: Floor[]
+  if (fp && 'floors' in fp && fp.floors) {
+    floors = fp.floors
+  } else {
+    const oldWalls: Wall[] = ((fp as FpOld)?.walls ?? []).map((w: Wall) => ({
+      id: w.id, x: w.x, y: w.y, w: w.w, h: w.h,
+    }))
+    floors = [{ id: 0, name: 'RDC', walls: oldWalls }]
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Plan de salle</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">
-            Positionnez vos tables, ajoutez des murs, enregistrez le plan.
-          </p>
-        </div>
-        <FloorPlanGeneratorTrigger
-          restaurantId={restaurant.id}
-          hasExistingTables={(tables?.length ?? 0) > 0}
-        />
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold">Plan de salle</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">
+          Positionnez vos tables, ajoutez des murs et des niveaux, enregistrez le plan.
+        </p>
       </div>
 
       {/* Ajouter des tables */}
-      <TableAddForm restaurantId={restaurant.id} existingZones={existingZones} />
+      <TableAddForm restaurantId={restaurant.id} existingZones={existingZones} floors={floors} />
 
       {/* Plan de salle */}
       {tablesWithPos.length === 0 ? (
@@ -80,7 +78,7 @@ export default async function TablesPage() {
       ) : (
         <FloorPlan
           initialTables={tablesWithPos}
-          initialWalls={walls}
+          initialFloors={floors}
           restaurantId={restaurant.id}
           restaurantSlug={restaurant.slug}
           siteUrl={siteUrl}
