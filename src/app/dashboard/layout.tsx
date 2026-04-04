@@ -113,19 +113,38 @@ export default async function DashboardLayout({
   const brandColor = (restaurant as { brand_color?: string } | null)?.brand_color ?? '#f97316'
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col" style={{ '--brand': brandColor, '--brand-dark': brandColor } as React.CSSProperties}>
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col" style={{ '--brand': brandColor } as React.CSSProperties}>
       <style>{`
-        [data-brand] { background-color: var(--brand) !important; }
-        [data-brand-text] { color: var(--brand) !important; }
-        [data-brand-border] { border-color: var(--brand) !important; }
-        [data-brand-ring] { --tw-ring-color: color-mix(in srgb, var(--brand) 50%, transparent) !important; }
+        /* Écrase toutes les classes Tailwind orange par la couleur de marque */
+        .bg-orange-500 { background-color: var(--brand) !important; }
+        .bg-orange-400 { background-color: color-mix(in srgb, var(--brand) 85%, white) !important; }
+        .hover\\:bg-orange-500:hover { background-color: var(--brand) !important; }
+        .hover\\:bg-orange-400:hover { background-color: color-mix(in srgb, var(--brand) 85%, white) !important; }
+        .active\\:bg-orange-600:active { background-color: color-mix(in srgb, var(--brand) 85%, black) !important; }
+        .bg-orange-500\\/10, .bg-orange-500\\/8, .bg-orange-500\\/15, .bg-orange-500\\/20 {
+          background-color: color-mix(in srgb, var(--brand) 12%, transparent) !important;
+        }
+        .text-orange-500 { color: var(--brand) !important; }
+        .text-orange-400 { color: color-mix(in srgb, var(--brand) 85%, white) !important; }
+        .hover\\:text-orange-400:hover { color: color-mix(in srgb, var(--brand) 85%, white) !important; }
+        .hover\\:text-orange-300:hover { color: color-mix(in srgb, var(--brand) 70%, white) !important; }
+        .border-orange-500 { border-color: var(--brand) !important; }
+        .border-orange-500\\/30 { border-color: color-mix(in srgb, var(--brand) 30%, transparent) !important; }
+        .border-orange-500\\/20 { border-color: color-mix(in srgb, var(--brand) 20%, transparent) !important; }
+        .hover\\:border-orange-500\\/50:hover { border-color: color-mix(in srgb, var(--brand) 50%, transparent) !important; }
+        .ring-orange-500\\/50 { --tw-ring-color: color-mix(in srgb, var(--brand) 50%, transparent) !important; }
+        .focus\\:ring-orange-500\\/50:focus { --tw-ring-color: color-mix(in srgb, var(--brand) 50%, transparent) !important; }
+        .focus\\:border-orange-500:focus { border-color: var(--brand) !important; }
+        .shadow-orange-500\\/20 { --tw-shadow-color: color-mix(in srgb, var(--brand) 20%, transparent) !important; }
+        .ring-orange-500\\/20 { --tw-ring-color: color-mix(in srgb, var(--brand) 20%, transparent) !important; }
+        .from-orange-950\\/20 { --tw-gradient-from: color-mix(in srgb, var(--brand) 20%, transparent) !important; }
       `}</style>
       {/* Top nav */}
       <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10">
         <div className="px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-              <div data-brand className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
                 <IconLogo className="w-4 h-4 text-white" />
               </div>
               <span className="font-semibold text-sm hidden sm:block">Qomand</span>
