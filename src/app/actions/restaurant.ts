@@ -690,19 +690,22 @@ export async function deleteTable(formData: FormData) {
   revalidatePath('/dashboard/tables')
 }
 
-export async function deleteTableById(id: string) {
+export async function deleteTableById(id: string, restaurantId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
+  // Vérifie que le restaurant appartient bien à l'utilisateur
   const { data: restaurant } = await supabase
     .from('restaurants')
     .select('id')
+    .eq('id', restaurantId)
     .eq('owner_id', user.id)
-    .single()
+    .maybeSingle()
   if (!restaurant) return
 
-  await supabase.from('tables').delete().eq('id', id).eq('restaurant_id', restaurant.id)
+  await supabase.from('tables').delete().eq('id', id).eq('restaurant_id', restaurantId)
+  revalidatePath('/dashboard/tables')
 }
 
 export async function saveFloorPlan(
@@ -738,6 +741,8 @@ export async function saveFloorPlan(
     .from('restaurants')
     .update({ floor_plan: { floors } })
     .eq('id', restaurantId)
+
+  revalidatePath('/dashboard/tables')
 }
 
 // ─── Orders ───────────────────────────────────────────────────

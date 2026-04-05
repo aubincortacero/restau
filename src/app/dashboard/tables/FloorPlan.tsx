@@ -389,7 +389,7 @@ export default function FloorPlan({
   }
 
   async function handleDeleteTable(id: string) {
-    await deleteTableById(id)
+    await deleteTableById(id, restaurantId)
     setTables((prev) => prev.filter((t) => t.id !== id))
     setQrTable(null)
   }
