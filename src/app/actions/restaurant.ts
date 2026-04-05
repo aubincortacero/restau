@@ -775,11 +775,6 @@ export async function updateOrderStatus(formData: FormData) {
 
   const updateData: Record<string, string> = { status }
 
-  if (status === 'done' && order.payment_method === 'cash' && order.payment_status === 'unpaid') {
-    // Encaisser automatiquement les commandes cash
-    updateData.payment_status = 'paid'
-  }
-
   if (status === 'cancelled' && order.payment_method === 'online' && order.payment_status === 'paid' && order.stripe_payment_intent_id) {
     // Rembourser automatiquement via Stripe
     try {
@@ -792,6 +787,33 @@ export async function updateOrderStatus(formData: FormData) {
   }
 
   await supabase.from('orders').update(updateData).eq('id', id)
+  revalidatePath('/dashboard/orders')
+}
+
+export async function collectCashPayment(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  if (!id) return
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, restaurant_id, payment_method, payment_status')
+    .eq('id', id)
+    .single()
+  if (!order || order.payment_method !== 'cash' || order.payment_status !== 'unpaid') return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', order.restaurant_id)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', id)
   revalidatePath('/dashboard/orders')
 }
 
