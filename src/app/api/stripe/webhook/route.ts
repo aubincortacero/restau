@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -21,6 +20,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Signature invalide' }, { status: 400 })
   }
 
+  const admin = createAdminClient()
+
   if (event.type === 'payment_intent.succeeded') {
     const pi = event.data.object as Stripe.PaymentIntent
     const { restaurantId, tableId, note, items: itemsJson } = pi.metadata
@@ -29,12 +30,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Metadata manquante' }, { status: 400 })
     }
 
-    const supabase = await createClient()
     const items: Array<{ itemId: string; quantity: number }> = JSON.parse(itemsJson)
 
     // Recalculer les prix depuis la DB
     const itemIds = items.map((i) => i.itemId)
-    const { data: dbItems } = await supabase
+    const { data: dbItems } = await admin
       .from('items')
       .select('id, price, happy_hour_price, category_id')
       .in('id', itemIds)
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Créer la commande en base
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await admin
       .from('orders')
       .insert({
         restaurant_id: restaurantId,
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erreur création commande' }, { status: 500 })
     }
 
-    await supabase.from('order_items').insert(
+    await admin.from('order_items').insert(
       items.map((pi_item) => {
         const dbItem = dbItems.find((i) => i.id === pi_item.itemId)!
         return {
@@ -82,8 +82,7 @@ export async function POST(req: NextRequest) {
   // Synchroniser le statut du compte Connect quand Stripe valide/modifie un compte
   if (event.type === 'account.updated') {
     const account = event.data.object as import('stripe').default.Account
-    const supabase = await createClient()
-    await supabase
+    await admin
       .from('restaurants')
       .update({
         stripe_charges_enabled: account.charges_enabled,
@@ -94,8 +93,6 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── Abonnements plateforme ────────────────────────────────────
-  const admin = createAdminClient()
-
   if (
     event.type === 'customer.subscription.created' ||
     event.type === 'customer.subscription.updated'

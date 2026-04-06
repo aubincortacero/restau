@@ -43,10 +43,10 @@ export default async function DashboardPage() {
   const restaurantId = await getActiveRestaurantId(user.id)
   if (!restaurantId) redirect('/dashboard/new')
 
-  const [restaurantRes, pendingRes, categoriesRes, tablesRes, ordersRes] = await Promise.all([
+  const [restaurantRes, pendingRes] = await Promise.all([
     supabase
       .from('restaurants')
-      .select('id, name, slug, opening_hours, happy_hour, stripe_account_id')
+      .select('id, name, slug, opening_hours, happy_hour')
       .eq('id', restaurantId)
       .maybeSingle(),
     supabase
@@ -55,9 +55,6 @@ export default async function DashboardPage() {
       .eq('restaurant_id', restaurantId)
       .eq('status', 'pending')
       .is('archived_at', null),
-    supabase.from('categories').select('id').eq('restaurant_id', restaurantId).limit(1),
-    supabase.from('tables').select('id').eq('restaurant_id', restaurantId).limit(1),
-    supabase.from('orders').select('id').eq('restaurant_id', restaurantId).limit(1),
   ])
 
   const restaurant = restaurantRes.data
@@ -69,17 +66,8 @@ export default async function DashboardPage() {
     restaurant.happy_hour as HappyHour | null,
   )
 
-  const checklist = [
-    { id: 'menu',   label: 'Créer votre menu',     done: (categoriesRes.data ?? []).length > 0, href: '/dashboard/menu' },
-    { id: 'tables', label: 'Configurer vos tables', done: (tablesRes.data ?? []).length > 0,    href: '/dashboard/tables' },
-    { id: 'stripe', label: 'Connecter Stripe',      done: !!restaurant.stripe_account_id,       href: '/dashboard/settings/stripe' },
-    { id: 'orders', label: 'Recevoir une commande', done: (ordersRes.data ?? []).length > 0,    href: '/dashboard/orders' },
-  ]
-  const checklistDone = checklist.every(i => i.done)
-  const doneCount = checklist.filter(i => i.done).length
-
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -132,57 +120,13 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      {/* Guide de démarrage – disparaît une fois tout coché */}
-      {!checklistDone && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-white">Guide de démarrage</h2>
-            <span className="text-xs text-zinc-500">{doneCount}/{checklist.length}</span>
-          </div>
-          <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden mb-4">
-            <div
-              className="h-full bg-orange-500 rounded-full transition-all duration-500"
-              style={{ width: `${(doneCount / checklist.length) * 100}%` }}
-            />
-          </div>
-          <ul className="space-y-0.5">
-            {checklist.map(item => (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 px-2 py-2.5 rounded-xl text-sm transition-colors ${
-                    item.done ? 'text-zinc-500' : 'text-zinc-200 hover:bg-zinc-800/60 hover:text-white'
-                  }`}
-                >
-                  {item.done ? (
-                    <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4 text-zinc-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <circle cx="12" cy="12" r="9" />
-                    </svg>
-                  )}
-                  <span className={item.done ? 'line-through' : ''}>{item.label}</span>
-                  {!item.done && (
-                    <svg className="w-3.5 h-3.5 text-zinc-600 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
-                    </svg>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* Raccourcis */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
-          { href: '/dashboard/orders',           label: 'Commandes',  desc: 'Suivi en temps réel',   icon: '🧾' },
-          { href: '/dashboard/menu',             label: 'Menu',        desc: 'Catégories & articles', icon: '📋' },
-          { href: '/dashboard/tables',           label: 'Tables & QR', desc: 'Gérer vos QR codes',   icon: '🪑' },
-          { href: '/dashboard/settings/schedules', label: 'Horaires', desc: 'Ouverture & Happy Hour', icon: '🕐' },
+          { href: '/dashboard/orders',             label: 'Commandes',   desc: 'Suivi en temps réel',    icon: '🧾' },
+          { href: '/dashboard/menu',               label: 'Menu',         desc: 'Catégories & articles',  icon: '📋' },
+          { href: '/dashboard/tables',             label: 'Tables & QR',  desc: 'Gérer vos QR codes',    icon: '🪑' },
+          { href: '/dashboard/settings/schedules', label: 'Horaires',     desc: 'Ouverture & Happy Hour', icon: '🕐' },
         ].map(({ href, label, desc, icon }) => (
           <Link
             key={href}
