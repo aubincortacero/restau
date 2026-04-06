@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import QRCode from 'qrcode'
-import { saveFloorPlan, deleteTableById } from '@/app/actions/restaurant'
+import { saveFloorPlan, deleteTableById, updateTable } from '@/app/actions/restaurant'
 
 const CW = 2000       // canvas logical width
 const CH = 1200       // canvas logical height
@@ -394,6 +394,12 @@ export default function FloorPlan({
     setQrTable(null)
   }
 
+  async function handleUpdateTable(id: string, data: { number: number; label: string | null }) {
+    await updateTable(id, restaurantId, data)
+    setTables((prev) => prev.map((t) => t.id === id ? { ...t, ...data } : t))
+    setQrTable((prev) => prev?.id === id ? { ...prev, ...data } : prev)
+  }
+
   const scalePct = Math.round(view.scale * 100)
   const currentFloorTables = tables.filter((t) => t.floor === activeFloor)
 
@@ -610,9 +616,11 @@ export default function FloorPlan({
           table={qrTable}
           siteUrl={siteUrl}
           slug={restaurantSlug}
+          restaurantId={restaurantId}
           isActive={activeIds.has(qrTable.id)}
           onClose={() => setQrTable(null)}
           onDelete={handleDeleteTable}
+          onUpdate={handleUpdateTable}
         />
       )}
     </div>
@@ -629,19 +637,27 @@ function QRModal({
   table,
   siteUrl,
   slug,
+  restaurantId,
   isActive,
   onClose,
   onDelete,
+  onUpdate,
 }: {
   table: FloorTable
   siteUrl: string
   slug: string
+  restaurantId: string
   isActive: boolean
   onClose: () => void
   onDelete: (id: string) => void
+  onUpdate: (id: string, data: { number: number; label: string | null }) => Promise<void>
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [deleting, setDeleting] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editNumber, setEditNumber] = useState(String(table.number))
+  const [editLabel, setEditLabel] = useState(table.label ?? '')
+  const [saving, setSaving] = useState(false)
   const url = `${siteUrl}/menu/${slug}?table=${table.id}`
 
   useEffect(() => {
@@ -683,6 +699,16 @@ function QRModal({
   async function handleDelete() {
     setDeleting(true)
     await onDelete(table.id)
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    const num = parseInt(editNumber)
+    if (!num || num < 1) return
+    setSaving(true)
+    await onUpdate(table.id, { number: num, label: editLabel.trim() || null })
+    setSaving(false)
+    setEditing(false)
   }
 
   return (
@@ -736,9 +762,63 @@ function QRModal({
           </button>
         </div>
 
-        <p className="text-xs text-zinc-600 break-all text-center mb-5">{url}</p>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full text-xs font-semibold text-white bg-orange-500 hover:bg-orange-400 px-3 py-2.5 rounded-lg transition-colors mb-5"
+        >
+          Voir la vitrine
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+          </svg>
+        </a>
 
-        <div className="border-t border-zinc-800 pt-4">
+        <div className="border-t border-zinc-800 pt-4 space-y-2">
+          {!editing ? (
+            <button
+              onClick={() => setEditing(true)}
+              className="w-full text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-2 rounded-lg transition-colors cursor-pointer"
+            >
+              Modifier la table
+            </button>
+          ) : (
+            <form onSubmit={handleSaveEdit} className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={editNumber}
+                  onChange={(e) => setEditNumber(e.target.value)}
+                  placeholder="N°"
+                  className="w-16 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-zinc-500"
+                />
+                <input
+                  type="text"
+                  value={editLabel}
+                  onChange={(e) => setEditLabel(e.target.value)}
+                  placeholder="Zone (Terrasse, Salle…)"
+                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="flex-1 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 text-xs text-white bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          )}
           <button
             onClick={handleDelete}
             disabled={deleting}

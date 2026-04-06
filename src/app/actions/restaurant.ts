@@ -690,6 +690,31 @@ export async function deleteTable(formData: FormData) {
   revalidatePath('/dashboard/tables')
 }
 
+export async function updateTable(
+  id: string,
+  restaurantId: string,
+  data: { number: number; label: string | null },
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', restaurantId)
+    .eq('owner_id', user.id)
+    .maybeSingle()
+  if (!restaurant) return
+
+  await supabase
+    .from('tables')
+    .update({ number: data.number, label: data.label || null })
+    .eq('id', id)
+    .eq('restaurant_id', restaurantId)
+  revalidatePath('/dashboard/tables')
+}
+
 export async function deleteTableById(id: string, restaurantId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
