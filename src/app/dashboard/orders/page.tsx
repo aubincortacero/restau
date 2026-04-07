@@ -6,7 +6,6 @@ import TicketActions from './TicketActions'
 import { IconCreditCard, IconBanknote } from '@/components/icons'
 import { updateOrderStatus, archiveOrder, markOrderReady, collectCashPayment } from '@/app/actions/restaurant'
 import OrderTimer from '@/components/OrderTimer'
-import { PaymentMethodsForm, FulfillmentModesForm } from '@/app/dashboard/settings/restaurant/PaymentSettingsForm'
 
 type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
 
@@ -83,20 +82,6 @@ export default async function OrdersPage() {
 
   return (
     <div>
-      {/* Réglages rapides paiement / service */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <PaymentMethodsForm
-          restaurantId={restaurant.id}
-          initial={(restaurant.accepted_payment_methods as string[] | null) ?? ['online', 'cash']}
-          saved={false}
-        />
-        <FulfillmentModesForm
-          restaurantId={restaurant.id}
-          initial={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
-          saved={false}
-        />
-      </div>
-
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-semibold">Commandes</h1>

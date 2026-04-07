@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition, useState } from 'react'
+import { useTransition, useState, useRef, useEffect } from 'react'
 import { updateSchedules } from '@/app/actions/restaurant'
 
 const DAYS = [
@@ -24,30 +24,53 @@ interface Props {
   urgencyThreshold: number
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved'
+
 const INPUT_TIME = "bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 w-28"
 
 export default function SchedulesForm({ restaurantId, opening_hours, happy_hour, urgencyThreshold }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<SaveStatus>('idle')
   const [hours, setHours] = useState<OpeningHours>(() =>
     DAYS.reduce((acc, { key }) => ({
       ...acc,
       [key]: opening_hours[key] ?? { open: '12:00', close: '22:00', closed: false },
     }), {} as OpeningHours)
   )
+  const formRef = useRef<HTMLFormElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    setSaved(false)
-    startTransition(async () => {
-      await updateSchedules(fd)
-      setSaved(true)
-    })
+  function triggerAutoSave() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if (!formRef.current) return
+      const fd = new FormData(formRef.current)
+      setStatus('saving')
+      startTransition(async () => {
+        await updateSchedules(fd)
+        setStatus('saved')
+        if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current)
+        savedTimeoutRef.current = setTimeout(() => setStatus('idle'), 2000)
+      })
+    }, 1000)
   }
 
+  // Auto-save when hours state changes (time inputs are controlled)
+  useEffect(() => {
+    triggerAutoSave()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hours])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current)
+    }
+  }, [])
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
+    <form ref={formRef} className="max-w-xl space-y-6">
       <input type="hidden" name="id" value={restaurantId} />
 
       {/* Horaires d'ouverture */}
@@ -69,6 +92,7 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
                     value="1"
                     defaultChecked={!day.closed}
                     className="sr-only peer"
+                    onChange={triggerAutoSave}
                   />
                   <div className="w-8 h-4 bg-zinc-700 rounded-full peer peer-checked:bg-orange-500 relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4 shrink-0" />
                   <span className="text-sm text-zinc-300">{label}</span>
@@ -104,6 +128,7 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
                 value="1"
                 defaultChecked={happy_hour.enabled}
                 className="sr-only peer"
+                onChange={triggerAutoSave}
               />
               <div className="w-10 h-5 bg-zinc-700 rounded-full peer peer-checked:bg-orange-500 after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5" />
             </div>
@@ -113,9 +138,9 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
         {/* Plage horaire */}
         <div className="flex items-center gap-3 mb-5">
           <span className="text-xs text-zinc-400 w-20">De</span>
-          <input type="time" name="hh_start" defaultValue={happy_hour.start} className={INPUT_TIME} />
+          <input type="time" name="hh_start" defaultValue={happy_hour.start} className={INPUT_TIME} onChange={triggerAutoSave} />
           <span className="text-zinc-600 text-xs">→</span>
-          <input type="time" name="hh_end" defaultValue={happy_hour.end} className={INPUT_TIME} />
+          <input type="time" name="hh_end" defaultValue={happy_hour.end} className={INPUT_TIME} onChange={triggerAutoSave} />
         </div>
 
         {/* Jours */}
@@ -130,6 +155,7 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
                   value="1"
                   defaultChecked={happy_hour.days.includes(key)}
                   className="sr-only peer"
+                  onChange={triggerAutoSave}
                 />
                 <span className="block text-xs px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600 peer-checked:border-amber-500/50 peer-checked:bg-amber-500/10 peer-checked:text-amber-300 transition-colors">
                   {label.slice(0, 3)}
@@ -154,21 +180,29 @@ export default function SchedulesForm({ restaurantId, opening_hours, happy_hour,
             max={60}
             defaultValue={urgencyThreshold}
             className={INPUT_TIME + ' w-20'}
+            onChange={triggerAutoSave}
           />
           <span className="text-sm text-zinc-400">minutes</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
-        >
-          {isPending ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-        {saved && !isPending && (
-          <span className="text-sm text-emerald-400">✓ Enregistré</span>
+      <div className="h-6 flex items-center">
+        {status === 'saving' && (
+          <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Enregistrement…
+          </span>
+        )}
+        {status === 'saved' && !isPending && (
+          <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            Enregistré
+          </span>
         )}
       </div>
     </form>

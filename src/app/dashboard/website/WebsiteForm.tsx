@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useTransition } from 'react'
 import { updateWebsiteContent } from '@/app/actions/restaurant'
 
 type TeamMember = { name: string; role: string; bio: string }
+
+type SaveStatus = 'idle' | 'saving' | 'saved'
 
 interface Props {
   restaurantId: string
@@ -15,35 +17,82 @@ interface Props {
     contact_email?: string | null
     contact_address?: string | null
   }
-  saved: boolean
+  saved?: boolean
 }
 
 const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
 const TEXTAREA = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 resize-none"
 
-export default function WebsiteForm({ restaurantId, initial, saved }: Props) {
+export default function WebsiteForm({ restaurantId, initial }: Props) {
   const [aboutDesc, setAboutDesc] = useState(initial.about_description ?? '')
   const [aboutPreview, setAboutPreview] = useState<string | null>(initial.about_image_url ?? null)
   const [team, setTeam] = useState<TeamMember[]>(initial.team_members ?? [])
   const [contactPhone, setContactPhone] = useState(initial.contact_phone ?? '')
   const [contactEmail, setContactEmail] = useState(initial.contact_email ?? '')
   const [contactAddress, setContactAddress] = useState(initial.contact_address ?? '')
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [, startTransition] = useTransition()
   const imgInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const teamRef = useRef(team)
+  teamRef.current = team
+
+  function doSave(fd: FormData) {
+    setStatus('saving')
+    startTransition(async () => {
+      await updateWebsiteContent(fd)
+      setStatus('saved')
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current)
+      savedTimeoutRef.current = setTimeout(() => setStatus('idle'), 2000)
+    })
+  }
+
+  function buildFormData() {
+    if (!formRef.current) return null
+    const fd = new FormData(formRef.current)
+    fd.set('team_members', JSON.stringify(teamRef.current))
+    return fd
+  }
+
+  function triggerAutoSave() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      const fd = buildFormData()
+      if (fd) doSave(fd)
+    }, 1000)
+  }
+
+  function saveImmediate() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    const fd = buildFormData()
+    if (fd) doSave(fd)
+  }
 
   function addMember() {
-    setTeam(prev => [...prev, { name: '', role: '', bio: '' }])
+    const next = [...team, { name: '', role: '', bio: '' }]
+    setTeam(next)
+    teamRef.current = next
+    triggerAutoSave()
   }
 
   function removeMember(i: number) {
-    setTeam(prev => prev.filter((_, idx) => idx !== i))
+    const next = team.filter((_, idx) => idx !== i)
+    setTeam(next)
+    teamRef.current = next
+    triggerAutoSave()
   }
 
   function updateMember(i: number, field: keyof TeamMember, value: string) {
-    setTeam(prev => prev.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
+    const next = team.map((m, idx) => idx === i ? { ...m, [field]: value } : m)
+    setTeam(next)
+    teamRef.current = next
+    triggerAutoSave()
   }
 
   return (
-    <form action={updateWebsiteContent} className="space-y-8">
+    <form ref={formRef} className="space-y-8">
       <input type="hidden" name="id" value={restaurantId} />
       <input type="hidden" name="team_members" value={JSON.stringify(team)} />
 
@@ -83,7 +132,10 @@ export default function WebsiteForm({ restaurantId, initial, saved }: Props) {
             className="hidden"
             onChange={e => {
               const file = e.target.files?.[0]
-              if (file) setAboutPreview(URL.createObjectURL(file))
+              if (file) {
+                setAboutPreview(URL.createObjectURL(file))
+                setTimeout(() => saveImmediate(), 50)
+              }
             }}
           />
         </div>
@@ -94,7 +146,7 @@ export default function WebsiteForm({ restaurantId, initial, saved }: Props) {
           <textarea
             name="about_description"
             value={aboutDesc}
-            onChange={e => setAboutDesc(e.target.value)}
+            onChange={e => { setAboutDesc(e.target.value); triggerAutoSave() }}
             rows={4}
             maxLength={1000}
             placeholder="Bienvenue chez nous ! Depuis 2010, nous proposons une cuisine authentique…"
@@ -186,7 +238,7 @@ export default function WebsiteForm({ restaurantId, initial, saved }: Props) {
             name="contact_phone"
             type="tel"
             value={contactPhone}
-            onChange={e => setContactPhone(e.target.value)}
+            onChange={e => { setContactPhone(e.target.value); triggerAutoSave() }}
             placeholder="01 23 45 67 89"
             className={INPUT}
           />
@@ -197,7 +249,7 @@ export default function WebsiteForm({ restaurantId, initial, saved }: Props) {
             name="contact_email"
             type="email"
             value={contactEmail}
-            onChange={e => setContactEmail(e.target.value)}
+            onChange={e => { setContactEmail(e.target.value); triggerAutoSave() }}
             placeholder="contact@monrestaurant.fr"
             className={INPUT}
           />
@@ -208,23 +260,26 @@ export default function WebsiteForm({ restaurantId, initial, saved }: Props) {
             name="contact_address"
             type="text"
             value={contactAddress}
-            onChange={e => setContactAddress(e.target.value)}
+            onChange={e => { setContactAddress(e.target.value); triggerAutoSave() }}
             placeholder="12 rue de la Paix, 75001 Paris"
             className={INPUT}
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
-        >
-          Enregistrer
-        </button>
-        {saved && (
-          <span className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <div className="h-6 flex items-center">
+        {status === 'saving' && (
+          <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Enregistrement…
+          </span>
+        )}
+        {status === 'saved' && (
+          <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
             Enregistré

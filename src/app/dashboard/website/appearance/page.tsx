@@ -3,12 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import AppearanceForm from '@/app/dashboard/settings/restaurant/AppearanceForm'
 
-export default async function WebsiteAppearancePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ saved?: string }>
-}) {
-  const { saved } = await searchParams
+export default async function WebsiteAppearancePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -40,7 +35,6 @@ export default async function WebsiteAppearancePage({
             logo_url: restaurant.logo_url as string | null,
             menu_max_width: restaurant.menu_max_width as number | null,
           }}
-          saved={saved === 'appearance'}
         />
       </div>
     </div>

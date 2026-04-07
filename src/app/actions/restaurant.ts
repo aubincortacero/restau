@@ -187,6 +187,7 @@ export async function updateRestaurant(formData: FormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/settings')
+  revalidatePath('/dashboard/settings/restaurant')
 }
 
 export async function updatePaymentMethods(formData: FormData) {
@@ -207,7 +208,7 @@ export async function updatePaymentMethods(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/settings/restaurant')
-  redirect('/dashboard/settings/restaurant?saved=payment')
+  revalidatePath('/dashboard/orders')
 }
 
 export async function updateFulfillmentModes(formData: FormData) {
@@ -228,7 +229,7 @@ export async function updateFulfillmentModes(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/settings/restaurant')
-  redirect('/dashboard/settings/restaurant?saved=fulfillment')
+  revalidatePath('/dashboard/orders')
 }
 
 export async function updateAppearance(formData: FormData) {
@@ -282,7 +283,7 @@ export async function updateAppearance(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/website')
-  redirect('/dashboard/website/appearance?saved=appearance')
+  revalidatePath('/dashboard/website/appearance')
 }
 
 export async function updateCoverImage(
@@ -379,7 +380,6 @@ export async function updateWebsiteContent(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/website')
-  redirect('/dashboard/website?saved=1')
 }
 
 export async function updateSchedules(formData: FormData) {

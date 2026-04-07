@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useTransition } from 'react'
 import { updateAppearance } from '@/app/actions/restaurant'
 
 const PRESET_COLORS = [
@@ -16,6 +16,8 @@ const PRESET_COLORS = [
   { hex: '#78716c', label: 'Gris chaud' },
 ]
 
+type SaveStatus = 'idle' | 'saving' | 'saved'
+
 interface Props {
   restaurantId: string
   initial: {
@@ -25,10 +27,10 @@ interface Props {
     logo_url?: string | null
     menu_max_width?: number | null
   }
-  saved: boolean
+  saved?: boolean
 }
 
-export default function AppearanceForm({ restaurantId, initial, saved }: Props) {
+export default function AppearanceForm({ restaurantId, initial }: Props) {
   const [color, setColor] = useState(initial.brand_color || '#f97316')
   const [radius, setRadius] = useState(initial.menu_button_radius || 'rounded')
   const [headerStyle, setHeaderStyle] = useState(initial.menu_header_style || 'dark')
@@ -38,12 +40,44 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
   const [logoPreview, setLogoPreview] = useState<string | null>(initial.logo_url ?? null)
   const [removeLogo, setRemoveLogo] = useState(false)
   const [maxWidth, setMaxWidth] = useState<string>(initial.menu_max_width ? String(initial.menu_max_width) : '')
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [, startTransition] = useTransition()
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const isPreset = PRESET_COLORS.some(p => p.hex === color)
 
+  function doSave(fd: FormData) {
+    setStatus('saving')
+    startTransition(async () => {
+      await updateAppearance(fd)
+      setStatus('saved')
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current)
+      savedTimeoutRef.current = setTimeout(() => setStatus('idle'), 2000)
+    })
+  }
+
+  function saveImmediate(overrides?: { brand_color?: string; menu_button_radius?: string; menu_header_style?: string; remove_logo?: string }) {
+    if (!formRef.current) return
+    const fd = new FormData(formRef.current)
+    if (overrides) {
+      Object.entries(overrides).forEach(([k, v]) => fd.set(k, v))
+    }
+    doSave(fd)
+  }
+
+  function saveDebounced() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if (!formRef.current) return
+      doSave(new FormData(formRef.current))
+    }, 1000)
+  }
+
   return (
-    <form action={updateAppearance} className="space-y-7" encType="multipart/form-data">
+    <form ref={formRef} className="space-y-7" encType="multipart/form-data">
       <input type="hidden" name="id" value={restaurantId} />
       <input type="hidden" name="brand_color" value={color} />
       <input type="hidden" name="menu_button_radius" value={radius} />
@@ -59,7 +93,7 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
               key={p.hex}
               type="button"
               title={p.label}
-              onClick={() => { setColor(p.hex); setCustomHex('') }}
+              onClick={() => { setColor(p.hex); setCustomHex(''); saveImmediate({ brand_color: p.hex }) }}
               className="relative w-8 h-8 rounded-full transition-transform hover:scale-110 focus:outline-none"
               style={{ backgroundColor: p.hex }}
             >
@@ -92,6 +126,7 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               value={color}
               onChange={e => { setColor(e.target.value); setCustomHex(e.target.value) }}
+              onBlur={e => saveImmediate({ brand_color: e.target.value })}
             />
           </label>
         </div>
@@ -131,6 +166,8 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
                   if (file) {
                     setLogoPreview(URL.createObjectURL(file))
                     setRemoveLogo(false)
+                    // Save immediately after logo selection
+                    setTimeout(() => saveImmediate({ remove_logo: '0' }), 50)
                   }
                 }}
               />
@@ -138,7 +175,7 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
             {(logoPreview && !removeLogo) && (
               <button
                 type="button"
-                onClick={() => { setRemoveLogo(true); setLogoPreview(null); if (logoInputRef.current) logoInputRef.current.value = '' }}
+                onClick={() => { setRemoveLogo(true); setLogoPreview(null); if (logoInputRef.current) logoInputRef.current.value = ''; saveImmediate({ remove_logo: '1' }) }}
                 className="text-xs text-red-400 hover:text-red-300 transition-colors text-left"
               >
                 Supprimer le logo
@@ -157,7 +194,7 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
             type="number"
             name="menu_max_width"
             value={maxWidth}
-            onChange={e => setMaxWidth(e.target.value)}
+            onChange={e => { setMaxWidth(e.target.value); saveDebounced() }}
             placeholder="Illimitée"
             min={320}
             max={1600}
@@ -167,16 +204,21 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
         </div>
       </div>
 
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="submit"
-          className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
-        >
-          Enregistrer
-        </button>
-        {saved && (
-          <span className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+      <div className="h-6 flex items-center pt-1">
+        {status === 'saving' && (
+          <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Enregistrement…
+          </span>
+        )}
+        {status === 'saved' && (
+          <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
             Enregistré
           </span>
         )}
