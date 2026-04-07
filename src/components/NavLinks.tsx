@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { IconHome, IconMenu, IconTable, IconOrders, IconEye } from './icons'
+import { IconHome, IconMenu, IconTable, IconOrders, IconEye, IconGlobe } from './icons'
 
 export const navItems = [
   { href: '/dashboard', label: 'Accueil', icon: IconHome },
   { href: '/dashboard/menu', label: 'Menu', icon: IconMenu },
   { href: '/dashboard/tables', label: 'Tables', icon: IconTable },
+  { href: '/dashboard/website', label: 'Website', icon: IconGlobe },
   { href: '/dashboard/orders', label: 'Commandes', icon: IconOrders },
 ]
 

@@ -283,6 +283,58 @@ export async function updateCoverImage(formData: FormData) {
   redirect('/dashboard/settings/restaurant?saved=cover')
 }
 
+export async function updateWebsiteContent(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  const about_description = (formData.get('about_description') as string) || null
+  const contact_phone = (formData.get('contact_phone') as string) || null
+  const contact_email = (formData.get('contact_email') as string) || null
+  const contact_address = (formData.get('contact_address') as string) || null
+
+  // Membres de l'équipe : tableau JSON encodé dans le form
+  let team_members: { name: string; role: string; bio: string }[] = []
+  try {
+    const raw = formData.get('team_members') as string
+    if (raw) team_members = JSON.parse(raw)
+  } catch { /* ignore */ }
+
+  // Upload photo À propos
+  let about_image_url: string | undefined
+  const aboutFile = formData.get('about_image') as File | null
+  if (aboutFile && aboutFile.size > 0) {
+    const ext = aboutFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${id}/about.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('restaurant-covers')
+      .upload(path, aboutFile, { contentType: aboutFile.type, cacheControl: '3600', upsert: true })
+    if (!uploadError) {
+      const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+      about_image_url = urlData.publicUrl + '?t=' + Date.now()
+    }
+  }
+
+  const update: Record<string, unknown> = {
+    about_description,
+    contact_phone,
+    contact_email,
+    contact_address,
+    team_members,
+  }
+  if (about_image_url) update.about_image_url = about_image_url
+
+  await supabase
+    .from('restaurants')
+    .update(update)
+    .eq('id', id)
+    .eq('owner_id', user.id)
+
+  revalidatePath('/dashboard/website')
+  redirect('/dashboard/website?saved=1')
+}
+
 export async function updateSchedules(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
