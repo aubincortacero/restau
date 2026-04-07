@@ -26,7 +26,7 @@ export default async function CustomPage({
 
   const { data: page } = await supabase
     .from('restaurant_pages')
-    .select('id, title, slug')
+    .select('id, title, slug, cover_image_url')
     .eq('restaurant_id', restaurant.id)
     .eq('slug', pageSlug)
     .eq('is_published', true)
@@ -40,12 +40,29 @@ export default async function CustomPage({
     .eq('page_id', page.id)
     .order('position')
 
+  const coverUrl = (page as { cover_image_url?: string | null }).cover_image_url ?? null
+
   return (
     <main className="min-h-screen bg-[#0a0908] text-stone-100 pb-20">
-      {/* Espacement pour la nav fixe */}
-      <div className="pt-28 px-5 max-w-lg mx-auto space-y-10">
-        <h1 className="text-3xl font-bold">{page.title}</h1>
+      {/* Hero */}
+      <div className="relative w-full" style={{ height: '45vw', maxHeight: '320px', minHeight: '200px' }}>
+        {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt={page.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-zinc-900" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0908] via-[#0a0908]/50 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 max-w-lg mx-auto">
+          <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">{page.title}</h1>
+        </div>
+      </div>
 
+      <div className="px-5 pt-8 max-w-lg mx-auto space-y-10">
         {(sections ?? []).map(section => (
           <SectionRenderer key={section.id} section={section as Section} />
         ))}

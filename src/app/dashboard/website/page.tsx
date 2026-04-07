@@ -103,7 +103,6 @@ export default async function WebsitePage() {
             brand_color: (restaurant.brand_color as string | null) ?? '#f97316',
             menu_button_radius: (restaurant.menu_button_radius as string | null) ?? 'rounded',
             menu_header_style: (restaurant.menu_header_style as string | null) ?? 'dark',
-            cover_image_url: (restaurant.cover_image_url as string | null) ?? null,
           }}
           saved={false}
         />

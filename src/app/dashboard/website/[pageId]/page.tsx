@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import PageEditor from './PageEditor'
 import DeletePageButton from './DeletePageButton'
+import PageCoverUpload from '@/components/PageCoverUpload'
 
 export default async function PageEditorPage({
   params,
@@ -20,7 +21,7 @@ export default async function PageEditorPage({
 
   const { data: page } = await supabase
     .from('restaurant_pages')
-    .select('id, title, slug, is_published')
+    .select('id, title, slug, is_published, cover_image_url')
     .eq('id', pageId)
     .eq('restaurant_id', activeRestaurantId)
     .single()
@@ -50,6 +51,15 @@ export default async function PageEditorPage({
           <p className="text-xs text-zinc-500 mt-0.5">slug : {page.slug}</p>
         </div>
         <DeletePageButton pageId={pageId} title={page.title} />
+      </div>
+
+      {/* Image d'en-tête */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+        <PageCoverUpload
+          pageId={pageId}
+          restaurantId={activeRestaurantId}
+          initialUrl={(page as { cover_image_url?: string | null }).cover_image_url ?? null}
+        />
       </div>
 
       {/* Éditeur de sections */}

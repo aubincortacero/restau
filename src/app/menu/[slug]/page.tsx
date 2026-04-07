@@ -93,7 +93,7 @@ export default async function PublicMenuPage({
   let afterSections: { id: string; type: string; content: Record<string, unknown> }[] = []
   const { data: menuPage } = await supabase
     .from('restaurant_pages')
-    .select('id')
+    .select('id, cover_image_url')
     .eq('restaurant_id', restaurant.id)
     .eq('slug', '__menu__')
     .maybeSingle()
@@ -165,7 +165,7 @@ export default async function PublicMenuPage({
     buttonRadius === 'sharp' ? '4px' :
     '12px'
 
-  const coverUrl = (restaurant.cover_image_url as string | null) ?? null
+  const coverUrl = (menuPage as { cover_image_url?: string | null } | null)?.cover_image_url ?? null
 
   return (
     <div

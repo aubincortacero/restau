@@ -1424,3 +1424,40 @@ export async function uploadSectionImage(
   return { url: urlData.publicUrl }
 }
 
+export async function uploadPageCover(
+  pageId: string,
+  restaurantId: string,
+  file: File,
+): Promise<{ error?: string; url?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  if (file.size > 500 * 1024) return { error: 'Image trop lourde (max 500 Ko).' }
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+  if (!ALLOWED.includes(file.type)) return { error: 'Format non supporté (JPG, PNG, WebP).' }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const path = `${restaurantId}/page-covers/${pageId}.${ext}`
+
+  const adminClient = createAdminClient()
+  const { error: uploadError } = await adminClient.storage
+    .from('restaurant-covers')
+    .upload(path, file, { contentType: file.type, upsert: true })
+
+  if (uploadError) return { error: `Erreur upload : ${uploadError.message}` }
+  const { data: urlData } = adminClient.storage.from('restaurant-covers').getPublicUrl(path)
+  const urlWithBust = `${urlData.publicUrl}?t=${Date.now()}`
+
+  const { error: updateError } = await supabase
+    .from('restaurant_pages')
+    .update({ cover_image_url: urlWithBust })
+    .eq('id', pageId)
+    .eq('restaurant_id', restaurantId)
+
+  if (updateError) return { error: 'Erreur mise à jour de la page.' }
+
+  revalidatePath('/dashboard/website')
+  return { url: urlWithBust }
+}
+
