@@ -204,7 +204,7 @@ export default async function PublicMenuPage({
               <img
                 src={restaurant.logo_url}
                 alt={restaurant.name}
-                className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-white/10 shadow-xl"
+                className="h-[60px] w-auto rounded-2xl object-contain shrink-0 shadow-xl"
               />
             )}
             <div className="flex-1 min-w-0">

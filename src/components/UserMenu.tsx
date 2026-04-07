@@ -154,13 +154,13 @@ export default function UserMenu({
                       }}
                       className={`flex-1 min-w-0 flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors cursor-pointer text-left ${
                         isActive
-                          ? 'text-white bg-orange-500/10'
+                          ? 'text-white bg-white/8'
                           : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-orange-500' : 'bg-zinc-700'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-white/60' : 'bg-zinc-700'}`} />
                       <span className="truncate">{r.name}</span>
-                      {isActive && <span className="ml-auto text-[10px] text-orange-500 font-medium shrink-0">actif</span>}
+                      {isActive && <span className="ml-auto text-[10px] text-zinc-400 font-medium shrink-0">actif</span>}
                     </button>
                     {restaurants.length > 1 && deleteAction && (
                       confirmDelete === r.id ? (
