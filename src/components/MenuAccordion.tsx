@@ -615,11 +615,23 @@ function ItemRow({
 }) {
   const showHH = hhActive && item.happy_hour_price != null
   const [imageOpen, setImageOpen] = useState(false)
+  const [imageVisible, setImageVisible] = useState(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function openImage() {
+    if (!item.image_url) return
+    setImageOpen(true)
+    requestAnimationFrame(() => requestAnimationFrame(() => setImageVisible(true)))
+  }
+
+  function closeImage() {
+    setImageVisible(false)
+    setTimeout(() => setImageOpen(false), 200)
+  }
 
   function startLongPress() {
     if (!item.image_url) return
-    longPressTimer.current = setTimeout(() => setImageOpen(true), 450)
+    longPressTimer.current = setTimeout(() => openImage(), 450)
   }
 
   function cancelLongPress() {
@@ -631,16 +643,26 @@ function ItemRow({
 
   return (
     <>
-      {/* Image popup bulle */}
+      {/* Image popup */}
       {imageOpen && item.image_url && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center"
-          style={{ backdropFilter: 'blur(6px)', background: 'rgba(10,9,8,0.75)' }}
-          onClick={() => setImageOpen(false)}
+          style={{
+            backdropFilter: 'blur(8px)',
+            background: `rgba(10,9,8,${imageVisible ? '0.80' : '0'})`,
+            transition: 'background 0.2s ease',
+          }}
+          onClick={closeImage}
         >
           <div
             className="relative mx-6 rounded-3xl overflow-hidden shadow-2xl"
-            style={{ maxWidth: '340px', width: '100%' }}
+            style={{
+              maxWidth: '340px',
+              width: '100%',
+              transform: imageVisible ? 'scale(1)' : 'scale(0.75)',
+              opacity: imageVisible ? 1 : 0,
+              transition: 'transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease',
+            }}
             onClick={e => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -652,7 +674,7 @@ function ItemRow({
             />
             <div className="absolute top-3 right-3">
               <button
-                onClick={() => setImageOpen(false)}
+                onClick={closeImage}
                 className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white border border-white/20"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -677,7 +699,7 @@ function ItemRow({
         {item.image_url ? (
           <button
             type="button"
-            onClick={() => setImageOpen(true)}
+            onClick={openImage}
             className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-stone-800/60 active:scale-95 transition-transform"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -693,7 +715,10 @@ function ItemRow({
         {/* Texte + actions */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-stone-100 text-base leading-snug flex-1 truncate">{item.name}</p>
+            <p
+              className={`font-semibold text-stone-100 text-base leading-snug flex-1 truncate ${item.image_url ? 'cursor-pointer active:opacity-70' : ''}`}
+              onClick={item.image_url ? openImage : undefined}
+            >{item.name}</p>
             <div className="text-right shrink-0 ml-2">
               {showHH ? (
                 <>
