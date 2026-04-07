@@ -93,7 +93,7 @@ export default async function DashboardLayout({
   const restaurantData = activeRestaurantId
     ? await supabase
         .from('restaurants')
-        .select('id, opening_hours, happy_hour')
+        .select('id, opening_hours, happy_hour, logo_url')
         .eq('id', activeRestaurantId)
         .single()
         .then((r) => r.data)
@@ -144,7 +144,7 @@ export default async function DashboardLayout({
 
       <div className="flex flex-1 min-h-screen">
         {/* Sidebar desktop */}
-        <DashboardSidebar />
+        <DashboardSidebar logoUrl={restaurant?.logo_url ?? null} />
 
         {/* Colonne principale */}
         <div className="flex-1 flex flex-col min-w-0">

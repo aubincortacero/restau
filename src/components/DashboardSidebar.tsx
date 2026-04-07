@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  IconLogo, IconHome, IconMenu, IconTable, IconOrders,
+  IconHome, IconMenu, IconTable, IconOrders,
   IconGlobe, IconSettings,
 } from './icons'
 
@@ -22,7 +23,7 @@ const BOTTOM_ITEMS = [
 
 const COLLAPSED_KEY = 'sidebar_collapsed'
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar({ logoUrl }: { logoUrl: string | null }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -53,13 +54,22 @@ export default function DashboardSidebar() {
       style={{ minHeight: '100dvh', position: 'sticky', top: 0 }}
     >
       {/* Logo + collapse toggle */}
-      <div className={`h-14 flex items-center border-b border-zinc-800 shrink-0 ${collapsed ? 'justify-center' : 'px-4 justify-between'}`}>
+      <div className={`flex items-center border-b border-zinc-800 shrink-0 ${collapsed ? 'h-14 justify-center' : 'px-4 justify-between'}`}>
         {!collapsed && (
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center shrink-0">
-              <IconLogo className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-sm">Qomand</span>
+          <Link href="/dashboard" className="flex items-center py-2">
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt="Logo restaurant"
+                height={60}
+                width={0}
+                style={{ height: '60px', width: 'auto' }}
+                className="object-contain"
+                unoptimized
+              />
+            ) : (
+              <span className="font-semibold text-sm">Qomand</span>
+            )}
           </Link>
         )}
         <button
