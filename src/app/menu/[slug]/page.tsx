@@ -291,7 +291,7 @@ export default async function PublicMenuPage({
 
       {/* Footer */}
       <footer className="text-center py-10 text-stone-700 text-xs">
-        <p>Propulsé par Restau·app</p>
+        <p>Propulsé par Qomand</p>
       </footer>
     </div>
   )
