@@ -275,13 +275,14 @@ export async function updateCoverImage(
 
   const ext = coverFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `${id}/cover.${ext}`
-  const { error: uploadError } = await supabase.storage
+  const adminClient = createAdminClient()
+  const { error: uploadError } = await adminClient.storage
     .from('restaurant-covers')
     .upload(path, coverFile, { contentType: coverFile.type, cacheControl: '3600', upsert: true })
 
   if (uploadError) return { error: `Erreur upload : ${uploadError.message}` }
 
-  const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+  const { data: urlData } = adminClient.storage.from('restaurant-covers').getPublicUrl(path)
   const cover_image_url = urlData.publicUrl + '?t=' + Date.now()
 
   const { error: dbError } = await supabase
@@ -321,11 +322,12 @@ export async function updateWebsiteContent(formData: FormData) {
   if (aboutFile && aboutFile.size > 0) {
     const ext = aboutFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
     const path = `${id}/about.${ext}`
-    const { error: uploadError } = await supabase.storage
+    const adminClient = createAdminClient()
+    const { error: uploadError } = await adminClient.storage
       .from('restaurant-covers')
       .upload(path, aboutFile, { contentType: aboutFile.type, cacheControl: '3600', upsert: true })
     if (!uploadError) {
-      const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+      const { data: urlData } = adminClient.storage.from('restaurant-covers').getPublicUrl(path)
       about_image_url = urlData.publicUrl + '?t=' + Date.now()
     }
   }
@@ -1351,12 +1353,13 @@ export async function uploadSectionImage(
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `${restaurantId}/pages/${sectionId}/${Date.now()}.${ext}`
 
-  const { error: uploadError } = await supabase.storage
+  const adminClient = createAdminClient()
+  const { error: uploadError } = await adminClient.storage
     .from('restaurant-covers')
     .upload(path, file, { contentType: file.type, upsert: false })
 
   if (uploadError) return { error: `Erreur upload : ${uploadError.message}` }
-  const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+  const { data: urlData } = adminClient.storage.from('restaurant-covers').getPublicUrl(path)
   return { url: urlData.publicUrl }
 }
 
