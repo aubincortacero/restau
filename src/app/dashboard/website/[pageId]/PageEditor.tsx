@@ -247,13 +247,15 @@ function GalleryEditor({ section, restaurantId }: { section: Section; restaurant
   const c = section.content as { images?: GalleryImage[] }
   const [images, setImages] = useState<GalleryImage[]>(c.images ?? [])
   const [, startSave] = useTransition()
-  const [uploadPending, startUpload] = useTransition()
+  const [uploadCount, setUploadCount] = useState(0)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imagesRef = useRef(images)
   imagesRef.current = images
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const dragIndex = useRef<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
 
   function doSave(imgs: GalleryImage[]) {
     setStatus('saving'); setError(null)
@@ -269,21 +271,29 @@ function GalleryEditor({ section, restaurantId }: { section: Section; restaurant
     debounceRef.current = setTimeout(() => doSave(imgs), 1000)
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 500 * 1024) { setError('Image trop lourde (max 500 Ko).'); return }
-    setError(null)
-    startUpload(async () => {
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    const valid = files.filter(f => f.size <= 500 * 1024)
+    const skipped = files.length - valid.length
+    if (valid.length === 0) { setError('Image(s) trop lourde(s) — max 500 Ko.'); return }
+    if (skipped > 0) setError(`${skipped} fichier(s) ignoré(s) > 500 Ko.`)
+    else setError(null)
+    setUploadCount(valid.length)
+    const newImgs: GalleryImage[] = []
+    for (const file of valid) {
       const result = await uploadSectionImage(restaurantId, section.id, file)
-      if (result.error) { setError(result.error) }
-      else if (result.url) {
-        const next = [...imagesRef.current, { url: result.url!, caption: '' }]
-        setImages(next)
-        doSave(next)
-      }
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    })
+      setUploadCount(prev => prev - 1)
+      if (result.error) { setError(result.error); break }
+      else if (result.url) newImgs.push({ url: result.url, caption: '' })
+    }
+    setUploadCount(0)
+    if (newImgs.length) {
+      const next = [...imagesRef.current, ...newImgs]
+      setImages(next)
+      doSave(next)
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function removeImage(i: number) {
@@ -298,15 +308,52 @@ function GalleryEditor({ section, restaurantId }: { section: Section; restaurant
     saveDebounced(next)
   }
 
+  function onDragStart(e: React.DragEvent, i: number) {
+    dragIndex.current = i
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  function onDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOver !== i) setDragOver(i)
+  }
+  function onDragEnd() { dragIndex.current = null; setDragOver(null) }
+  function onDrop(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    if (dragIndex.current === null || dragIndex.current === i) { setDragOver(null); return }
+    const next = [...images]
+    const [moved] = next.splice(dragIndex.current, 1)
+    next.splice(i, 0, moved)
+    setImages(next); setDragOver(null); dragIndex.current = null
+    doSave(next)
+  }
+
   return (
-    <div className="space-y-3">
-      {images.length === 0 && (
+    <div className="space-y-2">
+      {images.length === 0 && uploadCount === 0 && (
         <p className="text-xs text-zinc-600 text-center py-4">Aucune photo ajoutée</p>
       )}
       {images.map((img, i) => (
-        <div key={img.url + i} className="flex items-center gap-3 bg-zinc-800/50 rounded-xl p-2.5">
+        <div
+          key={img.url}
+          draggable
+          onDragStart={e => onDragStart(e, i)}
+          onDragOver={e => onDragOver(e, i)}
+          onDragEnd={onDragEnd}
+          onDrop={e => onDrop(e, i)}
+          className={`flex items-center gap-2.5 rounded-xl p-2 transition-colors select-none ${
+            dragOver === i ? 'bg-orange-500/10 ring-1 ring-orange-500/40' : 'bg-zinc-800/50'
+          }`}
+        >
+          <div className="text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0 px-0.5">
+            <svg className="w-3 h-4" viewBox="0 0 6 10" fill="currentColor">
+              <circle cx="1.5" cy="1.5" r="1.2"/><circle cx="4.5" cy="1.5" r="1.2"/>
+              <circle cx="1.5" cy="5" r="1.2"/><circle cx="4.5" cy="5" r="1.2"/>
+              <circle cx="1.5" cy="8.5" r="1.2"/><circle cx="4.5" cy="8.5" r="1.2"/>
+            </svg>
+          </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.url} alt="" className="w-16 h-12 object-cover rounded-lg shrink-0" />
+          <img src={img.url} alt="" className="w-14 h-10 object-cover rounded-lg shrink-0" />
           <input
             type="text"
             value={img.caption}
@@ -323,19 +370,28 @@ function GalleryEditor({ section, restaurantId }: { section: Section; restaurant
         </div>
       ))}
 
-      <div className="flex items-center gap-3">
+      {uploadCount > 0 && Array.from({ length: uploadCount }).map((_, i) => (
+        <div key={`ghost-${i}`} className="flex items-center gap-2.5 bg-zinc-800/30 rounded-xl p-2 animate-pulse">
+          <div className="w-4 h-4 shrink-0" />
+          <div className="w-14 h-10 bg-zinc-700 rounded-lg shrink-0" />
+          <div className="flex-1 h-7 bg-zinc-700 rounded-lg" />
+          <div className="w-7 h-7 rounded-lg bg-zinc-700 shrink-0" />
+        </div>
+      ))}
+
+      <div className="flex items-center gap-3 pt-1">
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploadPending}
+          disabled={uploadCount > 0}
           className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
         >
-          {uploadPending
+          {uploadCount > 0
             ? <span className="w-3 h-3 border-2 border-zinc-500 border-t-zinc-200 rounded-full animate-spin" />
             : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
           }
-          Ajouter une photo
+          {uploadCount > 0 ? `${uploadCount} en cours…` : 'Ajouter des photos'}
         </button>
-        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
+        <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFiles} />
         <p className="text-xs text-zinc-700">JPG, PNG, WebP · max 500 Ko</p>
       </div>
 
