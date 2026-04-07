@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS page_sections (
 ALTER TABLE restaurant_pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE page_sections    ENABLE ROW LEVEL SECURITY;
 
+-- Nettoyage des policies existantes (idempotent)
+DROP POLICY IF EXISTS "owner_all_pages"     ON restaurant_pages;
+DROP POLICY IF EXISTS "public_read_pages"   ON restaurant_pages;
+DROP POLICY IF EXISTS "owner_all_sections"  ON page_sections;
+DROP POLICY IF EXISTS "public_read_sections" ON page_sections;
+
 -- Propriétaire : toutes opérations sur ses pages
 CREATE POLICY "owner_all_pages" ON restaurant_pages FOR ALL USING (
   restaurant_id IN (SELECT id FROM restaurants WHERE owner_id = auth.uid())

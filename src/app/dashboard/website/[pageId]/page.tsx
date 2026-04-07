@@ -2,8 +2,8 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import { deletePageById } from '@/app/actions/restaurant'
 import PageEditor from './PageEditor'
+import DeletePageButton from './DeletePageButton'
 
 export default async function PageEditorPage({
   params,
@@ -33,12 +33,6 @@ export default async function PageEditorPage({
     .eq('page_id', pageId)
     .order('position')
 
-  async function handleDelete() {
-    'use server'
-    await deletePageById(pageId)
-    redirect('/dashboard/website')
-  }
-
   return (
     <div className="max-w-xl space-y-6">
       {/* En-tête */}
@@ -55,17 +49,7 @@ export default async function PageEditorPage({
           <h1 className="text-xl font-bold text-white truncate">{page.title}</h1>
           <p className="text-xs text-zinc-500 mt-0.5">slug : {page.slug}</p>
         </div>
-        <form action={handleDelete}>
-          <button
-            type="submit"
-            className="text-xs text-zinc-600 hover:text-red-400 transition-colors px-2 py-1 rounded-lg"
-            onClick={e => {
-              if (!confirm(`Supprimer la page "${page.title}" ?`)) e.preventDefault()
-            }}
-          >
-            Supprimer
-          </button>
-        </form>
+        <DeletePageButton pageId={pageId} title={page.title} />
       </div>
 
       {/* Éditeur de sections */}
