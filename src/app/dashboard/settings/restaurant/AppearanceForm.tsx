@@ -3,7 +3,7 @@
 import { useState, useRef, useActionState, useEffect } from 'react'
 import { updateAppearance, updateCoverImage } from '@/app/actions/restaurant'
 
-const MAX_COVER_SIZE = 5 * 1024 * 1024 // 5 Mo
+const MAX_COVER_SIZE = 500 * 1024 // 500 Ko
 
 const PRESET_COLORS = [
   { hex: '#f97316', label: 'Orange' },
@@ -117,7 +117,7 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
           className="hidden"
           onChange={handleFileChange}
         />
-        <p className="text-xs text-zinc-600 mt-1.5">JPG, PNG ou WebP · max 5 Mo</p>
+        <p className="text-xs text-zinc-600 mt-1.5">JPG, PNG ou WebP · max 500 Ko</p>
       </div>
 
       {coverError && (

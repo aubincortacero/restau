@@ -88,6 +88,29 @@ export default async function PublicMenuPage({
 
   if (!restaurant) notFound()
 
+  // Sections avant/après le menu (page __menu__)
+  let beforeSections: { id: string; type: string; content: Record<string, unknown> }[] = []
+  let afterSections: { id: string; type: string; content: Record<string, unknown> }[] = []
+  const { data: menuPage } = await supabase
+    .from('restaurant_pages')
+    .select('id')
+    .eq('restaurant_id', restaurant.id)
+    .eq('slug', '__menu__')
+    .maybeSingle()
+  if (menuPage) {
+    const { data: menuSections } = await supabase
+      .from('page_sections')
+      .select('id, type, position, content')
+      .eq('page_id', menuPage.id)
+      .order('position')
+    beforeSections = (menuSections ?? []).filter(
+      s => (s.content as { _placement?: string })._placement === 'before'
+    )
+    afterSections = (menuSections ?? []).filter(
+      s => (s.content as { _placement?: string })._placement !== 'before'
+    )
+  }
+
   // Résoudre le numéro de table depuis l'UUID
   let tableLabel: string | null = null
   if (tableId) {
@@ -219,6 +242,15 @@ export default async function PublicMenuPage({
         </p>
       )}
 
+      {/* Sections AVANT le menu */}
+      {beforeSections.length > 0 && (
+        <div className="max-w-lg mx-auto px-5 pt-4 space-y-8">
+          {beforeSections.map(s => (
+            <PublicSectionRenderer key={s.id} section={s} />
+          ))}
+        </div>
+      )}
+
       {/* Menu */}
       <main className="max-w-lg mx-auto">
         {categories.length === 0 ? (
@@ -248,10 +280,59 @@ export default async function PublicMenuPage({
         )}
       </main>
 
+      {/* Sections APRÈS le menu */}
+      {afterSections.length > 0 && (
+        <div className="max-w-lg mx-auto px-5 pt-6 pb-4 space-y-8">
+          {afterSections.map(s => (
+            <PublicSectionRenderer key={s.id} section={s} />
+          ))}
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="text-center py-10 text-stone-700 text-xs">
         <p>Propulsé par Restau·app</p>
       </footer>
     </div>
   )
+}
+
+function PublicSectionRenderer({
+  section,
+}: {
+  section: { id: string; type: string; content: Record<string, unknown> }
+}) {
+  if (section.type === 'text_block') {
+    const c = section.content as { title?: string; subtitle?: string; body?: string }
+    return (
+      <div className="space-y-2">
+        {c.title && <h2 className="text-2xl font-bold text-white">{c.title}</h2>}
+        {c.subtitle && <p className="text-base font-medium text-stone-400">{c.subtitle}</p>}
+        {c.body && <p className="text-sm text-stone-300 leading-relaxed whitespace-pre-line">{c.body}</p>}
+      </div>
+    )
+  }
+
+  if (section.type === 'gallery') {
+    const c = section.content as { images?: { url: string; caption?: string }[] }
+    const images = c.images ?? []
+    if (!images.length) return null
+    return (
+      <div
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 [&::-webkit-scrollbar]:hidden pb-1"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {images.map((img, i) => (
+          <div key={img.url + i} className="shrink-0 snap-start rounded-2xl overflow-hidden bg-zinc-900" style={{ width: '80vw', maxWidth: '340px' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img.url} alt={img.caption ?? ''} className="w-full aspect-[4/3] object-cover" loading="lazy" />
+            {img.caption && <p className="text-xs text-stone-400 px-3 py-2">{img.caption}</p>}
+          </div>
+        ))}
+        <div className="shrink-0 w-5" />
+      </div>
+    )
+  }
+
+  return null
 }

@@ -267,8 +267,8 @@ export async function updateCoverImage(
 
   if (!coverFile || coverFile.size === 0) return { error: 'Aucun fichier sélectionné.' }
 
-  const MAX_SIZE = 5 * 1024 * 1024 // 5 Mo
-  if (coverFile.size > MAX_SIZE) return { error: `Image trop lourde (${(coverFile.size / 1024 / 1024).toFixed(1)} Mo). Maximum 5 Mo.` }
+  const MAX_SIZE = 500 * 1024 // 500 Ko
+  if (coverFile.size > MAX_SIZE) return { error: `Image trop lourde (${(coverFile.size / 1024).toFixed(0)} Ko). Maximum 500 Ko.` }
 
   const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
   if (!ALLOWED.includes(coverFile.type)) return { error: 'Format non supporté. Utilisez JPG, PNG ou WebP.' }
@@ -1237,6 +1237,59 @@ export async function deletePageById(pageId: string): Promise<{ error?: string }
   return {}
 }
 
+export async function getOrCreateMenuPage(
+  restaurantId: string,
+): Promise<{ error?: string; pageId?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { data: existing } = await supabase
+    .from('restaurant_pages')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .eq('slug', '__menu__')
+    .maybeSingle()
+
+  if (existing) return { pageId: existing.id }
+
+  const { data, error } = await supabase
+    .from('restaurant_pages')
+    .insert({ restaurant_id: restaurantId, title: 'Menu', slug: '__menu__', position: -1, is_published: true })
+    .select('id')
+    .single()
+
+  if (error) return { error: error.message }
+  return { pageId: data.id }
+}
+
+export async function createMenuSection(
+  pageId: string,
+  type: 'text_block' | 'gallery',
+  placement: 'before' | 'after',
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { count } = await supabase
+    .from('page_sections')
+    .select('*', { count: 'exact', head: true })
+    .eq('page_id', pageId)
+
+  const defaultContent = type === 'text_block'
+    ? { _placement: placement, title: '', subtitle: '', body: '' }
+    : { _placement: placement, images: [] }
+
+  const { error } = await supabase
+    .from('page_sections')
+    .insert({ page_id: pageId, type, position: count ?? 0, content: defaultContent })
+
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/website/menu')
+  return {}
+}
+
 export async function createSection(
   pageId: string,
   type: 'text_block' | 'gallery',
@@ -1268,14 +1321,18 @@ export async function updateTextSection(
   title: string,
   subtitle: string,
   body: string,
+  placement?: 'before' | 'after',
 ): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié.' }
 
+  const content: Record<string, unknown> = { title, subtitle, body }
+  if (placement) content._placement = placement
+
   const { error } = await supabase
     .from('page_sections')
-    .update({ content: { title, subtitle, body } })
+    .update({ content })
     .eq('id', sectionId)
 
   if (error) return { error: error.message }
@@ -1285,14 +1342,18 @@ export async function updateTextSection(
 export async function updateGallerySection(
   sectionId: string,
   images: { url: string; caption: string }[],
+  placement?: 'before' | 'after',
 ): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié.' }
 
+  const content: Record<string, unknown> = { images }
+  if (placement) content._placement = placement
+
   const { error } = await supabase
     .from('page_sections')
-    .update({ content: { images } })
+    .update({ content })
     .eq('id', sectionId)
 
   if (error) return { error: error.message }
@@ -1346,7 +1407,7 @@ export async function uploadSectionImage(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié.' }
 
-  if (file.size > 5 * 1024 * 1024) return { error: 'Image trop lourde (max 5 Mo).' }
+  if (file.size > 500 * 1024) return { error: 'Image trop lourde (max 500 Ko).' }
   const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
   if (!ALLOWED.includes(file.type)) return { error: 'Format non supporté (JPG, PNG, WebP).' }
 

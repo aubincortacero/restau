@@ -250,7 +250,7 @@ function GalleryEditor({ section, restaurantId }: { section: Section; restaurant
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) { setError('Image trop lourde (max 5 Mo).'); return }
+    if (file.size > 500 * 1024) { setError('Image trop lourde (max 500 Ko).'); return }
     setError(null)
     setSaved(false)
     startUpload(async () => {
@@ -319,7 +319,7 @@ function GalleryEditor({ section, restaurantId }: { section: Section; restaurant
           Ajouter une photo
         </button>
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
-        <p className="text-xs text-zinc-700">JPG, PNG, WebP · max 5 Mo</p>
+        <p className="text-xs text-zinc-700">JPG, PNG, WebP · max 500 Ko</p>
       </div>
 
       <SaveBar pending={savePending} saved={saved} error={error} onSave={save} />
