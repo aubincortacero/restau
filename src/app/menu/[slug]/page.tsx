@@ -319,7 +319,7 @@ function PublicSectionRenderer({
     if (!images.length) return null
     return (
       <div
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 [&::-webkit-scrollbar]:hidden pb-1"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 scroll-pl-5 [&::-webkit-scrollbar]:hidden pb-1"
         style={{ scrollbarWidth: 'none' }}
       >
         {images.map((img, i) => (
