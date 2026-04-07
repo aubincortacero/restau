@@ -25,6 +25,7 @@ export default async function MenuLayout({
       .select('title, slug')
       .eq('restaurant_id', restaurant.id)
       .eq('is_published', true)
+      .neq('slug', '__menu__')
       .order('position')
     pages = data ?? []
   }

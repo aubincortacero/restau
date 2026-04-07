@@ -179,7 +179,7 @@ export default async function PublicMenuPage({
       } as React.CSSProperties}
     >
       {/* Hero plein-écran */}
-      <div className="relative w-full" style={{ height: '52vw', maxHeight: '340px', minHeight: '220px' }}>
+      <div className="relative w-full" style={{ height: '52vw', maxHeight: '390px', minHeight: '270px' }}>
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

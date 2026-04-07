@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import NewPageButton from './NewPageButton'
+import AppearanceForm from '@/app/dashboard/settings/restaurant/AppearanceForm'
 
 export default async function WebsitePage() {
   const supabase = await createClient()
@@ -14,7 +15,7 @@ export default async function WebsitePage() {
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, slug')
+    .select('id, slug, brand_color, menu_button_radius, menu_header_style, cover_image_url')
     .eq('id', activeRestaurantId)
     .single()
   if (!restaurant) notFound()
@@ -40,6 +41,7 @@ export default async function WebsitePage() {
         <NewPageButton restaurantId={activeRestaurantId} />
       </div>
 
+      {/* Pages */}
       <div className="grid grid-cols-2 gap-3">
         {/* Carte Menu intégrée — toujours en premier */}
         <div className="bg-zinc-900 border border-blue-900/40 rounded-2xl px-5 py-4 flex flex-col gap-3">
@@ -90,6 +92,21 @@ export default async function WebsitePage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Apparence */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+        <h2 className="text-sm font-semibold text-white mb-5">Apparence du menu client</h2>
+        <AppearanceForm
+          restaurantId={restaurant.id}
+          initial={{
+            brand_color: (restaurant.brand_color as string | null) ?? '#f97316',
+            menu_button_radius: (restaurant.menu_button_radius as string | null) ?? 'rounded',
+            menu_header_style: (restaurant.menu_header_style as string | null) ?? 'dark',
+            cover_image_url: (restaurant.cover_image_url as string | null) ?? null,
+          }}
+          saved={false}
+        />
       </div>
     </div>
   )
