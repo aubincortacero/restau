@@ -5,7 +5,12 @@ import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import NewPageButton from './NewPageButton'
 import AppearanceForm from '@/app/dashboard/settings/restaurant/AppearanceForm'
 
-export default async function WebsitePage() {
+export default async function WebsitePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string }>
+}) {
+  const { saved } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -15,7 +20,7 @@ export default async function WebsitePage() {
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, slug, brand_color, menu_button_radius, menu_header_style, cover_image_url')
+    .select('id, slug, brand_color, menu_button_radius, menu_header_style, cover_image_url, logo_url, menu_max_width')
     .eq('id', activeRestaurantId)
     .single()
   if (!restaurant) notFound()
@@ -103,8 +108,10 @@ export default async function WebsitePage() {
             brand_color: (restaurant.brand_color as string | null) ?? '#f97316',
             menu_button_radius: (restaurant.menu_button_radius as string | null) ?? 'rounded',
             menu_header_style: (restaurant.menu_header_style as string | null) ?? 'dark',
+            logo_url: restaurant.logo_url as string | null,
+            menu_max_width: restaurant.menu_max_width as number | null,
           }}
-          saved={false}
+          saved={saved === 'appearance'}
         />
       </div>
     </div>

@@ -240,18 +240,49 @@ export async function updateAppearance(formData: FormData) {
   const brand_color = (formData.get('brand_color') as string) || '#f97316'
   const menu_button_radius = (formData.get('menu_button_radius') as string) || 'rounded'
   const menu_header_style = (formData.get('menu_header_style') as string) || 'dark'
+  const menu_max_width_raw = formData.get('menu_max_width') as string | null
+  const menu_max_width = menu_max_width_raw && menu_max_width_raw !== ''
+    ? Math.min(1600, Math.max(320, parseInt(menu_max_width_raw, 10)))
+    : null
 
   // Validation hex color
   if (!/^#[0-9a-fA-F]{6}$/.test(brand_color)) return
 
+  const updates: Record<string, unknown> = { brand_color, menu_button_radius, menu_header_style, menu_max_width }
+
+  // Logo upload (optionnel)
+  const logoFile = formData.get('logo') as File | null
+  if (logoFile && logoFile.size > 0) {
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
+    const MAX_SIZE = 500 * 1024
+    if (ALLOWED.includes(logoFile.type) && logoFile.size <= MAX_SIZE) {
+      const ext = logoFile.name.split('.').pop()?.toLowerCase() ?? 'png'
+      const path = `${id}/logo.${ext}`
+      const adminClient = createAdminClient()
+      const { error: uploadError } = await adminClient.storage
+        .from('restaurant-covers')
+        .upload(path, logoFile, { contentType: logoFile.type, cacheControl: '3600', upsert: true })
+      if (!uploadError) {
+        const { data: urlData } = adminClient.storage.from('restaurant-covers').getPublicUrl(path)
+        updates.logo_url = urlData.publicUrl + '?t=' + Date.now()
+      }
+    }
+  }
+
+  // Suppression logo
+  const removeLogo = formData.get('remove_logo') as string | null
+  if (removeLogo === '1') {
+    updates.logo_url = null
+  }
+
   await supabase
     .from('restaurants')
-    .update({ brand_color, menu_button_radius, menu_header_style })
+    .update(updates)
     .eq('id', id)
     .eq('owner_id', user.id)
 
-  revalidatePath('/dashboard/settings/restaurant')
-  redirect('/dashboard/settings/restaurant?saved=appearance')
+  revalidatePath('/dashboard/website')
+  redirect('/dashboard/website?saved=appearance')
 }
 
 export async function updateCoverImage(
