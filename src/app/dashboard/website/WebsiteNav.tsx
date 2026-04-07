@@ -45,7 +45,7 @@ export default function WebsiteNav({
             href="/dashboard/website/menu"
             className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
               menuActive
-                ? 'bg-orange-500/10 text-orange-400 font-medium'
+                ? 'bg-white/8 text-white font-medium'
                 : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
             }`}
           >
@@ -68,7 +68,7 @@ export default function WebsiteNav({
                 href={`/dashboard/website/${page.id}`}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? 'bg-orange-500/10 text-orange-400 font-medium'
+                    ? 'bg-white/8 text-white font-medium'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                 }`}
               >
@@ -131,7 +131,7 @@ export default function WebsiteNav({
           href="/dashboard/website/appearance"
           className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
             appearanceActive
-              ? 'bg-orange-500/10 text-orange-400 font-medium'
+              ? 'bg-white/8 text-white font-medium'
               : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
           }`}
         >

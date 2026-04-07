@@ -96,16 +96,16 @@ export default function DashboardSidebar({ logoUrl }: { logoUrl: string | null }
                 collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'
               } ${
                 active
-                  ? 'bg-orange-500/12 text-orange-400'
+                  ? 'bg-white/8 text-white'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
               }`}
             >
-              <Icon className={`shrink-0 ${active ? 'text-orange-400' : ''} ${collapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
+              <Icon className={`shrink-0 ${collapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
               {!collapsed && (
-                <span className={`text-sm font-medium truncate ${active ? 'text-orange-400' : ''}`}>{label}</span>
+                <span className="text-sm font-medium truncate">{label}</span>
               )}
               {!collapsed && active && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/40 shrink-0" />
               )}
             </Link>
           )
@@ -125,13 +125,13 @@ export default function DashboardSidebar({ logoUrl }: { logoUrl: string | null }
                 collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'
               } ${
                 active
-                  ? 'bg-orange-500/12 text-orange-400'
+                  ? 'bg-white/8 text-white'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
               }`}
             >
-              <Icon className={`shrink-0 ${active ? 'text-orange-400' : ''} ${collapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
+              <Icon className={`shrink-0 ${collapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
               {!collapsed && (
-                <span className={`text-sm font-medium ${active ? 'text-orange-400' : ''}`}>{label}</span>
+                <span className="text-sm font-medium">{label}</span>
               )}
             </Link>
           )
