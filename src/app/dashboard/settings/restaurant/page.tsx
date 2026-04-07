@@ -25,7 +25,7 @@ export default async function SettingsRestaurantPage({
   if (!restaurant) redirect('/dashboard/new')
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
         <h2 className="text-sm font-semibold text-white mb-5">Informations du restaurant</h2>
         <form action={updateRestaurant} className="space-y-4">
