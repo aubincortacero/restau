@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { updateAppearance } from '@/app/actions/restaurant'
+import { useState, useRef } from 'react'
+import { updateAppearance, updateCoverImage } from '@/app/actions/restaurant'
 
 const PRESET_COLORS = [
   { hex: '#f97316', label: 'Orange' },
@@ -34,6 +34,7 @@ interface Props {
     brand_color: string
     menu_button_radius: string
     menu_header_style: string
+    cover_image_url?: string | null
   }
   saved: boolean
 }
@@ -45,10 +46,65 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
   const [customHex, setCustomHex] = useState(
     PRESET_COLORS.some(p => p.hex === initial.brand_color) ? '' : (initial.brand_color || '')
   )
+  const [coverPreview, setCoverPreview] = useState<string | null>(initial.cover_image_url ?? null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
   const isPreset = PRESET_COLORS.some(p => p.hex === color)
 
   return (
+    <>
+    <form action={updateCoverImage} className="space-y-4 mb-7">
+      <input type="hidden" name="id" value={restaurantId} />
+      <div>
+        <p className="text-xs font-medium text-zinc-400 mb-3">Photo de couverture <span className="text-zinc-600">(hero du menu client)</span></p>
+        <div
+          className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-dashed border-zinc-700 hover:border-zinc-500 cursor-pointer transition-colors group"
+          onClick={() => coverInputRef.current?.click()}
+          style={{ background: coverPreview ? 'none' : '#18181b' }}
+        >
+          {coverPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={coverPreview} alt="Couverture" className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-2 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+              </svg>
+              <span className="text-xs">Cliquer pour ajouter une photo</span>
+            </div>
+          )}
+          {coverPreview && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium bg-black/50 px-3 py-1.5 rounded-lg">Changer la photo</span>
+            </div>
+          )}
+        </div>
+        <input
+          ref={coverInputRef}
+          type="file"
+          name="cover"
+          accept="image/*"
+          className="hidden"
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file) setCoverPreview(URL.createObjectURL(file))
+          }}
+        />
+      </div>
+      <button
+        type="submit"
+        className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
+      >
+        Enregistrer la photo
+      </button>
+      {saved && (
+        <span className="ml-3 inline-flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Enregistré
+        </span>
+      )}
+    </form>
+
     <form action={updateAppearance} className="space-y-7">
       <input type="hidden" name="id" value={restaurantId} />
       <input type="hidden" name="brand_color" value={color} />
@@ -172,5 +228,6 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
         )}
       </div>
     </form>
+    </>
   )
 }

@@ -82,7 +82,7 @@ export default async function PublicMenuPage({
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, name, logo_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled, brand_color, menu_button_radius, menu_header_style')
+    .select('id, name, logo_url, cover_image_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled, brand_color, menu_button_radius, menu_header_style')
     .eq('slug', slug)
     .single()
 
@@ -142,6 +142,8 @@ export default async function PublicMenuPage({
     buttonRadius === 'sharp' ? '4px' :
     '12px'
 
+  const coverUrl = (restaurant.cover_image_url as string | null) ?? null
+
   return (
     <div
       className="min-h-screen bg-[#0a0908] text-stone-100"
@@ -153,53 +155,69 @@ export default async function PublicMenuPage({
         '--header-subtext': headerSubText,
       } as React.CSSProperties}
     >
-      {/* Hero header */}
-      <div className="relative overflow-hidden" style={{ backgroundColor: 'var(--header-bg)' }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ background: headerStyle === 'dark' ? 'linear-gradient(to bottom, color-mix(in srgb, var(--brand) 15%, transparent), transparent)' : 'none' }} />
-        <div className="relative px-5 pt-12 pb-8 text-center">
-          {restaurant.logo_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={restaurant.logo_url}
-              alt={restaurant.name}
-              className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 border border-stone-700/60"
-            />
-          )}
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--header-text)' }}>
-            {restaurant.name}
-          </h1>
-          {restaurant.address && (
-            <p className="text-sm mt-1.5 flex items-center justify-center gap-1.5" style={{ color: 'var(--header-subtext)' }}>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-              </svg>
-              {restaurant.address}
-            </p>
-          )}
+      {/* Hero plein-écran */}
+      <div className="relative w-full" style={{ height: '52vw', maxHeight: '340px', minHeight: '220px' }}>
+        {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt={restaurant.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: headerStyle === 'colored' ? brandColor : headerStyle === 'light' ? '#e5e5e4' : '#111110' }}
+          />
+        )}
+        {/* Gradient overlay bas → titre */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0908] via-[#0a0908]/60 to-transparent" />
 
-          {tableLabel && (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-stone-800/60 text-stone-300 border border-stone-700/50 rounded-full px-3.5 py-1 text-xs font-medium">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
-              {tableLabel}
+        {/* Contenu hero */}
+        <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
+          <div className="flex items-end gap-4 max-w-lg mx-auto">
+            {restaurant.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={restaurant.logo_url}
+                alt={restaurant.name}
+                className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-white/10 shadow-xl"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight text-white leading-tight drop-shadow-lg">
+                {restaurant.name}
+              </h1>
+              {tableLabel && (
+                <p className="text-sm text-stone-300 mt-1 drop-shadow font-medium">{tableLabel}</p>
+              )}
             </div>
-          )}
-
-          {hhActive && hhEndsAt && (
-            <HappyHourCountdown endsAt={hhEndsAt} />
-          )}
+          </div>
         </div>
+      </div>
 
-        {/* Subtle divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-stone-700/60 to-transparent mx-5" />
-
-        {/* Category & item count */}
-        {categories.length > 0 && (
-          <p className="text-center text-xs text-stone-600 py-3">
-            {categories.length} catégorie{categories.length > 1 ? 's' : ''} · {totalItems} plat{totalItems > 1 ? 's' : ''}
+      {/* Barre infos sous le hero */}
+      <div className="max-w-lg mx-auto px-5 pt-4 pb-2 flex flex-wrap items-center gap-3">
+        {restaurant.address && (
+          <p className="text-xs text-stone-500 flex items-center gap-1">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+            </svg>
+            {restaurant.address}
           </p>
         )}
+
+        {hhActive && hhEndsAt && (
+          <HappyHourCountdown endsAt={hhEndsAt} />
+        )}
       </div>
+
+      {categories.length > 0 && (
+        <p className="text-center text-xs text-stone-700 pb-3">
+          {categories.length} catégorie{categories.length > 1 ? 's' : ''} · {totalItems} plat{totalItems > 1 ? 's' : ''}
+        </p>
+      )}
 
       {/* Menu */}
       <main className="max-w-lg mx-auto">

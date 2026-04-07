@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, useRef } from 'react'
 import { CATEGORY_TYPES } from '@/lib/category-types'
 import type { PublicCategory } from '@/app/menu/[slug]/page'
 import { placeOrder } from '@/app/actions/restaurant'
@@ -612,77 +612,142 @@ function ItemRow({
   onRemove: () => void
 }) {
   const showHH = hhActive && item.happy_hour_price != null
+  const [imageOpen, setImageOpen] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function startLongPress() {
+    if (!item.image_url) return
+    longPressTimer.current = setTimeout(() => setImageOpen(true), 450)
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
 
   return (
-    <div className={`flex items-start gap-3 px-5 py-4 ${!last ? 'border-b border-stone-800/30' : ''}`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold text-stone-100 text-base leading-snug flex-1">{item.name}</p>
-          <div className="text-right shrink-0">
-            {showHH ? (
-              <>
-                <p className="font-bold text-amber-400 text-base leading-tight">{fmt(item.happy_hour_price!)}</p>
-                <p className="text-stone-500 line-through text-xs mt-0.5">{fmt(item.price)}</p>
-              </>
-            ) : (
-              <p className="font-semibold text-stone-200 text-base">{fmt(item.price)}</p>
-            )}
-          </div>
-        </div>
-
-        {(item.is_vegan || item.is_vegetarian) && (
-          <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {item.is_vegan && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 font-medium border border-emerald-800/40">🌿 Vegan</span>
-            )}
-            {item.is_vegetarian && !item.is_vegan && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 font-medium border border-green-800/40">🌱 Végétarien</span>
-            )}
-          </div>
-        )}
-
-        {item.description && (
-          <p className="text-sm text-stone-400 mt-1.5 line-clamp-2 leading-relaxed">{item.description}</p>
-        )}
-
-        {item.allergens && item.allergens.length > 0 && (
-          <p className="text-xs text-stone-600 mt-1.5">Allergènes : {item.allergens.join(', ')}</p>
-        )}
-
-        <div className="mt-3">
-          {qty === 0 ? (
-            <button
-              onClick={onAdd}
-              className="menu-add-btn flex items-center gap-1.5 bg-stone-800/80 active:scale-95 text-stone-300 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all border border-stone-700/50"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Ajouter
-            </button>
-          ) : (
-            <div className="flex items-center gap-2.5">
-              <button onClick={onRemove} className="w-8 h-8 rounded-xl bg-stone-800 hover:bg-stone-700 active:scale-95 text-stone-300 flex items-center justify-center transition-all border border-stone-700/50">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
-              </button>
-              <span className="text-stone-100 font-bold text-sm w-5 text-center">{qty}</span>
-              <button onClick={onAdd} className="menu-item-plus w-8 h-8 active:scale-95 text-white flex items-center justify-center transition-all">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+    <>
+      {/* Image popup bulle */}
+      {imageOpen && item.image_url && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center"
+          style={{ backdropFilter: 'blur(6px)', background: 'rgba(10,9,8,0.75)' }}
+          onClick={() => setImageOpen(false)}
+        >
+          <div
+            className="relative mx-6 rounded-3xl overflow-hidden shadow-2xl"
+            style={{ maxWidth: '340px', width: '100%' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.image_url}
+              alt={item.name}
+              className="w-full object-cover"
+              style={{ maxHeight: '65vw', minHeight: '200px' }}
+            />
+            <div className="absolute top-3 right-3">
+              <button
+                onClick={() => setImageOpen(false)}
+                className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white border border-white/20"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`flex items-center gap-4 px-5 py-4 ${!last ? 'border-b border-stone-800/40' : ''} ${item.image_url ? 'select-none' : ''}`}
+        onTouchStart={startLongPress}
+        onTouchEnd={cancelLongPress}
+        onTouchMove={cancelLongPress}
+        onMouseDown={startLongPress}
+        onMouseUp={cancelLongPress}
+        onMouseLeave={cancelLongPress}
+      >
+        {/* Miniature cliquable */}
+        {item.image_url ? (
+          <button
+            type="button"
+            onClick={() => setImageOpen(true)}
+            className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-stone-800/60 active:scale-95 transition-transform"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.image_url}
+              alt={item.name}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </button>
+        ) : null}
+
+        {/* Texte + actions */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold text-stone-100 text-base leading-snug flex-1 truncate">{item.name}</p>
+            <div className="text-right shrink-0 ml-2">
+              {showHH ? (
+                <>
+                  <p className="font-bold text-amber-400 text-base leading-tight">{fmt(item.happy_hour_price!)}</p>
+                  <p className="text-stone-500 line-through text-xs mt-0.5">{fmt(item.price)}</p>
+                </>
+              ) : (
+                <p className="font-semibold text-stone-200 text-base">{fmt(item.price)}</p>
+              )}
+            </div>
+          </div>
+
+          {(item.is_vegan || item.is_vegetarian) && (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {item.is_vegan && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 font-medium border border-emerald-800/40">🌿 Vegan</span>
+              )}
+              {item.is_vegetarian && !item.is_vegan && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 font-medium border border-green-800/40">🌱 Végétarien</span>
+              )}
+            </div>
           )}
+
+          {item.description && (
+            <p className="text-xs text-stone-500 mt-1 line-clamp-1 leading-relaxed">{item.description}</p>
+          )}
+
+          {item.allergens && item.allergens.length > 0 && (
+            <p className="text-xs text-stone-700 mt-1">Allergènes : {item.allergens.join(', ')}</p>
+          )}
+
+          <div className="mt-2.5">
+            {qty === 0 ? (
+              <button
+                onClick={onAdd}
+                className="menu-add-btn flex items-center gap-1.5 bg-stone-800/80 active:scale-95 text-stone-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border border-stone-700/50"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Ajouter
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button onClick={onRemove} className="w-7 h-7 rounded-xl bg-stone-800 hover:bg-stone-700 active:scale-95 text-stone-300 flex items-center justify-center transition-all border border-stone-700/50">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+                </button>
+                <span className="text-stone-100 font-bold text-sm w-5 text-center">{qty}</span>
+                <button onClick={onAdd} className="menu-item-plus w-7 h-7 active:scale-95 text-white flex items-center justify-center transition-all">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {item.image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.image_url}
-          alt={item.name}
-          className="w-20 h-20 object-cover rounded-2xl shrink-0 border border-stone-800/60 mt-0.5"
-          loading="lazy"
-        />
-      )}
-    </div>
+    </>
   )
 }

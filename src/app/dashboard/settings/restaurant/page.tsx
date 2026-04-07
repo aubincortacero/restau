@@ -20,7 +20,7 @@ export default async function SettingsRestaurantPage({
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes, brand_color, menu_button_radius, menu_header_style').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes, brand_color, menu_button_radius, menu_header_style, cover_image_url').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
@@ -84,8 +84,9 @@ export default async function SettingsRestaurantPage({
             brand_color: (restaurant.brand_color as string | null) ?? '#f97316',
             menu_button_radius: (restaurant.menu_button_radius as string | null) ?? 'rounded',
             menu_header_style: (restaurant.menu_header_style as string | null) ?? 'dark',
+            cover_image_url: (restaurant.cover_image_url as string | null) ?? null,
           }}
-          saved={saved === 'appearance'}
+          saved={saved === 'appearance' || saved === 'cover'}
         />
       </div>
     </div>

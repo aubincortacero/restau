@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
     const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount: amountCents,
       currency: 'eur',
+      statement_descriptor: 'QOMAND',
       metadata: {
         restaurantId,
         tableId: tableId ?? '',

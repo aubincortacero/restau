@@ -254,6 +254,35 @@ export async function updateAppearance(formData: FormData) {
   redirect('/dashboard/settings/restaurant?saved=appearance')
 }
 
+export async function updateCoverImage(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  const coverFile = formData.get('cover') as File | null
+
+  if (coverFile && coverFile.size > 0) {
+    const ext = coverFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${id}/cover.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('restaurant-covers')
+      .upload(path, coverFile, { contentType: coverFile.type, cacheControl: '3600', upsert: true })
+    if (!uploadError) {
+      const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+      const cover_image_url = urlData.publicUrl + '?t=' + Date.now()
+      await supabase
+        .from('restaurants')
+        .update({ cover_image_url })
+        .eq('id', id)
+        .eq('owner_id', user.id)
+    }
+  }
+
+  revalidatePath('/dashboard/settings/restaurant')
+  redirect('/dashboard/settings/restaurant?saved=cover')
+}
+
 export async function updateSchedules(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
