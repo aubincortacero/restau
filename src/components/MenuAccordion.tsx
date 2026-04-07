@@ -174,7 +174,7 @@ export default function MenuAccordion({
         .menu-item-plus { background-color: var(--brand); border-radius: 10px; }
         .menu-item-plus:hover { filter: brightness(1.1); }
       `}</style>
-      <div className="pb-32">
+      <div className="px-3 pt-2 pb-32">
         {categories.map(cat => {
           const isOpen = openIds.includes(cat.id)
           const catType = CATEGORY_TYPES.find(t => t.id === cat.category_type)
@@ -183,12 +183,13 @@ export default function MenuAccordion({
           const catCartQty = cat.items.reduce((s, i) => s + (cart[i.id]?.quantity ?? 0), 0)
 
           return (
-            <div key={cat.id} className="border-b border-stone-800/50">
+            <div key={cat.id} className="rounded-2xl overflow-hidden mb-2.5 bg-stone-900">
+              {/* En-tête catégorie */}
               <button
                 onClick={() => toggleCat(cat.id)}
-                className="w-full flex items-center gap-4 px-5 py-4 text-left active:bg-stone-800/30 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-stone-800/80 transition-colors"
               >
-                <span className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0 relative ${circleClass}`}>
+                <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 relative ${circleClass}`}>
                   {emoji}
                   {catCartQty > 0 && (
                     <span className="menu-cart-badge absolute -top-1 -right-1 w-5 h-5 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
@@ -197,21 +198,22 @@ export default function MenuAccordion({
                   )}
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-semibold text-stone-100 text-lg leading-tight">{cat.name}</span>
+                  <span className="block font-bold text-stone-100 text-[15px] leading-tight">{cat.name}</span>
                   <span className="text-xs text-stone-500 mt-0.5 block">
                     {cat.items.length} plat{cat.items.length > 1 ? 's' : ''}
                   </span>
                 </span>
                 <svg
-                  className={`w-5 h-5 text-stone-500 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                  className={`w-4 h-4 text-stone-500 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                   fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
                 </svg>
               </button>
 
+              {/* Plats — fond plus sombre pour montrer qu'ils sont dans la catégorie */}
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="pb-2">
+                <div className="bg-[#111110] divide-y divide-stone-800/50 border-t border-stone-800/60">
                   {cat.items.map((item, idx) => {
                     const effectivePrice = hhActive && item.happy_hour_price != null ? item.happy_hour_price : item.price
                     return (
@@ -663,7 +665,7 @@ function ItemRow({
       )}
 
       <div
-        className={`flex items-center gap-4 px-5 py-4 ${!last ? 'border-b border-stone-800/40' : ''} ${item.image_url ? 'select-none' : ''}`}
+        className={`flex items-center gap-4 px-4 py-3.5 ${item.image_url ? 'select-none' : ''}`}
         onTouchStart={startLongPress}
         onTouchEnd={cancelLongPress}
         onTouchMove={cancelLongPress}
