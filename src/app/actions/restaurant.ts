@@ -254,33 +254,47 @@ export async function updateAppearance(formData: FormData) {
   redirect('/dashboard/settings/restaurant?saved=appearance')
 }
 
-export async function updateCoverImage(formData: FormData) {
+export async function updateCoverImage(
+  _prevState: { error?: string; success?: boolean },
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) return { error: 'Non authentifié.' }
 
   const id = formData.get('id') as string
   const coverFile = formData.get('cover') as File | null
 
-  if (coverFile && coverFile.size > 0) {
-    const ext = coverFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `${id}/cover.${ext}`
-    const { error: uploadError } = await supabase.storage
-      .from('restaurant-covers')
-      .upload(path, coverFile, { contentType: coverFile.type, cacheControl: '3600', upsert: true })
-    if (!uploadError) {
-      const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
-      const cover_image_url = urlData.publicUrl + '?t=' + Date.now()
-      await supabase
-        .from('restaurants')
-        .update({ cover_image_url })
-        .eq('id', id)
-        .eq('owner_id', user.id)
-    }
-  }
+  if (!coverFile || coverFile.size === 0) return { error: 'Aucun fichier sélectionné.' }
+
+  const MAX_SIZE = 5 * 1024 * 1024 // 5 Mo
+  if (coverFile.size > MAX_SIZE) return { error: `Image trop lourde (${(coverFile.size / 1024 / 1024).toFixed(1)} Mo). Maximum 5 Mo.` }
+
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!ALLOWED.includes(coverFile.type)) return { error: 'Format non supporté. Utilisez JPG, PNG ou WebP.' }
+
+  const ext = coverFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const path = `${id}/cover.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from('restaurant-covers')
+    .upload(path, coverFile, { contentType: coverFile.type, cacheControl: '3600', upsert: true })
+
+  if (uploadError) return { error: `Erreur upload : ${uploadError.message}` }
+
+  const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+  const cover_image_url = urlData.publicUrl + '?t=' + Date.now()
+
+  const { error: dbError } = await supabase
+    .from('restaurants')
+    .update({ cover_image_url })
+    .eq('id', id)
+    .eq('owner_id', user.id)
+
+  if (dbError) return { error: 'Erreur lors de la sauvegarde.' }
 
   revalidatePath('/dashboard/settings/restaurant')
-  redirect('/dashboard/settings/restaurant?saved=cover')
+  revalidatePath('/menu')
+  return { success: true }
 }
 
 export async function updateWebsiteContent(formData: FormData) {

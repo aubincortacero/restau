@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useActionState, useEffect } from 'react'
 import { updateAppearance, updateCoverImage } from '@/app/actions/restaurant'
+
+const MAX_COVER_SIZE = 5 * 1024 * 1024 // 5 Mo
 
 const PRESET_COLORS = [
   { hex: '#f97316', label: 'Orange' },
@@ -47,13 +49,41 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
     PRESET_COLORS.some(p => p.hex === initial.brand_color) ? '' : (initial.brand_color || '')
   )
   const [coverPreview, setCoverPreview] = useState<string | null>(initial.cover_image_url ?? null)
+  const [clientError, setClientError] = useState<string | null>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+
+  const [coverState, coverAction, coverPending] = useActionState(updateCoverImage, {})
+
+  // Réinitialiser l'erreur client si succès serveur
+  useEffect(() => {
+    if (coverState.success) setClientError(null)
+  }, [coverState.success])
 
   const isPreset = PRESET_COLORS.some(p => p.hex === color)
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > MAX_COVER_SIZE) {
+      setClientError(`Image trop lourde (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum 5 Mo.`)
+      e.target.value = ''
+      return
+    }
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!ALLOWED.includes(file.type)) {
+      setClientError('Format non supporté. Utilisez JPG, PNG ou WebP.')
+      e.target.value = ''
+      return
+    }
+    setClientError(null)
+    setCoverPreview(URL.createObjectURL(file))
+  }
+
+  const coverError = clientError ?? coverState.error
+
   return (
     <>
-    <form action={updateCoverImage} className="space-y-4 mb-7">
+    <form action={coverAction} className="space-y-4 mb-7">
       <input type="hidden" name="id" value={restaurantId} />
       <div>
         <p className="text-xs font-medium text-zinc-400 mb-3">Photo de couverture <span className="text-zinc-600">(hero du menu client)</span></p>
@@ -83,26 +113,38 @@ export default function AppearanceForm({ restaurantId, initial, saved }: Props) 
           ref={coverInputRef}
           type="file"
           name="cover"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) setCoverPreview(URL.createObjectURL(file))
-          }}
+          onChange={handleFileChange}
         />
+        <p className="text-xs text-zinc-600 mt-1.5">JPG, PNG ou WebP · max 5 Mo</p>
       </div>
-      <button
-        type="submit"
-        className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
-      >
-        Enregistrer la photo
-      </button>
-      {saved && (
-        <span className="ml-3 inline-flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-          Enregistré
-        </span>
+
+      {coverError && (
+        <div className="flex items-center gap-2 bg-red-950/60 border border-red-800/60 rounded-xl px-3.5 py-2.5 text-red-400 text-xs">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          {coverError}
+        </div>
       )}
+
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={coverPending || !!clientError}
+          className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
+        >
+          {coverPending && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+          Enregistrer la photo
+        </button>
+        {coverState.success && !coverError && (
+          <span className="inline-flex items-center gap-1.5 text-emerald-400 text-sm font-medium">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            Enregistré
+          </span>
+        )}
+      </div>
     </form>
 
     <form action={updateAppearance} className="space-y-7">
