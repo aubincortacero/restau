@@ -1402,6 +1402,19 @@ export async function deleteSectionById(sectionId: string): Promise<{ error?: st
   return {}
 }
 
+export async function reorderPageSections(
+  updates: { id: string; position: number }[],
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+  for (const { id, position } of updates) {
+    await supabase.from('page_sections').update({ position }).eq('id', id)
+  }
+  revalidatePath('/dashboard/website')
+  return {}
+}
+
 export async function moveSectionDir(
   sectionId: string,
   pageId: string,

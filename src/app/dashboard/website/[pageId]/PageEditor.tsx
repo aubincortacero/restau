@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   createSection,
   updateTextSection,
   updateGallerySection,
   deleteSectionById,
-  moveSectionDir,
+  reorderPageSections,
   uploadSectionImage,
 } from '@/app/actions/restaurant'
 
@@ -29,8 +29,14 @@ export default function PageEditor({
   initialSections: Section[]
 }) {
   const router = useRouter()
+  const [sections, setSections] = useState(initialSections)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [addPending, startAdd] = useTransition()
+  const [, startReorder] = useTransition()
+  const dragFromIdx = useRef<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  useEffect(() => { setSections(initialSections) }, [initialSections])
 
   function addSection(type: 'text_block' | 'gallery') {
     setShowAddMenu(false)
@@ -40,16 +46,32 @@ export default function PageEditor({
     })
   }
 
+  function onDragStart(i: number) { dragFromIdx.current = i }
+  function onDragOver(i: number) { if (dragOverIdx !== i) setDragOverIdx(i) }
+  function onDragEnd() { dragFromIdx.current = null; setDragOverIdx(null) }
+  function onDrop(i: number) {
+    if (dragFromIdx.current === null || dragFromIdx.current === i) { setDragOverIdx(null); return }
+    const next = [...sections]
+    const [moved] = next.splice(dragFromIdx.current, 1)
+    next.splice(i, 0, moved)
+    setSections(next); setDragOverIdx(null); dragFromIdx.current = null
+    startReorder(async () => {
+      await reorderPageSections(next.map((s, pos) => ({ id: s.id, position: pos })))
+    })
+  }
+
   return (
     <div className="space-y-3">
-      {initialSections.map((s, i) => (
+      {sections.map((s, i) => (
         <SectionCard
           key={s.id}
           section={s}
-          pageId={pageId}
           restaurantId={restaurantId}
-          isFirst={i === 0}
-          isLast={i === initialSections.length - 1}
+          isDragOver={dragOverIdx === i}
+          onDragStart={() => onDragStart(i)}
+          onDragOver={() => onDragOver(i)}
+          onDragEnd={onDragEnd}
+          onDrop={() => onDrop(i)}
           onRefresh={() => router.refresh()}
         />
       ))}
@@ -109,30 +131,27 @@ export default function PageEditor({
 
 function SectionCard({
   section,
-  pageId,
   restaurantId,
-  isFirst,
-  isLast,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onDrop,
   onRefresh,
 }: {
   section: Section
-  pageId: string
   restaurantId: string
-  isFirst: boolean
-  isLast: boolean
+  isDragOver: boolean
+  onDragStart: () => void
+  onDragOver: () => void
+  onDragEnd: () => void
+  onDrop: () => void
   onRefresh: () => void
 }) {
   const [actionPending, startAction] = useTransition()
 
   const typeLabel = section.type === 'text_block' ? 'Texte' : 'Galerie'
   const typeBg = section.type === 'text_block' ? 'bg-blue-900/30 text-blue-400' : 'bg-purple-900/30 text-purple-400'
-
-  function move(dir: 'up' | 'down') {
-    startAction(async () => {
-      await moveSectionDir(section.id, pageId, dir)
-      onRefresh()
-    })
-  }
 
   function del() {
     if (!confirm('Supprimer ce composant ?')) return
@@ -143,40 +162,40 @@ function SectionCard({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={e => { e.preventDefault(); onDragOver() }}
+      onDragEnd={onDragEnd}
+      onDrop={e => { e.preventDefault(); onDrop() }}
+      className={`bg-zinc-900 border rounded-2xl overflow-hidden select-none transition-colors ${
+        isDragOver ? 'border-orange-500/50 ring-1 ring-orange-500/30' : 'border-zinc-800'
+      }`}
+    >
       {/* Header barre */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60">
+        <div className="text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0">
+          <svg className="w-3 h-4" viewBox="0 0 6 10" fill="currentColor">
+            <circle cx="1.5" cy="1.5" r="1.2"/><circle cx="4.5" cy="1.5" r="1.2"/>
+            <circle cx="1.5" cy="5" r="1.2"/><circle cx="4.5" cy="5" r="1.2"/>
+            <circle cx="1.5" cy="8.5" r="1.2"/><circle cx="4.5" cy="8.5" r="1.2"/>
+          </svg>
+        </div>
         <span className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md ${typeBg}`}>
           {typeLabel}
         </span>
         <div className="flex-1" />
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => move('up')}
-            disabled={isFirst || actionPending}
-            className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-400 flex items-center justify-center transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" /></svg>
-          </button>
-          <button
-            onClick={() => move('down')}
-            disabled={isLast || actionPending}
-            className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-400 flex items-center justify-center transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
-          </button>
-          <button
-            onClick={del}
-            disabled={actionPending}
-            className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-red-900/40 disabled:opacity-30 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
+        <button
+          onClick={del}
+          disabled={actionPending}
+          className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-red-900/40 disabled:opacity-30 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
       </div>
 
       {/* Éditeur */}
-      <div className="p-4">
+      <div className="p-4" onDragStart={e => e.stopPropagation()}>
         {section.type === 'text_block' ? (
           <TextBlockEditor section={section} />
         ) : (

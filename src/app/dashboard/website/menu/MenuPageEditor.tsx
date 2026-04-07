@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   createMenuSection,
   updateTextSection,
   updateGallerySection,
   deleteSectionById,
+  reorderPageSections,
   uploadSectionImage,
 } from '@/app/actions/restaurant'
 
@@ -30,13 +31,51 @@ export default function MenuPageEditor({
   const router = useRouter()
   const [showAdd, setShowAdd] = useState<'before' | 'after' | null>(null)
   const [addPending, startAdd] = useTransition()
+  const [, startReorder] = useTransition()
 
-  const beforeSections = initialSections.filter(
-    s => (s.content as { _placement?: string })._placement === 'before'
+  const [beforeSections, setBeforeSections] = useState(() =>
+    initialSections.filter(s => (s.content as { _placement?: string })._placement === 'before')
   )
-  const afterSections = initialSections.filter(
-    s => (s.content as { _placement?: string })._placement !== 'before'
+  const [afterSections, setAfterSections] = useState(() =>
+    initialSections.filter(s => (s.content as { _placement?: string })._placement !== 'before')
   )
+
+  useEffect(() => {
+    setBeforeSections(initialSections.filter(s => (s.content as { _placement?: string })._placement === 'before'))
+    setAfterSections(initialSections.filter(s => (s.content as { _placement?: string })._placement !== 'before'))
+  }, [initialSections])
+
+  // Drag state for each group
+  const beforeDragFrom = useRef<number | null>(null)
+  const [beforeDragOver, setBeforeDragOver] = useState<number | null>(null)
+  const afterDragFrom = useRef<number | null>(null)
+  const [afterDragOver, setAfterDragOver] = useState<number | null>(null)
+
+  function makeHandlers(group: 'before' | 'after') {
+    const sections = group === 'before' ? beforeSections : afterSections
+    const setSections = group === 'before' ? setBeforeSections : setAfterSections
+    const dragFrom = group === 'before' ? beforeDragFrom : afterDragFrom
+    const setDragOver = group === 'before' ? setBeforeDragOver : setAfterDragOver
+    return {
+      onDragStart: (i: number) => { dragFrom.current = i },
+      onDragOver: (i: number) => { setDragOver(v => v === i ? v : i) },
+      onDragEnd: () => { dragFrom.current = null; setDragOver(null) },
+      onDrop: (i: number) => {
+        if (dragFrom.current === null || dragFrom.current === i) { setDragOver(null); return }
+        const next = [...sections]
+        const [moved] = next.splice(dragFrom.current, 1)
+        next.splice(i, 0, moved)
+        setSections(next); setDragOver(null); dragFrom.current = null
+        startReorder(async () => {
+          await reorderPageSections(next.map((s, pos) => ({ id: s.id, position: pos })))
+        })
+      },
+      dragOverIdx: group === 'before' ? beforeDragOver : afterDragOver,
+    }
+  }
+
+  const beforeHandlers = makeHandlers('before')
+  const afterHandlers = makeHandlers('after')
 
   function addSection(type: 'text_block' | 'gallery', placement: 'before' | 'after') {
     setShowAdd(null)
@@ -49,12 +88,17 @@ export default function MenuPageEditor({
   return (
     <div className="space-y-3">
       {/* Sections AVANT */}
-      {beforeSections.map(s => (
+      {beforeSections.map((s, i) => (
         <MenuSectionCard
           key={s.id}
           section={s}
           restaurantId={restaurantId}
           placement="before"
+          isDragOver={beforeHandlers.dragOverIdx === i}
+          onDragStart={() => beforeHandlers.onDragStart(i)}
+          onDragOver={() => beforeHandlers.onDragOver(i)}
+          onDragEnd={beforeHandlers.onDragEnd}
+          onDrop={() => beforeHandlers.onDrop(i)}
           onRefresh={() => router.refresh()}
         />
       ))}
@@ -102,12 +146,17 @@ export default function MenuPageEditor({
       />
 
       {/* Sections APRÈS */}
-      {afterSections.map(s => (
+      {afterSections.map((s, i) => (
         <MenuSectionCard
           key={s.id}
           section={s}
           restaurantId={restaurantId}
           placement="after"
+          isDragOver={afterHandlers.dragOverIdx === i}
+          onDragStart={() => afterHandlers.onDragStart(i)}
+          onDragOver={() => afterHandlers.onDragOver(i)}
+          onDragEnd={afterHandlers.onDragEnd}
+          onDrop={() => afterHandlers.onDrop(i)}
           onRefresh={() => router.refresh()}
         />
       ))}
@@ -182,11 +231,21 @@ function MenuSectionCard({
   section,
   restaurantId,
   placement,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onDrop,
   onRefresh,
 }: {
   section: Section
   restaurantId: string
   placement: 'before' | 'after'
+  isDragOver: boolean
+  onDragStart: () => void
+  onDragOver: () => void
+  onDragEnd: () => void
+  onDrop: () => void
   onRefresh: () => void
 }) {
   const [delPending, startDel] = useTransition()
@@ -203,8 +262,24 @@ function MenuSectionCard({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={e => { e.preventDefault(); onDragOver() }}
+      onDragEnd={onDragEnd}
+      onDrop={e => { e.preventDefault(); onDrop() }}
+      className={`bg-zinc-900 border rounded-2xl overflow-hidden select-none transition-colors ${
+        isDragOver ? 'border-orange-500/50 ring-1 ring-orange-500/30' : 'border-zinc-800'
+      }`}
+    >
       <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60">
+        <div className="text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0">
+          <svg className="w-3 h-4" viewBox="0 0 6 10" fill="currentColor">
+            <circle cx="1.5" cy="1.5" r="1.2"/><circle cx="4.5" cy="1.5" r="1.2"/>
+            <circle cx="1.5" cy="5" r="1.2"/><circle cx="4.5" cy="5" r="1.2"/>
+            <circle cx="1.5" cy="8.5" r="1.2"/><circle cx="4.5" cy="8.5" r="1.2"/>
+          </svg>
+        </div>
         <span className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md ${typeBg}`}>
           {typeLabel}
         </span>
@@ -218,7 +293,7 @@ function MenuSectionCard({
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
         </button>
       </div>
-      <div className="p-4">
+      <div className="p-4" onDragStart={e => e.stopPropagation()}>
         {section.type === 'text_block'
           ? <MenuTextEditor section={section} placement={placement} />
           : <MenuGalleryEditor section={section} restaurantId={restaurantId} placement={placement} />
