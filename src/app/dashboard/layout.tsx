@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { IconLogo } from '@/components/icons'
-import { NavDesktop, MobileNav } from '@/components/NavLinks'
+import { MobileNav } from '@/components/NavLinks'
+import DashboardSidebar from '@/components/DashboardSidebar'
 import UserMenu from '@/components/UserMenu'
 import RestaurantPicker from '@/components/RestaurantPicker'
 import { getRestaurantsWithActive, ACTIVE_RESTAURANT_COOKIE } from '@/lib/active-restaurant'
@@ -124,6 +125,7 @@ export default async function DashboardLayout({
         .hover\\:bg-orange-400:hover { background-color: #eb8c74 !important; }
         .active\\:bg-orange-600:active { background-color: #cf5a3c !important; }
         .bg-orange-500\\/10, .bg-orange-500\\/8, .bg-orange-500\\/15, .bg-orange-500\\/20 { background-color: #e76f5120 !important; }
+        .bg-orange-500\\/12 { background-color: #e76f511e !important; }
         .text-orange-500 { color: #e76f51 !important; }
         .text-orange-400 { color: #eb8c74 !important; }
         .hover\\:text-orange-400:hover { color: #eb8c74 !important; }
@@ -139,62 +141,68 @@ export default async function DashboardLayout({
         .ring-orange-500\\/20 { --tw-ring-color: #e76f5133 !important; }
         .from-orange-950\\/20 { --tw-gradient-from: #e76f5133 !important; }
       `}</style>
-      {/* Top nav */}
-      <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10">
-        <div className="px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
-                <IconLogo className="w-4 h-4 text-white" />
+
+      <div className="flex flex-1 min-h-screen">
+        {/* Sidebar desktop */}
+        <DashboardSidebar />
+
+        {/* Colonne principale */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Top header */}
+          <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10 shrink-0">
+            <div className="px-4 h-14 flex items-center justify-between">
+              {/* Logo mobile uniquement */}
+              <Link href="/dashboard" className="flex items-center gap-2 md:hidden shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
+                  <IconLogo className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-semibold text-sm">Qomand</span>
+              </Link>
+
+              <div className="hidden md:block" />
+
+              <div className="flex items-center gap-3">
+                {pills?.happyHour && (
+                  <span className="hidden sm:inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
+                    🍹 Happy Hour !
+                  </span>
+                )}
+
+                {restaurant && (
+                  <OrderNotificationBell restaurantId={restaurant.id} />
+                )}
+
+                <ThemeToggle />
+
+                <UserMenu
+                  displayName={displayName}
+                  email={email}
+                  avatarUrl={avatarUrl}
+                  signOutAction={signOut}
+                  restaurants={restaurants}
+                  activeRestaurantId={activeRestaurantId}
+                  setActiveAction={setActiveRestaurant}
+                  deleteAction={deleteRestaurant}
+                  subStatus={subStatus}
+                  trialEndsAt={trialEndsAt?.toISOString() ?? null}
+                />
               </div>
-              <span className="font-semibold text-sm hidden sm:block">Qomand</span>
-            </Link>
+            </div>
+          </header>
 
-            <NavDesktop />
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Happy Hour pill uniquement dans le header */}
-            {pills?.happyHour && (
-              <span className="hidden sm:inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
-                🍹 Happy Hour !
-              </span>
-            )}
-
-            {restaurant && (
-              <OrderNotificationBell restaurantId={restaurant.id} />
-            )}
-
-            <ThemeToggle />
-
-            <UserMenu
-              displayName={displayName}
-              email={email}
-              avatarUrl={avatarUrl}
-              signOutAction={signOut}
-              restaurants={restaurants}
-              activeRestaurantId={activeRestaurantId}
-              setActiveAction={setActiveRestaurant}
-              deleteAction={deleteRestaurant}
-              subStatus={subStatus}
-              trialEndsAt={trialEndsAt?.toISOString() ?? null}
+          {/* Bandeau d'urgence */}
+          {restaurant && (
+            <UrgencyBanner
+              restaurantId={restaurant.id}
+              thresholdMinutes={urgencyThreshold}
             />
-          </div>
+          )}
+
+          <main className="flex-1 px-4 py-8 pb-24 md:pb-8">
+            {children}
+          </main>
         </div>
-
-      </header>
-
-      {/* Bandeau d'urgence commandes */}
-      {restaurant && (
-        <UrgencyBanner
-          restaurantId={restaurant.id}
-          thresholdMinutes={urgencyThreshold}
-        />
-      )}
-
-      <main className="flex-1 w-full px-4 py-8 pb-24 md:pb-8">
-        {children}
-      </main>
+      </div>
 
       {restaurant && (
         <PendingOrdersFloat restaurantId={restaurant.id} />
