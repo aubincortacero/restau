@@ -1196,3 +1196,167 @@ export async function markOrderReady(formData: FormData) {
 
   revalidatePath('/dashboard/orders')
 }
+
+// ─── Pages & sections (page builder) ─────────────────────────
+
+export async function createPage(
+  restaurantId: string,
+  title: string,
+): Promise<{ error?: string; pageId?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const slug = slugify(title) + '-' + Math.random().toString(36).slice(2, 5)
+  const { count } = await supabase
+    .from('restaurant_pages')
+    .select('*', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId)
+
+  const { data, error } = await supabase
+    .from('restaurant_pages')
+    .insert({ restaurant_id: restaurantId, title, slug, position: count ?? 0 })
+    .select('id')
+    .single()
+
+  if (error) return { error: 'Erreur création page : ' + error.message }
+  revalidatePath('/dashboard/website')
+  return { pageId: data.id }
+}
+
+export async function deletePageById(pageId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { error } = await supabase.from('restaurant_pages').delete().eq('id', pageId)
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/website')
+  return {}
+}
+
+export async function createSection(
+  pageId: string,
+  type: 'text_block' | 'gallery',
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { count } = await supabase
+    .from('page_sections')
+    .select('*', { count: 'exact', head: true })
+    .eq('page_id', pageId)
+
+  const defaultContent = type === 'text_block'
+    ? { title: '', subtitle: '', body: '' }
+    : { images: [] }
+
+  const { error } = await supabase
+    .from('page_sections')
+    .insert({ page_id: pageId, type, position: count ?? 0, content: defaultContent })
+
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/website')
+  return {}
+}
+
+export async function updateTextSection(
+  sectionId: string,
+  title: string,
+  subtitle: string,
+  body: string,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { error } = await supabase
+    .from('page_sections')
+    .update({ content: { title, subtitle, body } })
+    .eq('id', sectionId)
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function updateGallerySection(
+  sectionId: string,
+  images: { url: string; caption: string }[],
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { error } = await supabase
+    .from('page_sections')
+    .update({ content: { images } })
+    .eq('id', sectionId)
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function deleteSectionById(sectionId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { error } = await supabase.from('page_sections').delete().eq('id', sectionId)
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/website')
+  return {}
+}
+
+export async function moveSectionDir(
+  sectionId: string,
+  pageId: string,
+  direction: 'up' | 'down',
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const { data: sections } = await supabase
+    .from('page_sections')
+    .select('id, position')
+    .eq('page_id', pageId)
+    .order('position')
+
+  if (!sections) return { error: 'Sections introuvables.' }
+  const idx = sections.findIndex(s => s.id === sectionId)
+  const neighbor = direction === 'up' ? sections[idx - 1] : sections[idx + 1]
+  if (!neighbor) return {}
+
+  const curr = sections[idx]
+  await supabase.from('page_sections').update({ position: neighbor.position }).eq('id', curr.id)
+  await supabase.from('page_sections').update({ position: curr.position }).eq('id', neighbor.id)
+  revalidatePath('/dashboard/website')
+  return {}
+}
+
+export async function uploadSectionImage(
+  restaurantId: string,
+  sectionId: string,
+  file: File,
+): Promise<{ error?: string; url?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  if (file.size > 5 * 1024 * 1024) return { error: 'Image trop lourde (max 5 Mo).' }
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+  if (!ALLOWED.includes(file.type)) return { error: 'Format non supporté (JPG, PNG, WebP).' }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const path = `${restaurantId}/pages/${sectionId}/${Date.now()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('restaurant-covers')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (uploadError) return { error: `Erreur upload : ${uploadError.message}` }
+  const { data: urlData } = supabase.storage.from('restaurant-covers').getPublicUrl(path)
+  return { url: urlData.publicUrl }
+}
+
