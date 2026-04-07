@@ -235,17 +235,23 @@ function MenuTextEditor({ section, placement }: { section: Section; placement: '
   const [title, setTitle] = useState(c.title ?? '')
   const [subtitle, setSubtitle] = useState(c.subtitle ?? '')
   const [body, setBody] = useState(c.body ?? '')
-  const [pending, startPending] = useTransition()
-  const [saved, setSaved] = useState(false)
+  const [, startPending] = useTransition()
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const valRef = useRef({ title: c.title ?? '', subtitle: c.subtitle ?? '', body: c.body ?? '' })
 
-  function save() {
-    setSaved(false); setError(null)
-    startPending(async () => {
-      const result = await updateTextSection(section.id, title, subtitle, body, placement)
-      if (result.error) setError(result.error)
-      else setSaved(true)
-    })
+  function triggerSave(next: { title: string; subtitle: string; body: string }) {
+    valRef.current = next
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setStatus('saving'); setError(null)
+      startPending(async () => {
+        const result = await updateTextSection(section.id, valRef.current.title, valRef.current.subtitle, valRef.current.body, placement)
+        if (result.error) { setError(result.error); setStatus('idle') }
+        else { setStatus('saved'); setTimeout(() => setStatus('idle'), 2000) }
+      })
+    }, 1000)
   }
 
   const INPUT = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
@@ -254,17 +260,17 @@ function MenuTextEditor({ section, placement }: { section: Section; placement: '
     <div className="space-y-3">
       <div>
         <label className="block text-xs text-zinc-500 mb-1">Titre</label>
-        <input value={title} onChange={e => { setTitle(e.target.value); setSaved(false) }} placeholder="Notre histoire" className={INPUT} />
+        <input value={title} onChange={e => { setTitle(e.target.value); triggerSave({ title: e.target.value, subtitle, body }) }} placeholder="Notre histoire" className={INPUT} />
       </div>
       <div>
         <label className="block text-xs text-zinc-500 mb-1">Sous-titre</label>
-        <input value={subtitle} onChange={e => { setSubtitle(e.target.value); setSaved(false) }} placeholder="Depuis 2010…" className={INPUT} />
+        <input value={subtitle} onChange={e => { setSubtitle(e.target.value); triggerSave({ title, subtitle: e.target.value, body }) }} placeholder="Depuis 2010…" className={INPUT} />
       </div>
       <div>
         <label className="block text-xs text-zinc-500 mb-1">Texte</label>
-        <textarea value={body} onChange={e => { setBody(e.target.value); setSaved(false) }} rows={4} maxLength={2000} placeholder="Votre texte ici…" className={`${INPUT} resize-none`} />
+        <textarea value={body} onChange={e => { setBody(e.target.value); triggerSave({ title, subtitle, body: e.target.value }) }} rows={4} maxLength={2000} placeholder="Votre texte ici…" className={`${INPUT} resize-none`} />
       </div>
-      <SaveBar pending={pending} saved={saved} error={error} onSave={save} />
+      <StatusBar status={status} error={error} />
     </div>
   )
 }
@@ -282,32 +288,56 @@ function MenuGalleryEditor({
 }) {
   const c = section.content as { images?: GalleryImage[] }
   const [images, setImages] = useState<GalleryImage[]>(c.images ?? [])
-  const [savePending, startSave] = useTransition()
+  const [, startSave] = useTransition()
   const [uploadPending, startUpload] = useTransition()
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imagesRef = useRef(images)
+  imagesRef.current = images
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  function doSave(imgs: GalleryImage[]) {
+    setStatus('saving'); setError(null)
+    startSave(async () => {
+      const result = await updateGallerySection(section.id, imgs, placement)
+      if (result.error) { setError(result.error); setStatus('idle') }
+      else { setStatus('saved'); setTimeout(() => setStatus('idle'), 2000) }
+    })
+  }
+
+  function saveDebounced(imgs: GalleryImage[]) {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => doSave(imgs), 1000)
+  }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 500 * 1024) { setError('Image trop lourde (max 500 Ko).'); return }
-    setError(null); setSaved(false)
+    setError(null)
     startUpload(async () => {
       const result = await uploadSectionImage(restaurantId, section.id, file)
-      if (result.error) setError(result.error)
-      else if (result.url) setImages(prev => [...prev, { url: result.url!, caption: '' }])
+      if (result.error) { setError(result.error) }
+      else if (result.url) {
+        const next = [...imagesRef.current, { url: result.url!, caption: '' }]
+        setImages(next)
+        doSave(next)
+      }
       if (fileInputRef.current) fileInputRef.current.value = ''
     })
   }
 
-  function save() {
-    setSaved(false); setError(null)
-    startSave(async () => {
-      const result = await updateGallerySection(section.id, images, placement)
-      if (result.error) setError(result.error)
-      else setSaved(true)
-    })
+  function removeImage(i: number) {
+    const next = images.filter((_, idx) => idx !== i)
+    setImages(next)
+    doSave(next)
+  }
+
+  function updateCaption(i: number, caption: string) {
+    const next = images.map((img, idx) => idx === i ? { ...img, caption } : img)
+    setImages(next)
+    saveDebounced(next)
   }
 
   return (
@@ -320,16 +350,16 @@ function MenuGalleryEditor({
           <input
             type="text"
             value={img.caption}
-            onChange={e => setImages(prev => prev.map((img2, idx) => idx === i ? { ...img2, caption: e.target.value } : img2))}
+            onChange={e => updateCaption(i, e.target.value)}
             placeholder="Légende (optionnel)"
             className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/40"
           />
-          <button onClick={() => { setImages(prev => prev.filter((_, idx) => idx !== i)); setSaved(false) }} className="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 flex items-center justify-center transition-colors shrink-0">
+          <button onClick={() => removeImage(i)} className="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 flex items-center justify-center transition-colors shrink-0">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
           </button>
         </div>
       ))}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <button onClick={() => fileInputRef.current?.click()} disabled={uploadPending} className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-xl transition-colors disabled:opacity-50">
           {uploadPending
             ? <span className="w-3 h-3 border-2 border-zinc-500 border-t-zinc-200 rounded-full animate-spin" />
@@ -340,21 +370,31 @@ function MenuGalleryEditor({
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
         <p className="text-xs text-zinc-700">max 500 Ko</p>
       </div>
-      <SaveBar pending={savePending} saved={saved} error={error} onSave={save} />
+      <StatusBar status={status} error={error} />
     </div>
   )
 }
 
-// ─── Save bar ─────────────────────────────────────────────────
+// ─── Status bar ─────────────────────────────────────────────────
 
-function SaveBar({ pending, saved, error, onSave }: { pending: boolean; saved: boolean; error: string | null; onSave: () => void }) {
+function StatusBar({ status, error }: { status: 'idle' | 'saving' | 'saved'; error: string | null }) {
   return (
-    <div className="flex items-center gap-3 pt-1">
-      <button onClick={onSave} disabled={pending} className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors">
-        {pending && <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-        Enregistrer
-      </button>
-      {saved && <span className="flex items-center gap-1 text-emerald-400 text-xs font-medium"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>Enregistré</span>}
+    <div className="h-5 flex items-center">
+      {status === 'saving' && (
+        <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
+          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Enregistrement…
+        </span>
+      )}
+      {status === 'saved' && (
+        <span className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          Enregistré
+        </span>
+      )}
       {error && <span className="text-red-400 text-xs">{error}</span>}
     </div>
   )
