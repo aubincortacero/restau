@@ -282,7 +282,7 @@ export async function updateAppearance(formData: FormData) {
     .eq('owner_id', user.id)
 
   revalidatePath('/dashboard/website')
-  redirect('/dashboard/website?saved=appearance')
+  redirect('/dashboard/website/appearance?saved=appearance')
 }
 
 export async function updateCoverImage(
