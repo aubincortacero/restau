@@ -16,6 +16,7 @@ type Item = {
   is_vegetarian: boolean
   is_vegan: boolean
   image_url: string | null
+  sizes: { label: string; price: number }[] | null
 }
 
 export type PublicCategory = {
@@ -129,7 +130,7 @@ export default async function PublicMenuPage({
 
   const { data: rawCategories } = await supabase
     .from('categories')
-    .select('id, name, position, category_type, items(id, name, description, price, happy_hour_price, allergens, is_available, is_vegetarian, is_vegan, image_url)')
+    .select('id, name, position, category_type, items(id, name, description, price, happy_hour_price, allergens, is_available, is_vegetarian, is_vegan, image_url, sizes)')
     .eq('restaurant_id', restaurant.id)
     .order('position')
 

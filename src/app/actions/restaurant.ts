@@ -515,7 +515,7 @@ export async function createItem(formData: FormData) {
   const is_vegan = formData.has('is_vegan')
 
   // Attributs spécifiques au type : tout ce qui n'est pas un champ standard
-  const STANDARD_KEYS = new Set(['category_id', 'name', 'description', 'price', 'happy_hour_price', 'happy_hour_price', 'allergens', 'is_vegetarian', 'is_vegan', 'image'])
+  const STANDARD_KEYS = new Set(['category_id', 'name', 'description', 'price', 'happy_hour_price', 'happy_hour_price', 'allergens', 'is_vegetarian', 'is_vegan', 'image', 'sizes'])
   const attributes: Record<string, string | string[]> = {}
   for (const [key, value] of formData.entries()) {
     if (STANDARD_KEYS.has(key) || typeof value !== 'string') continue
@@ -528,6 +528,9 @@ export async function createItem(formData: FormData) {
       attributes[key] = [existing, value]
     }
   }
+
+  const sizesRaw = formData.get('sizes') as string | null
+  const sizes = sizesRaw ? JSON.parse(sizesRaw) : null
 
   // Upload image vers Supabase Storage (bucket 'item-images' doit exister)
   let image_url: string | null = null
@@ -555,6 +558,7 @@ export async function createItem(formData: FormData) {
     is_vegan,
     attributes: Object.keys(attributes).length > 0 ? attributes : {},
     image_url,
+    sizes,
   })
 
   revalidatePath('/dashboard/menu')
@@ -578,7 +582,7 @@ export async function updateItem(formData: FormData) {
   const is_vegetarian = formData.has('is_vegetarian')
   const is_vegan = formData.has('is_vegan')
 
-  const STANDARD_KEYS = new Set(['id', 'name', 'description', 'price', 'happy_hour_price', 'allergens', 'is_vegetarian', 'is_vegan', 'image'])
+  const STANDARD_KEYS = new Set(['id', 'name', 'description', 'price', 'happy_hour_price', 'allergens', 'is_vegetarian', 'is_vegan', 'image', 'sizes'])
   const attributes: Record<string, string | string[]> = {}
   for (const [key, value] of formData.entries()) {
     if (STANDARD_KEYS.has(key) || typeof value !== 'string') continue
@@ -591,6 +595,9 @@ export async function updateItem(formData: FormData) {
       attributes[key] = [existing, value]
     }
   }
+
+  const sizesRaw = formData.get('sizes') as string | null
+  const sizes = sizesRaw ? JSON.parse(sizesRaw) : null
 
   // Upload nouvelle image si fournie
   let image_url: string | undefined = undefined
@@ -616,6 +623,7 @@ export async function updateItem(formData: FormData) {
     is_vegetarian,
     is_vegan,
     attributes,
+    sizes,
   }
   if (image_url !== undefined) updatePayload.image_url = image_url
 

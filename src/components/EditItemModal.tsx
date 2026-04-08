@@ -8,6 +8,7 @@ import type { CategoryTypeId } from '@/lib/category-types'
 const INPUT = "bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 w-full"
 
 type Attributes = Record<string, string | string[]>
+type Size = { label: string; price: string }
 
 interface ItemData {
   id: string
@@ -20,6 +21,7 @@ interface ItemData {
   is_vegan: boolean
   image_url: string | null
   attributes: Attributes | null
+  sizes: { label: string; price: number }[] | null
 }
 
 interface Props {
@@ -32,6 +34,12 @@ function ModalForm({ item, categoryType, onClose }: Props & { onClose: () => voi
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const previewUrlRef = useRef<string | null>(null)
   const fields = CATEGORY_ATTRIBUTES[categoryType] ?? []
+  const [useSizes, setUseSizes] = useState(() => !!(item.sizes && item.sizes.length > 0))
+  const [sizes, setSizes] = useState<Size[]>(() =>
+    item.sizes && item.sizes.length > 0
+      ? item.sizes.map(s => ({ label: s.label, price: String(s.price) }))
+      : [{ label: '', price: '' }]
+  )
 
   const [sliders, setSliders] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
@@ -82,10 +90,73 @@ function ModalForm({ item, categoryType, onClose }: Props & { onClose: () => voi
       {/* Nom + Prix */}
       <div className="grid grid-cols-3 gap-2">
         <input name="name" required defaultValue={item.name} placeholder="Nom du plat *" className={INPUT + ' col-span-2'} />
-        <div className="relative">
-          <input name="price" type="number" step="0.01" min="0" required defaultValue={item.price} placeholder="Prix *" className={INPUT + ' pr-6'} />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">€</span>
+        {!useSizes && (
+          <div className="relative">
+            <input name="price" type="number" step="0.01" min="0" required defaultValue={item.price} placeholder="Prix *" className={INPUT + ' pr-6'} />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">€</span>
+          </div>
+        )}
+        {useSizes && <input type="hidden" name="price" value="0" />}
+      </div>
+
+      {/* Tailles / Variantes */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs text-zinc-500">Plusieurs tailles</label>
+          <button
+            type="button"
+            onClick={() => setUseSizes(v => !v)}
+            className={`relative w-9 h-5 rounded-full transition-colors ${
+              useSizes ? 'bg-orange-500' : 'bg-zinc-700'
+            }`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+              useSizes ? 'translate-x-4' : 'translate-x-0'
+            }`} />
+          </button>
         </div>
+        {useSizes && (
+          <div className="space-y-1.5">
+            {sizes.map((s, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <input
+                  value={s.label}
+                  onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))}
+                  placeholder="Label (25cl, 50cl…)"
+                  className={INPUT + ' flex-1'}
+                />
+                <div className="relative w-24 shrink-0">
+                  <input
+                    value={s.price}
+                    onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, price: e.target.value } : x))}
+                    type="number" step="0.01" min="0"
+                    placeholder="Prix"
+                    className={INPUT + ' pr-5'}
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">€</span>
+                </div>
+                {sizes.length > 1 && (
+                  <button type="button" onClick={() => setSizes(prev => prev.filter((_, idx) => idx !== i))}
+                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-red-900/40 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors shrink-0">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" onClick={() => setSizes(prev => [...prev, { label: '', price: '' }])}
+              className="text-xs text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1 mt-0.5">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              Ajouter une taille
+            </button>
+            <input
+              type="hidden"
+              name="sizes"
+              value={JSON.stringify(
+                sizes.filter(s => s.label && s.price).map(s => ({ label: s.label, price: parseFloat(s.price) }))
+              )}
+            />
+          </div>
+        )}
       </div>
 
       {/* Prix Happy Hour */}

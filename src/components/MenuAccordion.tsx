@@ -78,10 +78,12 @@ export default function MenuAccordion({
     )
   }
 
-  function addItem(item: Item, price: number) {
+  function addItem(item: Item, price: number, sizeLabel?: string) {
+    const key = sizeLabel ? `${item.id}:${sizeLabel}` : item.id
+    const name = sizeLabel ? `${item.name} (${sizeLabel})` : item.name
     setCart(prev => ({
       ...prev,
-      [item.id]: { id: item.id, name: item.name, price, quantity: (prev[item.id]?.quantity ?? 0) + 1 },
+      [key]: { id: key, name, price, quantity: (prev[key]?.quantity ?? 0) + 1 },
     }))
   }
 
@@ -216,6 +218,12 @@ export default function MenuAccordion({
                 <div className="bg-[#111110] divide-y divide-stone-800/50 border-t border-stone-800/60">
                   {cat.items.map((item, idx) => {
                     const effectivePrice = hhActive && item.happy_hour_price != null ? item.happy_hour_price : item.price
+                    const qtyBySize = item.sizes
+                      ? item.sizes.reduce<Record<string, number>>((acc, s) => {
+                          acc[s.label] = cart[`${item.id}:${s.label}`]?.quantity ?? 0
+                          return acc
+                        }, {})
+                      : undefined
                     return (
                       <ItemRow
                         key={item.id}
@@ -223,8 +231,11 @@ export default function MenuAccordion({
                         hhActive={hhActive}
                         last={idx === cat.items.length - 1}
                         qty={cart[item.id]?.quantity ?? 0}
+                        qtyBySize={qtyBySize}
                         onAdd={() => addItem(item, effectivePrice)}
+                        onAddSize={(label, price) => addItem(item, price, label)}
                         onRemove={() => removeItem(item.id)}
+                        onRemoveSize={(label) => removeItem(`${item.id}:${label}`)}
                       />
                     )
                   })}
@@ -603,15 +614,21 @@ function ItemRow({
   hhActive,
   last,
   qty,
+  qtyBySize,
   onAdd,
+  onAddSize,
   onRemove,
+  onRemoveSize,
 }: {
   item: Item
   hhActive: boolean
   last: boolean
   qty: number
+  qtyBySize?: Record<string, number>
   onAdd: () => void
+  onAddSize?: (label: string, price: number) => void
   onRemove: () => void
+  onRemoveSize?: (label: string) => void
 }) {
   const showHH = hhActive && item.happy_hour_price != null
   const [imageOpen, setImageOpen] = useState(false)
@@ -720,7 +737,9 @@ function ItemRow({
               onClick={item.image_url ? openImage : undefined}
             >{item.name}</p>
             <div className="text-right shrink-0 ml-2">
-              {showHH ? (
+              {item.sizes && item.sizes.length > 0 ? (
+                <p className="text-stone-500 text-xs font-medium">dès {fmt(Math.min(...item.sizes.map(s => s.price)))}</p>
+              ) : showHH ? (
                 <>
                   <p className="font-bold text-amber-400 text-base leading-tight">{fmt(item.happy_hour_price!)}</p>
                   <p className="text-stone-500 line-through text-xs mt-0.5">{fmt(item.price)}</p>
@@ -751,7 +770,40 @@ function ItemRow({
           )}
 
           <div className="mt-2.5">
-            {qty === 0 ? (
+            {item.sizes && item.sizes.length > 0 ? (
+              <div className="space-y-1.5">
+                {item.sizes.map(size => {
+                  const sizeQty = qtyBySize?.[size.label] ?? 0
+                  return (
+                    <div key={size.label} className="flex items-center gap-2">
+                      <span className="text-stone-400 text-xs font-medium flex-1">{size.label}</span>
+                      <span className="text-stone-300 text-xs font-semibold">{fmt(size.price)}</span>
+                      {sizeQty === 0 ? (
+                        <button
+                          onClick={() => onAddSize?.(size.label, size.price)}
+                          className="menu-add-btn flex items-center gap-1 bg-stone-800/80 active:scale-95 text-stone-300 text-xs font-semibold px-2.5 py-1 rounded-xl transition-all border border-stone-700/50"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                          Ajouter
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => onRemoveSize?.(size.label)} className="w-6 h-6 rounded-lg bg-stone-800 hover:bg-stone-700 active:scale-95 text-stone-300 flex items-center justify-center transition-all border border-stone-700/50">
+                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+                          </button>
+                          <span className="text-stone-100 font-bold text-sm w-4 text-center">{sizeQty}</span>
+                          <button onClick={() => onAddSize?.(size.label, size.price)} className="menu-item-plus w-6 h-6 active:scale-95 text-white flex items-center justify-center transition-all">
+                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : qty === 0 ? (
               <button
                 onClick={onAdd}
                 className="menu-add-btn flex items-center gap-1.5 bg-stone-800/80 active:scale-95 text-stone-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border border-stone-700/50"
