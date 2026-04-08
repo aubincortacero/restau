@@ -25,6 +25,7 @@ type Item = {
   is_vegan: boolean
   image_url: string | null
   attributes: Attributes | null
+  sizes: { label: string; price: number }[] | null
 }
 
 type Category = {
@@ -63,7 +64,7 @@ export default async function MenuPage() {
   {
     const { data, error } = await supabase
       .from('categories')
-      .select('id, name, position, category_type, items(id, name, description, price, happy_hour_price, allergens, is_available, is_vegetarian, is_vegan, image_url, attributes)')
+      .select('id, name, position, category_type, items(id, name, description, price, happy_hour_price, allergens, is_available, is_vegetarian, is_vegan, image_url, attributes, sizes)')
       .eq('restaurant_id', restaurant.id)
       .order('position')
 
@@ -73,7 +74,7 @@ export default async function MenuPage() {
       // Fallback sans les colonnes optionnelles (migration non appliquée)
       const { data: fallback } = await supabase
         .from('categories')
-        .select('id, name, position, items(id, name, description, price, allergens, is_available, is_vegetarian, is_vegan, image_url)')
+        .select('id, name, position, items(id, name, description, price, allergens, is_available, is_vegetarian, is_vegan, image_url, sizes)')
         .eq('restaurant_id', restaurant.id)
         .order('position')
       categories = (fallback ?? []).map((c) => ({
