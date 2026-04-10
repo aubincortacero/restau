@@ -35,12 +35,6 @@ export const CATEGORY_ATTRIBUTES: Record<CategoryTypeId, AttributeFieldDef[]> = 
   tapas: [],
   alcohol: [
     {
-      type: 'select',
-      key: 'type',
-      label: 'Type de boisson',
-      options: ['Vin', 'Bière', 'Cocktail', 'Spiritueux', 'Champagne / Pétillant', 'Autre'],
-    },
-    {
       type: 'slider',
       key: 'degre',
       label: "Degré d'alcool",
@@ -49,21 +43,8 @@ export const CATEGORY_ATTRIBUTES: Record<CategoryTypeId, AttributeFieldDef[]> = 
       step: 0.5,
       unit: '°',
     },
-    {
-      type: 'select',
-      key: 'format',
-      label: 'Format / Contenance',
-      options: ['25 cl', '33 cl', '50 cl', '75 cl', '1 L'],
-    },
   ],
-  beverage: [
-    {
-      type: 'select',
-      key: 'format',
-      label: 'Format / Contenance',
-      options: ['25 cl', '33 cl', '50 cl', '1 L'],
-    },
-  ],
+  beverage: [],
   dessert: [
     {
       type: 'select',

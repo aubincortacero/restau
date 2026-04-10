@@ -245,17 +245,19 @@ function ModalForm({ categoryId, categoryType, onClose }: Props & { onClose: () 
         </div>
       ))}
 
-      {/* Végé / Vegan */}
-      <div className="flex flex-wrap gap-2">
-        <label className="cursor-pointer select-none">
-          <input type="checkbox" name="is_vegetarian" className="sr-only peer" />
-          <span className="block text-xs px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-500 hover:border-zinc-600 peer-checked:border-lime-500/40 peer-checked:bg-lime-500/10 peer-checked:text-lime-400 transition-colors">🌿 Végétarien</span>
-        </label>
-        <label className="cursor-pointer select-none">
-          <input type="checkbox" name="is_vegan" className="sr-only peer" />
-          <span className="block text-xs px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-500 hover:border-zinc-600 peer-checked:border-pink-500/40 peer-checked:bg-pink-500/10 peer-checked:text-pink-400 transition-colors">🫘 Vegan</span>
-        </label>
-      </div>
+      {/* Végé / Vegan — masqué pour les alcools */}
+      {categoryType !== 'alcohol' && (
+        <div className="flex flex-wrap gap-2">
+          <label className="cursor-pointer select-none">
+            <input type="checkbox" name="is_vegetarian" className="sr-only peer" />
+            <span className="block text-xs px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-500 hover:border-zinc-600 peer-checked:border-lime-500/40 peer-checked:bg-lime-500/10 peer-checked:text-lime-400 transition-colors">🌿 Végétarien</span>
+          </label>
+          <label className="cursor-pointer select-none">
+            <input type="checkbox" name="is_vegan" className="sr-only peer" />
+            <span className="block text-xs px-3 py-1.5 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-500 hover:border-zinc-600 peer-checked:border-pink-500/40 peer-checked:bg-pink-500/10 peer-checked:text-pink-400 transition-colors">🫘 Vegan</span>
+          </label>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-1">
