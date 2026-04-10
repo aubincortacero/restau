@@ -1,5 +1,6 @@
 import { signInWithGoogle } from '@/app/actions/auth'
 import { IconLogo } from '@/components/icons'
+import EmailLoginForm from '@/components/EmailLoginForm'
 
 export default function LoginPage({
   searchParams,
@@ -25,6 +26,16 @@ export default function LoginPage({
 
           {/* Alerts */}
           <Alerts searchParams={searchParams} />
+
+          {/* Email / password */}
+          <EmailLoginForm />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-zinc-800" />
+            <span className="text-xs text-zinc-600">ou</span>
+            <div className="flex-1 h-px bg-zinc-800" />
+          </div>
 
           {/* Google button */}
           <form action={signInWithGoogle}>
@@ -64,6 +75,22 @@ async function Alerts({
     return (
       <div className="mb-4 px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-300">
         Votre compte a été supprimé. À bientôt.
+      </div>
+    )
+  }
+
+  if (params.error === 'invalid_credentials') {
+    return (
+      <div className="mb-4 px-4 py-3 rounded-xl bg-red-950 border border-red-800 text-sm text-red-300">
+        Email ou mot de passe incorrect.
+      </div>
+    )
+  }
+
+  if (params.error === 'missing_fields') {
+    return (
+      <div className="mb-4 px-4 py-3 rounded-xl bg-red-950 border border-red-800 text-sm text-red-300">
+        Veuillez renseigner votre email et mot de passe.
       </div>
     )
   }

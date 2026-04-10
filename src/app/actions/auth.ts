@@ -5,6 +5,19 @@ import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
+export async function signInWithEmail(formData: FormData) {
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+
+  if (!email || !password) redirect('/login?error=missing_fields')
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) redirect('/login?error=invalid_credentials')
+  redirect('/dashboard')
+}
+
 export async function signInWithGoogle() {
   const supabase = await createClient()
   const headersList = await headers()
