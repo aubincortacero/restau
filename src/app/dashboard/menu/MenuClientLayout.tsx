@@ -10,6 +10,38 @@ import AddItemModal from '@/components/AddItemModal'
 import EditCategoryName from '@/components/EditCategoryName'
 import EditItemModal from '@/components/EditItemModal'
 import MenuScanButton from './MenuScanButton'
+import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
+
+const MENU_TUTORIAL_STEPS: PageTutorialStep[] = [
+  {
+    selector: '[data-page-tutorial="menu-scan"]',
+    emoji: '✨',
+    title: 'Importez votre menu en 10 secondes',
+    description:
+      'Photographiez votre menu papier. Qomand l’IA crée automatiquement toutes vos catégories et tous vos plats. Vous n’avez plus qu’à vérifier.',
+  },
+  {
+    selector: '[data-page-tutorial="menu-cat-nav"]',
+    emoji: '📂',
+    title: 'Vos catégories',
+    description:
+      'Chaque catégorie a un type (pizzas, viandes, boissons…). Cliquez dessus pour voir et modifier ses plats. Vous pouvez en créer autant que vous voulez.',
+  },
+  {
+    selector: '[data-page-tutorial="menu-cat-add"]',
+    emoji: '➕',
+    title: 'Créez une catégorie',
+    description:
+      'Donnez un nom et choisissez un type. Le type détermine les champs disponibles : degré d’alcool, labels végétarien / vegan, tailles avec prix par déclinaison.',
+  },
+  {
+    selector: '[data-page-tutorial="menu-content"]',
+    emoji: '🍽️',
+    title: 'Gérez vos plats',
+    description:
+      'Ajoutez des plats avec photo, description, prix et variantes de taille (ex : pizza 26 cm / 33 cm). Activez ou désactivez chaque plat selon votre stock.',
+  },
+]
 
 type Attributes = Record<string, string | string[]>
 
@@ -39,9 +71,11 @@ type Category = {
 function formatAttributes(attrs: Attributes | null): string | null {
   if (!attrs || Object.keys(attrs).length === 0) return null
   const parts: string[] = []
-  for (const val of Object.values(attrs)) {
+  for (const [key, val] of Object.entries(attrs)) {
     if (Array.isArray(val) && val.length > 0) parts.push(val.join(' · '))
-    else if (typeof val === 'string' && val) parts.push(val)
+    else if (typeof val === 'string' && val) {
+      parts.push(key === 'degre' ? `${val}°` : val)
+    }
   }
   return parts.length > 0 ? parts.join(' — ') : null
 }
@@ -71,12 +105,14 @@ export default function MenuClientLayout({
           <h1 className="text-2xl font-semibold">Menu</h1>
           <p className="text-sm text-zinc-400 mt-0.5">Gérez vos catégories et vos plats</p>
         </div>
-        <MenuScanButton restaurantId={restaurantId} />
+        <div data-page-tutorial="menu-scan">
+          <MenuScanButton restaurantId={restaurantId} />
+        </div>
       </div>
 
       <div className="flex gap-6 items-start">
         {/* ── Colonne gauche : liste des catégories ── */}
-        <nav className="w-48 shrink-0">
+        <nav className="w-48 shrink-0" data-page-tutorial="menu-cat-nav">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 px-3 mb-2">
             Catégories
           </p>
@@ -111,6 +147,7 @@ export default function MenuClientLayout({
           <div className="mt-2">
             {!showAddCategory ? (
               <button
+                data-page-tutorial="menu-cat-add"
                 onClick={() => setShowAddCategory(true)}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50 transition-colors border border-dashed border-zinc-800 hover:border-zinc-700 mt-1"
               >
@@ -137,7 +174,7 @@ export default function MenuClientLayout({
         </nav>
 
         {/* ── Colonne droite : contenu de la catégorie ── */}
-        <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl">
+        <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl" data-page-tutorial="menu-content">
           {!selected ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-6">
               <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
@@ -199,22 +236,26 @@ export default function MenuClientLayout({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-white truncate">{item.name}</span>
-                            <form action={updateItemFlags}>
-                              <input type="hidden" name="id" value={item.id} />
-                              <input type="hidden" name="field" value="is_vegetarian" />
-                              <input type="hidden" name="value" value={(!item.is_vegetarian).toString()} />
-                              <button type="submit" className={`text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer shrink-0 ${item.is_vegetarian ? 'bg-lime-500/15 text-lime-400 border-lime-500/30 hover:opacity-60' : 'bg-transparent text-zinc-600 border-zinc-700 hover:text-lime-400 hover:border-lime-500/30'}`}>
-                                🌿 Végé
-                              </button>
-                            </form>
-                            <form action={updateItemFlags}>
-                              <input type="hidden" name="id" value={item.id} />
-                              <input type="hidden" name="field" value="is_vegan" />
-                              <input type="hidden" name="value" value={(!item.is_vegan).toString()} />
-                              <button type="submit" className={`text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer shrink-0 ${item.is_vegan ? 'bg-pink-500/15 text-pink-400 border-pink-500/30 hover:opacity-60' : 'bg-transparent text-zinc-600 border-zinc-700 hover:text-pink-400 hover:border-pink-500/30'}`}>
-                                🫘 Vegan
-                              </button>
-                            </form>
+                            {item.is_vegetarian && (
+                              <form action={updateItemFlags}>
+                                <input type="hidden" name="id" value={item.id} />
+                                <input type="hidden" name="field" value="is_vegetarian" />
+                                <input type="hidden" name="value" value="false" />
+                                <button type="submit" className="text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer shrink-0 bg-lime-500/15 text-lime-400 border-lime-500/30 hover:opacity-60">
+                                  🌿 Végé
+                                </button>
+                              </form>
+                            )}
+                            {item.is_vegan && (
+                              <form action={updateItemFlags}>
+                                <input type="hidden" name="id" value={item.id} />
+                                <input type="hidden" name="field" value="is_vegan" />
+                                <input type="hidden" name="value" value="false" />
+                                <button type="submit" className="text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer shrink-0 bg-pink-500/15 text-pink-400 border-pink-500/30 hover:opacity-60">
+                                  🫘 Vegan
+                                </button>
+                              </form>
+                            )}
                             {!item.is_available && (
                               <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full shrink-0">Indispo</span>
                             )}
@@ -233,12 +274,20 @@ export default function MenuClientLayout({
                         {/* Prix + actions */}
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right">
-                            {item.happy_hour_price != null && (
-                              <p className="text-xs text-amber-400 tabular-nums">{Number(item.happy_hour_price).toFixed(2)} € 🍹</p>
+                            {item.sizes && item.sizes.length > 0 ? (
+                              <span className="text-sm font-semibold text-white tabular-nums">
+                                dès {Math.min(...item.sizes.map(s => s.price)).toFixed(2)} €
+                              </span>
+                            ) : (
+                              <>
+                                {item.happy_hour_price != null && (
+                                  <p className="text-xs text-amber-400 tabular-nums">{Number(item.happy_hour_price).toFixed(2)} € 🍹</p>
+                                )}
+                                <span className="text-sm font-semibold text-white tabular-nums">
+                                  {Number(item.price).toFixed(2)} €
+                                </span>
+                              </>
                             )}
-                            <span className="text-sm font-semibold text-white tabular-nums">
-                              {Number(item.price).toFixed(2)} €
-                            </span>
                           </div>
                           <EditItemModal item={item} categoryType={catType} />
                           <form action={updateItemFlags}>
@@ -309,6 +358,8 @@ export default function MenuClientLayout({
           </a>
         </div>
       </div>
+
+      <PageTutorial steps={MENU_TUTORIAL_STEPS} storageKey="tutorial_page_menu_v1" />
     </div>
   )
 }

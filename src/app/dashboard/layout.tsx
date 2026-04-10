@@ -14,6 +14,7 @@ import PendingOrdersSidebar from '@/components/PendingOrdersSidebar'
 import type { ChecklistItem } from '@/components/PendingOrdersSidebar'
 import UrgencyBanner from '@/components/UrgencyBanner'
 import { getSubscriptionStatus, isAccessGranted } from '@/lib/subscription'
+import TutorialOverlay from '@/components/TutorialOverlay'
 
 type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
 type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
@@ -235,6 +236,8 @@ export default async function DashboardLayout({
       )}
 
       <MobileNav restaurantSlug={restaurants.find((r) => r.id === activeRestaurantId)?.slug} />
+
+      <TutorialOverlay />
     </div>
   )
 }

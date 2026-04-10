@@ -5,6 +5,31 @@ import FloorPlan, { type Floor } from './FloorPlan'
 import TableAddForm from './TableAddForm'
 import QRExportButton from './QRExportButton'
 import { deleteTableById } from '@/app/actions/restaurant'
+import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
+
+const TABLES_TUTORIAL_STEPS: PageTutorialStep[] = [
+  {
+    selector: '[data-page-tutorial="tables-add"]',
+    emoji: '➕',
+    title: 'Créez vos tables',
+    description:
+      'Ajoutez une table à la fois ou en lot (ex : tables 1 à 10 d’un coup). Choisissez une zone et un niveau si vous avez plusieurs salles.',
+  },
+  {
+    selector: '[data-page-tutorial="tables-canvas"]',
+    emoji: '🗺️',
+    title: 'Plan de salle interactif',
+    description:
+      'Glissez les tables pour les placer. Dessinez des zones colorées pour organiser votre salle (terrasse, bar, salle privée…). Cliquez une table pour voir son QR code.',
+  },
+  {
+    selector: '[data-page-tutorial="tables-qr"]',
+    emoji: '📱',
+    title: 'Exportez les QR codes',
+    description:
+      'Générez un PDF avec les QR codes de toutes vos tables. Imprimez-les et posez-les sur les tables : vos clients commandent en 10 secondes.',
+  },
+]
 
 export type FloorTable = {
   id: string
@@ -81,17 +106,19 @@ export default function TablesClientLayout({
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-2xl font-semibold flex-1">Plan de salle</h1>
         {hasTables && (
-          <QRExportButton
-            tables={tables.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
-            siteUrl={siteUrl}
-            restaurantSlug={restaurantSlug}
-          />
+          <div data-page-tutorial="tables-qr">
+            <QRExportButton
+              tables={tables.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
+              siteUrl={siteUrl}
+              restaurantSlug={restaurantSlug}
+            />
+          </div>
         )}
       </div>
 
       <div className="flex gap-6 items-start">
         {/* ── Colonne gauche : liste des tables ── */}
-        <div className="w-48 shrink-0">
+        <div className="w-48 shrink-0" data-page-tutorial="tables-add">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 px-3 mb-2">
             Tables
           </p>
@@ -164,7 +191,7 @@ export default function TablesClientLayout({
         </div>
 
         {/* ── Colonne droite ── */}
-        <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+        <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden" data-page-tutorial="tables-canvas">
           {hasTables ? (
             /* Plan de salle — cliquer une table dans la liste la centre ici */
             <FloorPlan
@@ -190,6 +217,8 @@ export default function TablesClientLayout({
           )}
         </div>
       </div>
+
+      <PageTutorial steps={TABLES_TUTORIAL_STEPS} storageKey="tutorial_page_tables_v1" />
     </div>
   )
 }

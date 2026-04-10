@@ -19,6 +19,7 @@ type PreviewItem = {
   name: string
   description: string
   price: number
+  sizes: { label: string; price: number }[]
   confidence: 'high' | 'low'
 }
 
@@ -73,6 +74,7 @@ export default function MenuScanModal({ restaurantId, onClose, onSuccess }: Prop
           name: item.name,
           description: item.description ?? '',
           price: item.price,
+          sizes: item.sizes ?? [],
           confidence: item.confidence,
         })),
       }))
@@ -117,6 +119,7 @@ export default function MenuScanModal({ restaurantId, onClose, onSuccess }: Prop
           name: i.name,
           description: i.description,
           price: i.price,
+          sizes: i.sizes.length > 0 ? i.sizes : undefined,
         })),
       }))
 
@@ -311,9 +314,21 @@ export default function MenuScanModal({ restaurantId, onClose, onSuccess }: Prop
                             {item.description && (
                               <p className="text-xs text-zinc-500 truncate">{item.description}</p>
                             )}
+                            {item.sizes.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {item.sizes.map((s, si) => (
+                                  <span key={si} className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-400 border border-zinc-700">
+                                    {s.label} — {s.price.toFixed(2)} €
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <span className="text-sm font-medium text-zinc-300 shrink-0">
-                            {item.price > 0 ? `${item.price.toFixed(2)} €` : <span className="text-amber-400">—</span>}
+                            {item.sizes.length > 0
+                              ? <span className="text-zinc-500 text-xs">dès {Math.min(...item.sizes.map(s => s.price)).toFixed(2)} €</span>
+                              : item.price > 0 ? `${item.price.toFixed(2)} €` : <span className="text-amber-400">—</span>
+                            }
                           </span>
                           <button
                             onClick={() => removeItem(catIdx, itemIdx)}

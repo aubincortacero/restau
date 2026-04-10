@@ -6,10 +6,16 @@ import { createClient } from '@/lib/supabase/server'
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
  
 // ─── Schéma de sortie attendu de l'IA ─────────────────────────
+const SizeSchema = z.object({
+  label: z.string().min(1),
+  price: z.number().nonnegative(),
+})
+
 const ItemSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().default(''),
   price: z.number().nonnegative(),
+  sizes: z.array(SizeSchema).optional().default([]),
   confidence: z.enum(['high', 'low']),
 })
 
@@ -47,6 +53,17 @@ Structure attendue :
           "name": "Nom du plat",
           "description": "Description si visible, sinon chaîne vide",
           "price": 12.50,
+          "sizes": [],
+          "confidence": "high"
+        },
+        {
+          "name": "Pizza Margherita",
+          "description": "",
+          "price": 0,
+          "sizes": [
+            { "label": "26 cm", "price": 10.00 },
+            { "label": "33 cm", "price": 13.50 }
+          ],
           "confidence": "high"
         }
       ]
@@ -65,6 +82,13 @@ Types de catégories disponibles (utilise le plus approprié) :
 - "alcohol" : Vins, bières, cocktails, spiritueux (ex: Piña Colada → alcohol)
 - "beverage" : Jus, sodas, eaux, cafés, thés
 - "dessert" : Desserts, glaces, fromages
+
+Règles sur les tailles / variantes (TRÈS IMPORTANT) :
+- Si un plat est proposé en plusieurs tailles ou formats (ex: pizza 26cm/33cm, bière 25cl/50cl, vin au verre/pichet/bouteille, burger S/M/L), utilise le champ "sizes" pour chaque déclinaison avec son prix.
+- Dans ce cas, mets "price": 0 (le prix réel est dans les sizes).
+- Si c'est un prix unique, laisse "sizes": [] et indique le prix dans "price".
+- Exemples de cas à mettre en sizes : "Pizza S/M/L", "Bière pression 25cl / 50cl", "Vin 12cl / 25cl / bouteille", "Cocktail 20cl / 40cl".
+- Le label de chaque size doit être court et clair : "25 cl", "50 cl", "S", "M", "L", "26 cm", "33 cm", "au verre", "bouteille".
 
 Règles importantes :
 - Si tu n'arrives pas à lire un prix clairement, mets 0 et passe le confidence à "low"

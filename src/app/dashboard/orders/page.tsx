@@ -6,6 +6,31 @@ import TicketActions from './TicketActions'
 import { IconCreditCard, IconBanknote } from '@/components/icons'
 import { updateOrderStatus, archiveOrder, markOrderReady, collectCashPayment } from '@/app/actions/restaurant'
 import OrderTimer from '@/components/OrderTimer'
+import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
+
+const ORDERS_TUTORIAL_STEPS: PageTutorialStep[] = [
+  {
+    selector: '[data-page-tutorial="orders-header"]',
+    emoji: '🔔',
+    title: 'Vos commandes en temps réel',
+    description:
+      'Dès qu’un client scanne le QR code de sa table et passe commande, elle apparaît ici instantanément. Vous êtes aussi notifié par une cloche en haut de la sidebar.',
+  },
+  {
+    selector: '[data-page-tutorial="orders-list"]',
+    emoji: '✅',
+    title: 'Gérez chaque ticket',
+    description:
+      'Lisez les plats commandés, acceptez la commande, ou annulez-la. Les tickets en attente sont encadrés en orange, les commandes prêtes en bleu.',
+  },
+  {
+    selector: '[data-page-tutorial="orders-archives"]',
+    emoji: '📦',
+    title: 'Archives',
+    description:
+      'Les commandes traitées sont automatiquement archivées. Retrouvez-y le détail de chaque ticket, les montants HT / TTC, et le mode de paiement.',
+  },
+]
 
 type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
 
@@ -82,7 +107,7 @@ export default async function OrdersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8" data-page-tutorial="orders-header">
         <div>
           <h1 className="text-2xl font-semibold">Commandes</h1>
           <p className="text-sm text-zinc-400 mt-0.5">
@@ -93,6 +118,7 @@ export default async function OrdersPage() {
         </div>
         <Link
           href="/dashboard/orders/archives"
+          data-page-tutorial="orders-archives"
           className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-xl transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -103,12 +129,12 @@ export default async function OrdersPage() {
       </div>
 
       {enriched.length === 0 ? (
-        <div className="text-center py-20 text-zinc-500 text-sm">
+        <div data-page-tutorial="orders-list" className="text-center py-20 text-zinc-500 text-sm">
           Aucune commande pour l&apos;instant.<br />
           <span className="text-zinc-600">Les commandes apparaîtront ici dès que vos clients commanderont.</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" data-page-tutorial="orders-list">
           {enriched.map((order) => {
             const statusInfo = STATUS_LABELS[order.status] ?? STATUS_LABELS.pending
             const payInfo = PAYMENT_STATUS[order.payment_status] ?? PAYMENT_STATUS.unpaid
@@ -317,6 +343,8 @@ export default async function OrdersPage() {
           })}
         </div>
       )}
+
+      <PageTutorial steps={ORDERS_TUTORIAL_STEPS} storageKey="tutorial_page_orders_v1" />
     </div>
   )
 }

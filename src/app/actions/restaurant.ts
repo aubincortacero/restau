@@ -664,6 +664,7 @@ export type BulkImportCategory = {
     name: string
     description: string
     price: number
+    sizes?: { label: string; price: number }[]
   }[]
 }
 
@@ -711,7 +712,8 @@ export async function bulkImportMenu(
       category_id: newCat.id,
       name: item.name,
       description: item.description || null,
-      price: item.price,
+      price: item.sizes && item.sizes.length > 0 ? 0 : item.price,
+      sizes: item.sizes && item.sizes.length > 0 ? item.sizes : null,
       is_available: true,
       is_vegetarian: false,
       is_vegan: false,
