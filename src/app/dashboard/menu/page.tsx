@@ -1,15 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import { deleteCategory, deleteItem, updateItemFlags } from '@/app/actions/restaurant'
-import { CATEGORY_TYPE_COLORS, CATEGORY_TYPES } from '@/lib/category-types'
-import type { CategoryTypeId } from '@/lib/category-types'
-import { IconTrash } from '@/components/icons'
-import AddCategoryForm from '@/components/AddCategoryForm'
-import AddItemModal from '@/components/AddItemModal'
-import EditCategoryName from '@/components/EditCategoryName'
-import EditItemModal from '@/components/EditItemModal'
-import MenuScanButton from './MenuScanButton'
+import MenuClientLayout from './MenuClientLayout'
 
 type Attributes = Record<string, string | string[]>
 
@@ -36,16 +28,6 @@ type Category = {
   items: Item[]
 }
 
-function formatAttributes(attrs: Attributes | null): string | null {
-  if (!attrs || Object.keys(attrs).length === 0) return null
-  const parts: string[] = []
-  for (const val of Object.values(attrs)) {
-    if (Array.isArray(val) && val.length > 0) parts.push(val.join(' · '))
-    else if (typeof val === 'string' && val) parts.push(val)
-  }
-  return parts.length > 0 ? parts.join(' — ') : null
-}
-
 export default async function MenuPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -54,12 +36,11 @@ export default async function MenuPage() {
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, slug').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
 
-  // Tentative avec toutes les colonnes — fallback si la migration n'est pas encore appliquée
   let categories: Category[] | null = null
   {
     const { data, error } = await supabase
@@ -71,7 +52,6 @@ export default async function MenuPage() {
     if (!error) {
       categories = data as unknown as Category[]
     } else {
-      // Fallback sans les colonnes optionnelles (migration non appliquée)
       const { data: fallback } = await supabase
         .from('categories')
         .select('id, name, position, items(id, name, description, price, allergens, is_available, is_vegetarian, is_vegan, image_url, sizes)')
@@ -86,148 +66,10 @@ export default async function MenuPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Menu</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">Gérez vos catégories et vos plats</p>
-        </div>
-        <MenuScanButton restaurantId={restaurant.id} />
-      </div>
-
-      {/* Ajouter une catégorie */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-6">
-        <h2 className="text-sm font-medium text-zinc-300 mb-4">Nouvelle catégorie</h2>
-        <AddCategoryForm restaurantId={restaurant.id} />
-      </div>
-
-      {/* Liste des catégories */}
-      {!categories || categories.length === 0 ? (
-        <div className="text-center py-16 text-zinc-500 text-sm">
-          Aucune catégorie — commencez par en créer une ci-dessus.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4 items-start">
-          {(categories ?? []).map((cat) => {
-            const catType = cat.category_type as CategoryTypeId
-            const typeMeta = CATEGORY_TYPES.find((t) => t.id === catType) ?? CATEGORY_TYPES[0]
-            const typeBadgeClass = CATEGORY_TYPE_COLORS[catType] ?? CATEGORY_TYPE_COLORS.standard
-
-            return (
-              <div key={cat.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                {/* Header catégorie */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg leading-none">{typeMeta.emoji}</span>
-                    <EditCategoryName id={cat.id} name={cat.name} />
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${typeBadgeClass}`}>
-                      {typeMeta.label}
-                    </span>
-                  </div>
-                  <form action={deleteCategory}>
-                    <input type="hidden" name="id" value={cat.id} />
-                    <button
-                      type="submit"
-                      className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-red-400/10"
-                      title="Supprimer la catégorie"
-                    >
-                      <IconTrash className="w-3.5 h-3.5" />
-                    </button>
-                  </form>
-                </div>
-
-                {/* Plats */}
-                <div className="divide-y divide-zinc-800">
-                  {cat.items?.map((item) => {
-                    const attrText = formatAttributes(item.attributes)
-                    return (
-                      <div key={item.id} className="flex items-center gap-3 px-5 py-3">
-                        {/* Thumbnail */}
-                        {item.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.image_url} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 text-base">
-                            {typeMeta.emoji}
-                          </div>
-                        )}
-
-                        {/* Infos */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-white truncate">{item.name}</span>
-
-                            <form action={updateItemFlags}>
-                              <input type="hidden" name="id" value={item.id} />
-                              <input type="hidden" name="field" value="is_vegetarian" />
-                              <input type="hidden" name="value" value={(!item.is_vegetarian).toString()} />
-                              <button type="submit" className={`text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer shrink-0 ${item.is_vegetarian ? 'bg-lime-500/15 text-lime-400 border-lime-500/30 hover:opacity-60' : 'bg-transparent text-zinc-600 border-zinc-700 hover:text-lime-400 hover:border-lime-500/30'}`}>
-                                🌿 Végé
-                              </button>
-                            </form>
-
-                            <form action={updateItemFlags}>
-                              <input type="hidden" name="id" value={item.id} />
-                              <input type="hidden" name="field" value="is_vegan" />
-                              <input type="hidden" name="value" value={(!item.is_vegan).toString()} />
-                              <button type="submit" className={`text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer shrink-0 ${item.is_vegan ? 'bg-pink-500/15 text-pink-400 border-pink-500/30 hover:opacity-60' : 'bg-transparent text-zinc-600 border-zinc-700 hover:text-pink-400 hover:border-pink-500/30'}`}>
-                                🫘 Vegan
-                              </button>
-                            </form>
-
-                            {!item.is_available && (
-                              <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full shrink-0">Indispo</span>
-                            )}
-                          </div>
-                          {item.description && (
-                            <p className="text-xs text-zinc-400 truncate mt-0.5">{item.description}</p>
-                          )}
-                          {attrText && (
-                            <p className="text-xs text-zinc-500 mt-0.5">{attrText}</p>
-                          )}
-                          {item.allergens?.length > 0 && (
-                            <p className="text-xs text-zinc-600 mt-0.5">{item.allergens.join(', ')}</p>
-                          )}
-                        </div>
-
-                        {/* Prix + actions */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="text-right">
-                            {item.happy_hour_price != null && (
-                              <p className="text-xs text-amber-400 tabular-nums">{Number(item.happy_hour_price).toFixed(2)} € 🍹</p>
-                            )}
-                            <span className="text-sm font-semibold text-white tabular-nums">
-                              {Number(item.price).toFixed(2)} €
-                            </span>
-                          </div>
-                          <EditItemModal item={item} categoryType={catType} />
-                          <form action={updateItemFlags}>
-                            <input type="hidden" name="id" value={item.id} />
-                            <input type="hidden" name="field" value="is_available" />
-                            <input type="hidden" name="value" value={(!item.is_available).toString()} />
-                            <button type="submit" className="text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-2 py-1 rounded-lg transition-colors cursor-pointer">
-                              {item.is_available ? 'Désactiver' : 'Activer'}
-                            </button>
-                          </form>
-                          <form action={deleteItem}>
-                            <input type="hidden" name="id" value={item.id} />
-                            <button type="submit" className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-red-400/10" title="Supprimer">
-                              <IconTrash className="w-3.5 h-3.5" />
-                            </button>
-                          </form>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Formulaire ajout plat */}
-                <AddItemModal categoryId={cat.id} categoryType={catType} />
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
+    <MenuClientLayout
+      categories={categories ?? []}
+      restaurantId={restaurant.id}
+      restaurantSlug={restaurant.slug}
+    />
   )
 }

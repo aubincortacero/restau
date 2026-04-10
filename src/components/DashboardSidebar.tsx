@@ -4,10 +4,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import UserMenu from './UserMenu'
+import OrderNotificationBell from './OrderNotificationBell'
 import {
   IconHome, IconMenu, IconTable, IconOrders,
   IconGlobe, IconSettings,
 } from './icons'
+
+type RestaurantSummary = { id: string; name: string; slug: string }
+type SubStatus = 'active' | 'trialing' | 'expired' | 'none'
 
 const NAV_ITEMS = [
   { href: '/dashboard',         label: 'Accueil',    icon: IconHome,     exact: true },
@@ -23,7 +28,37 @@ const BOTTOM_ITEMS = [
 
 const COLLAPSED_KEY = 'sidebar_collapsed'
 
-export default function DashboardSidebar({ logoUrl }: { logoUrl: string | null }) {
+interface SidebarProps {
+  logoUrl: string | null
+  restaurantId: string | null
+  happyHour: boolean
+  displayName: string
+  email: string
+  avatarUrl?: string | null
+  signOutAction: () => Promise<void>
+  restaurants: RestaurantSummary[]
+  activeRestaurantId: string | null
+  setActiveAction: (fd: FormData) => Promise<void>
+  deleteAction: (fd: FormData) => Promise<void>
+  subStatus: SubStatus
+  trialEndsAt: string | null
+}
+
+export default function DashboardSidebar({
+  logoUrl,
+  restaurantId,
+  happyHour,
+  displayName,
+  email,
+  avatarUrl,
+  signOutAction,
+  restaurants,
+  activeRestaurantId,
+  setActiveAction,
+  deleteAction,
+  subStatus,
+  trialEndsAt,
+}: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -81,6 +116,51 @@ export default function DashboardSidebar({ logoUrl }: { logoUrl: string | null }
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
+      </div>
+
+      {/* Profile section */}
+      <div className={`border-b border-zinc-800 shrink-0 ${collapsed ? 'py-3 flex flex-col items-center gap-2' : 'px-3 py-3'}`}>
+        {collapsed ? (
+          <>
+            <UserMenu
+              displayName={displayName}
+              email={email}
+              avatarUrl={avatarUrl}
+              signOutAction={signOutAction}
+              restaurants={restaurants}
+              activeRestaurantId={activeRestaurantId}
+              setActiveAction={setActiveAction}
+              deleteAction={deleteAction}
+              subStatus={subStatus}
+              trialEndsAt={trialEndsAt}
+              compact
+              dropdownAlign="left"
+            />
+            {restaurantId && <OrderNotificationBell restaurantId={restaurantId} />}
+          </>
+        ) : (
+          <div className="flex items-center gap-1">
+            <div className="flex-1 min-w-0">
+              <UserMenu
+                displayName={displayName}
+                email={email}
+                avatarUrl={avatarUrl}
+                signOutAction={signOutAction}
+                restaurants={restaurants}
+                activeRestaurantId={activeRestaurantId}
+                setActiveAction={setActiveAction}
+                deleteAction={deleteAction}
+                subStatus={subStatus}
+                trialEndsAt={trialEndsAt}
+                dropdownAlign="left"
+              />
+            </div>
+            {restaurantId && <OrderNotificationBell restaurantId={restaurantId} />}
+            {happyHour && (
+              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">🍹</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Nav principale */}

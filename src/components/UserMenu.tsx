@@ -19,6 +19,8 @@ interface UserMenuProps {
   deleteAction?: (formData: FormData) => Promise<void>
   subStatus?: SubStatus
   trialEndsAt?: string | null
+  compact?: boolean
+  dropdownAlign?: 'left' | 'right'
 }
 
 export default function UserMenu({
@@ -32,6 +34,8 @@ export default function UserMenu({
   deleteAction,
   subStatus,
   trialEndsAt,
+  compact = false,
+  dropdownAlign = 'right',
 }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -65,17 +69,17 @@ export default function UserMenu({
             {initial}
           </div>
         )}
-        <span className="hidden sm:block text-xs text-zinc-300 max-w-[120px] truncate">{displayName}</span>
-        <svg
+        {!compact && <span className="hidden sm:block text-xs text-zinc-300 max-w-[120px] truncate">{displayName}</span>}
+        {!compact && <svg
           className={`w-3 h-3 text-zinc-500 transition-transform hidden sm:block ${open ? 'rotate-180' : ''}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
-        </svg>
+        </svg>}
       </button>
 
       {open && (
-        <div className="popup-panel absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl shadow-black/40 z-50 overflow-hidden">
+        <div className={`popup-panel absolute top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl shadow-black/40 z-50 overflow-hidden ${dropdownAlign === 'left' ? 'left-0' : 'right-0'}`}>
           {/* Infos utilisateur + vitrine */}
           {(() => {
             const active = restaurants.find((r) => r.id === activeRestaurantId)

@@ -7,7 +7,7 @@ import { placeOrder } from '@/app/actions/restaurant'
 import StripeCheckoutForm from '@/components/StripeCheckoutForm'
 
 type Item = PublicCategory['items'][number]
-type CartItem = { id: string; name: string; price: number; quantity: number }
+type CartItem = { id: string; name: string; price: number; quantity: number; sizeLabel?: string }
 type CartStep = 'cart' | 'payment-choice' | 'fulfillment-choice' | 'email' | 'stripe-form' | 'success'
 
 const CATEGORY_CIRCLE: Record<string, string> = {
@@ -80,10 +80,10 @@ export default function MenuAccordion({
 
   function addItem(item: Item, price: number, sizeLabel?: string) {
     const key = sizeLabel ? `${item.id}:${sizeLabel}` : item.id
-    const name = sizeLabel ? `${item.name} (${sizeLabel})` : item.name
+    const name = sizeLabel ? `${item.name} \u2014 ${sizeLabel}` : item.name
     setCart(prev => ({
       ...prev,
-      [key]: { id: key, name, price, quantity: (prev[key]?.quantity ?? 0) + 1 },
+      [key]: { id: key, name, price, quantity: (prev[key]?.quantity ?? 0) + 1, sizeLabel },
     }))
   }
 
@@ -738,7 +738,11 @@ function ItemRow({
             >{item.name}</p>
             <div className="text-right shrink-0 ml-2">
               {item.sizes && item.sizes.length > 0 ? (
-                <p className="text-stone-500 text-xs font-medium">dès {fmt(Math.min(...item.sizes.map(s => s.price)))}</p>
+                <p className="text-stone-500 text-xs font-medium">
+                  {hhActive && item.sizes.some(s => s.happy_hour_price != null)
+                    ? <>dès <span className="text-amber-400">{fmt(Math.min(...item.sizes.map(s => s.happy_hour_price ?? s.price)))}</span> <span className="line-through opacity-50">{fmt(Math.min(...item.sizes.map(s => s.price)))}</span></>
+                    : <>dès {fmt(Math.min(...item.sizes.map(s => s.price)))}</>}
+                </p>
               ) : showHH ? (
                 <>
                   <p className="font-bold text-amber-400 text-base leading-tight">{fmt(item.happy_hour_price!)}</p>
@@ -774,13 +778,23 @@ function ItemRow({
               <div className="space-y-1.5">
                 {item.sizes.map(size => {
                   const sizeQty = qtyBySize?.[size.label] ?? 0
+                  const sizeEffectivePrice = hhActive && size.happy_hour_price != null ? size.happy_hour_price : size.price
                   return (
                     <div key={size.label} className="flex items-center gap-2">
                       <span className="text-stone-400 text-xs font-medium flex-1">{size.label}</span>
-                      <span className="text-stone-300 text-xs font-semibold">{fmt(size.price)}</span>
+                      <span className="text-right shrink-0">
+                        {hhActive && size.happy_hour_price != null ? (
+                          <>
+                            <span className="text-amber-400 text-xs font-semibold">{fmt(size.happy_hour_price)}</span>
+                            <span className="text-stone-600 line-through text-[10px] ml-1">{fmt(size.price)}</span>
+                          </>
+                        ) : (
+                          <span className="text-stone-300 text-xs font-semibold">{fmt(size.price)}</span>
+                        )}
+                      </span>
                       {sizeQty === 0 ? (
                         <button
-                          onClick={() => onAddSize?.(size.label, size.price)}
+                          onClick={() => onAddSize?.(size.label, sizeEffectivePrice)}
                           className="menu-add-btn flex items-center gap-1 bg-stone-800/80 active:scale-95 text-stone-300 text-xs font-semibold px-2.5 py-1 rounded-xl transition-all border border-stone-700/50"
                         >
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -794,7 +808,7 @@ function ItemRow({
                             <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
                           </button>
                           <span className="text-stone-100 font-bold text-sm w-4 text-center">{sizeQty}</span>
-                          <button onClick={() => onAddSize?.(size.label, size.price)} className="menu-item-plus w-6 h-6 active:scale-95 text-white flex items-center justify-center transition-all">
+                          <button onClick={() => onAddSize?.(size.label, sizeEffectivePrice)} className="menu-item-plus w-6 h-6 active:scale-95 text-white flex items-center justify-center transition-all">
                             <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                           </button>
                         </div>

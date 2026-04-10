@@ -48,7 +48,7 @@ export default async function WebsiteLayout({
         />
 
         {/* Contenu */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
           {children}
         </div>
       </div>

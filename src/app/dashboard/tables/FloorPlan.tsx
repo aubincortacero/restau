@@ -33,14 +33,36 @@ export type Wall = {
   h: number
 }
 
+export type Zone = {
+  id: string
+  name: string
+  color: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export type Floor = {
   id: number
   name: string
   walls: Wall[]
+  zones: Zone[]
 }
 
+const ZONE_COLORS = [
+  { label: 'Orange',    color: '#f97316' },
+  { label: 'Bleu',      color: '#3b82f6' },
+  { label: 'Vert',      color: '#22c55e' },
+  { label: 'Violet',    color: '#a855f7' },
+  { label: 'Rose',      color: '#ec4899' },
+  { label: 'Jaune',     color: '#eab308' },
+  { label: 'Turquoise', color: '#14b8a6' },
+  { label: 'Rouge',     color: '#ef4444' },
+] as const
+
 type DragState = {
-  kind: 'table' | 'wall' | 'resize'
+  kind: 'table' | 'wall' | 'zone' | 'resize' | 'zone-resize'
   id: string
   offsetX: number
   offsetY: number
@@ -52,14 +74,20 @@ export default function FloorPlan({
   restaurantId,
   restaurantSlug,
   siteUrl,
+  centerOnTableId,
+  onFloorsChange,
 }: {
   initialTables: FloorTable[]
   initialFloors: Floor[]
   restaurantId: string
   restaurantSlug: string
   siteUrl: string
+  centerOnTableId?: string | null
+  onFloorsChange?: (floors: Floor[]) => void
 }) {
-  const seedFloors = initialFloors.length > 0 ? initialFloors : [{ id: 0, name: 'RDC', walls: [] }]
+  const seedFloors = initialFloors.length > 0
+    ? initialFloors.map((f) => ({ ...f, zones: f.zones ?? [] }))
+    : [{ id: 0, name: 'RDC', walls: [], zones: [] }]
 
   const [tables, setTables] = useState<FloorTable[]>(initialTables)
   const [floors, setFloors] = useState<Floor[]>(seedFloors)
@@ -73,6 +101,11 @@ export default function FloorPlan({
   const [flashId, setFlashId] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<number | null>(null)
   const [renamingValue, setRenamingValue] = useState('')
+  const [addingZone, setAddingZone] = useState(false)
+  const [newZoneName, setNewZoneName] = useState('')
+  const [newZoneColor, setNewZoneColor] = useState<string>(ZONE_COLORS[0].color)
+  const [renamingZone, setRenamingZone] = useState<string | null>(null)
+  const [renamingZoneValue, setRenamingZoneValue] = useState('')
 
   const dragRef = useRef<DragState>(null)
   const viewRef = useRef<View>({ scale: 0.6, x: 40, y: 40 })
@@ -88,13 +121,18 @@ export default function FloorPlan({
   const activeFloorRef = useRef<number>(seedFloors[0].id)
   // wallsRef tracks the current floor's walls for use inside closures
   const wallsRef = useRef<Wall[]>(seedFloors[0]?.walls ?? [])
+  // zonesRef tracks the current floor's zones for use inside closures
+  const zonesRef = useRef<Zone[]>(seedFloors[0]?.zones ?? [])
 
   // Derived: walls for the active floor
   const walls = floors.find((f) => f.id === activeFloor)?.walls ?? []
+  // Derived: zones for the active floor
+  const zones = floors.find((f) => f.id === activeFloor)?.zones ?? []
 
   // Keep mutable refs in sync
   useEffect(() => { tablesRef.current = tables }, [tables])
   useEffect(() => { wallsRef.current = walls }, [walls])
+  useEffect(() => { zonesRef.current = zones }, [zones])
 
   function switchFloor(id: number) {
     activeFloorRef.current = id
@@ -109,6 +147,19 @@ export default function FloorPlan({
         f.id !== fid ? f : {
           ...f,
           walls: typeof updater === 'function' ? updater(f.walls) : updater,
+        },
+      ),
+    )
+  }
+
+  // setZones updates the current floor's zones inside the floors array
+  function setZones(updater: Zone[] | ((prev: Zone[]) => Zone[])) {
+    const fid = activeFloorRef.current
+    setFloors((prev) =>
+      prev.map((f) =>
+        f.id !== fid ? f : {
+          ...f,
+          zones: typeof updater === 'function' ? updater(f.zones ?? []) : updater,
         },
       ),
     )
@@ -137,6 +188,23 @@ export default function FloorPlan({
     setTimeout(() => setFlashId(null), 1500)
   }, [initialTables]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Centre la vue sur la table demandée depuis la sidebar
+  useEffect(() => {
+    if (!centerOnTableId) return
+    const target = tablesRef.current.find((t) => t.id === centerOnTableId)
+    if (!target) return
+    if (target.floor !== activeFloorRef.current) switchFloor(target.floor)
+    const el = containerRef.current
+    if (el) {
+      const { scale } = viewRef.current
+      const x = el.clientWidth / 2 - (target.pos_x + TW / 2) * scale
+      const y = el.clientHeight / 2 - (target.pos_y + TH / 2) * scale
+      applyView({ ...viewRef.current, x, y })
+    }
+    setFlashId(centerOnTableId)
+    setTimeout(() => setFlashId(null), 1500)
+  }, [centerOnTableId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function applyView(next: View) {
     viewRef.current = next
     setView({ ...next })
@@ -159,6 +227,7 @@ export default function FloorPlan({
         .filter((t) => t.floor === currentFloorId)
         .map((t) => ({ x: t.pos_x, y: t.pos_y, w: TW, h: TH })),
       ...wallsRef.current.map((w) => ({ x: w.x, y: w.y, w: w.w, h: w.h })),
+      ...zonesRef.current.map((z) => ({ x: z.x, y: z.y, w: z.w, h: z.h })),
     ]
     if (items.length === 0) { applyView({ scale: 0.6, x: 40, y: 40 }); return }
     const minX = Math.min(...items.map((i) => i.x))
@@ -175,6 +244,9 @@ export default function FloorPlan({
   }
 
   useLayoutEffect(() => { fitToContent() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Notify parent when floors (zones/walls) change
+  useEffect(() => { onFloorsChange?.(floors) }, [floors, onFloorsChange])
 
   // Wheel: Ctrl/Cmd = zoom toward cursor, else = pan
   useEffect(() => {
@@ -289,6 +361,18 @@ export default function FloorPlan({
           w: Math.round(Math.max(MIN_W, Math.min(CW - w.x, cp.x - w.x))),
           h: Math.round(Math.max(MIN_H, Math.min(CH - w.y, cp.y - w.y))),
         }))
+      } else if (d.kind === 'zone') {
+        setZones((prev) => prev.map((z) => z.id !== d.id ? z : {
+          ...z,
+          x: Math.round(Math.max(0, Math.min(CW - z.w, cp.x - d.offsetX))),
+          y: Math.round(Math.max(0, Math.min(CH - z.h, cp.y - d.offsetY))),
+        }))
+      } else if (d.kind === 'zone-resize') {
+        setZones((prev) => prev.map((z) => z.id !== d.id ? z : {
+          ...z,
+          w: Math.round(Math.max(100, Math.min(CW - z.x, cp.x - z.x))),
+          h: Math.round(Math.max(60, Math.min(CH - z.y, cp.y - z.y))),
+        }))
       }
     }
 
@@ -306,7 +390,7 @@ export default function FloorPlan({
 
   function startDrag(
     e: React.PointerEvent,
-    kind: 'table' | 'wall' | 'resize',
+    kind: 'table' | 'wall' | 'zone' | 'resize' | 'zone-resize',
     id: string,
     elemX: number,
     elemY: number,
@@ -357,7 +441,7 @@ export default function FloorPlan({
   function addFloor() {
     const nextId = floors.length === 0 ? 0 : Math.max(...floors.map((f) => f.id)) + 1
     const name = nextId === 0 ? 'RDC' : `Étage ${nextId}`
-    setFloors((prev) => [...prev, { id: nextId, name, walls: [] }])
+    setFloors((prev) => [...prev, { id: nextId, name, walls: [], zones: [] }])
     switchFloor(nextId)
   }
 
@@ -365,6 +449,31 @@ export default function FloorPlan({
     const name = renamingValue.trim()
     if (name) setFloors((prev) => prev.map((f) => f.id !== floorId ? f : { ...f, name }))
     setRenaming(null)
+  }
+
+  function createZone() {
+    if (!newZoneName.trim()) return
+    const el = containerRef.current
+    const { scale, x, y } = viewRef.current
+    const cx = el ? (el.clientWidth / 2 - x) / scale - 150 : CW / 2 - 150
+    const cy = el ? (CANVAS_H / 2 - y) / scale - 100 : CH / 2 - 100
+    setZones((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: newZoneName.trim(),
+      color: newZoneColor,
+      x: Math.round(Math.max(0, cx)),
+      y: Math.round(Math.max(0, cy)),
+      w: 300,
+      h: 200,
+    }])
+    setNewZoneName('')
+    setAddingZone(false)
+  }
+
+  function commitZoneRename(zoneId: string) {
+    const name = renamingZoneValue.trim()
+    if (name) setZones((prev) => prev.map((z) => z.id !== zoneId ? z : { ...z, name }))
+    setRenamingZone(null)
   }
 
   function floorIcon(idx: number) {
@@ -379,7 +488,7 @@ export default function FloorPlan({
       await saveFloorPlan(
         restaurantId,
         tables.map((t) => ({ id: t.id, pos_x: t.pos_x, pos_y: t.pos_y })),
-        floors.map((f) => ({ id: f.id, name: f.name, walls: f.walls })),
+        floors.map((f) => ({ id: f.id, name: f.name, walls: f.walls, zones: f.zones ?? [] })),
       )
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -403,8 +512,16 @@ export default function FloorPlan({
   const scalePct = Math.round(view.scale * 100)
   const currentFloorTables = tables.filter((t) => t.floor === activeFloor)
 
+  // Map floorId:zoneName → color pour colorier les tables
+  const zoneColorMap = new Map<string, string>()
+  for (const f of floors) {
+    for (const z of f.zones ?? []) {
+      zoneColorMap.set(`${f.id}:${z.name}`, z.color)
+    }
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4">
       {/* Sélecteur de niveaux */}
       <div className="flex items-center gap-1 flex-wrap">
         {floors.map((floor, i) => (
@@ -459,49 +576,106 @@ export default function FloorPlan({
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          onClick={addWall}
-          className="flex items-center gap-2 text-sm bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-xl transition-colors cursor-pointer"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Ajouter un mur
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 text-sm bg-orange-500 hover:bg-orange-400 disabled:opacity-60 text-white font-semibold px-4 py-2 rounded-xl transition-colors cursor-pointer"
-        >
-          {saving ? 'Enregistrement…' : saved ? '✓ Enregistré' : 'Enregistrer le plan'}
-        </button>
-        {activeIds.size > 0 && (
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            <span className="text-xs text-orange-400 font-semibold">
-              {activeIds.size} table{activeIds.size > 1 ? 's' : ''} en commande
-            </span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={addWall}
+            className="flex items-center gap-2 text-sm bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Mur
+          </button>
+          <button
+            onClick={() => setAddingZone((v) => !v)}
+            className={`flex items-center gap-2 text-sm border px-3 py-2 rounded-xl transition-colors cursor-pointer ${
+              addingZone
+                ? 'bg-zinc-700 border-zinc-600 text-white'
+                : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+            </svg>
+            Zone
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 text-sm bg-orange-500 hover:bg-orange-400 disabled:opacity-60 text-white font-semibold px-4 py-2 rounded-xl transition-colors cursor-pointer"
+          >
+            {saving ? 'Enregistrement…' : saved ? '✓ Enregistré' : 'Enregistrer le plan'}
+          </button>
+          {activeIds.size > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+              <span className="text-xs text-orange-400 font-semibold">
+                {activeIds.size} table{activeIds.size > 1 ? 's' : ''} en commande
+              </span>
+            </div>
+          )}
+          {/* Zoom controls */}
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => applyView({ ...viewRef.current, scale: Math.max(SCALE_MIN, Math.round((viewRef.current.scale - 0.1) * 10) / 10) })}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-sm cursor-pointer transition-colors"
+              title="Dézoomer (−)"
+            >−</button>
+            <button
+              onClick={fitToContent}
+              className="px-2 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-xs font-mono cursor-pointer transition-colors min-w-[3rem]"
+              title="Ajuster à la vue"
+            >{scalePct}%</button>
+            <button
+              onClick={() => applyView({ ...viewRef.current, scale: Math.min(SCALE_MAX, Math.round((viewRef.current.scale + 0.1) * 10) / 10) })}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-sm cursor-pointer transition-colors"
+              title="Zoomer (+)"
+            >+</button>
+          </div>
+        </div>
+
+        {/* Formulaire inline d’ajout de zone */}
+        {addingZone && (
+          <div className="bg-zinc-800/80 border border-zinc-700 rounded-xl p-3 flex flex-col gap-2.5">
+            <input
+              value={newZoneName}
+              onChange={(e) => setNewZoneName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') createZone(); if (e.key === 'Escape') setAddingZone(false) }}
+              placeholder="Nom de la zone (ex : Terrasse, Bar, Salle…)"
+              autoFocus
+              className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500 shrink-0">Couleur :</span>
+              <div className="flex gap-1.5 flex-wrap">
+                {ZONE_COLORS.map((c) => (
+                  <button
+                    key={c.color}
+                    type="button"
+                    onClick={() => setNewZoneColor(c.color)}
+                    title={c.label}
+                    className={`w-5 h-5 rounded-full cursor-pointer transition-transform ${
+                      newZoneColor === c.color ? 'scale-125 ring-2 ring-white ring-offset-1 ring-offset-zinc-800' : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: c.color }}
+                  />
+                ))}
+              </div>
+              <div className="ml-auto flex gap-2">
+                <button type="button" onClick={() => setAddingZone(false)} className="text-xs text-zinc-500 hover:text-zinc-300 cursor-pointer px-2">Annuler</button>
+                <button
+                  type="button"
+                  onClick={createZone}
+                  disabled={!newZoneName.trim()}
+                  className="text-xs bg-orange-500 hover:bg-orange-400 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg cursor-pointer font-medium"
+                >
+                  Créer
+                </button>
+              </div>
+            </div>
           </div>
         )}
-        {/* Zoom controls */}
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={() => applyView({ ...viewRef.current, scale: Math.max(SCALE_MIN, Math.round((viewRef.current.scale - 0.1) * 10) / 10) })}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-sm cursor-pointer transition-colors"
-            title="Dézoomer (−)"
-          >−</button>
-          <button
-            onClick={fitToContent}
-            className="px-2 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-xs font-mono cursor-pointer transition-colors min-w-[3rem]"
-            title="Ajuster à la vue"
-          >{scalePct}%</button>
-          <button
-            onClick={() => applyView({ ...viewRef.current, scale: Math.min(SCALE_MAX, Math.round((viewRef.current.scale + 0.1) * 10) / 10) })}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-sm cursor-pointer transition-colors"
-            title="Zoomer (+)"
-          >+</button>
-        </div>
       </div>
 
       {/* Canvas */}
@@ -533,6 +707,61 @@ export default function FloorPlan({
             transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
           }}
         >
+          {/* Zones du niveau actif (en dessous des murs et tables) */}
+          {zones.map((zone) => (
+            <div
+              key={zone.id}
+              className="absolute rounded-xl group cursor-move"
+              style={{
+                left: zone.x, top: zone.y, width: zone.w, height: zone.h,
+                backgroundColor: zone.color + '1a',
+                border: `2px dashed ${zone.color}99`,
+                touchAction: 'none',
+              }}
+              onPointerDown={(e) => startDrag(e, 'zone', zone.id, zone.x, zone.y)}
+            >
+              {/* Label de zone */}
+              {renamingZone === zone.id ? (
+                <input
+                  value={renamingZoneValue}
+                  onChange={(e) => setRenamingZoneValue(e.target.value)}
+                  onBlur={() => commitZoneRename(zone.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitZoneRename(zone.id)
+                    if (e.key === 'Escape') setRenamingZone(null)
+                  }}
+                  autoFocus
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="absolute top-2 left-2 text-xs bg-zinc-900 border border-zinc-600 text-white px-2 py-1 rounded-md focus:outline-none w-32"
+                />
+              ) : (
+                <span
+                  className="absolute top-2 left-3 text-xs font-semibold px-1.5 py-0.5 rounded text-white select-none"
+                  style={{ backgroundColor: zone.color + 'cc' }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    setRenamingZone(zone.id)
+                    setRenamingZoneValue(zone.name)
+                  }}
+                >
+                  {zone.name}
+                </span>
+              )}
+              {/* Supprimer */}
+              <button
+                className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full text-white text-xs leading-none hidden group-hover:flex items-center justify-center cursor-pointer z-10"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setZones((prev) => prev.filter((z) => z.id !== zone.id))}
+              >×</button>
+              {/* Redimensionner */}
+              <div
+                className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                style={{ background: `linear-gradient(135deg, transparent 40%, ${zone.color} 40%)`, borderBottomRightRadius: 8 }}
+                onPointerDown={(e) => { e.stopPropagation(); startDrag(e, 'zone-resize', zone.id, 0, 0) }}
+              />
+            </div>
+          ))}
+
           {/* Murs du niveau actif */}
           {walls.map((wall) => (
             <div
@@ -561,6 +790,8 @@ export default function FloorPlan({
           {currentFloorTables.map((table) => {
             const isActive = activeIds.has(table.id)
             const isNew = flashId === table.id
+            const zoneColor = table.label ? zoneColorMap.get(`${table.floor}:${table.label}`) : undefined
+            const inZone = !!zoneColor && !isNew && !isActive
             return (
               <div
                 key={table.id}
@@ -569,16 +800,21 @@ export default function FloorPlan({
                     ? 'bg-green-500/20 border-green-400 shadow-[0_0_28px_rgba(74,222,128,0.6)]'
                     : isActive
                     ? 'bg-orange-500/15 border-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.4)]'
+                    : inZone
+                    ? 'hover:shadow-lg'
                     : 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 hover:shadow-lg'
                 }`}
-                style={{ left: table.pos_x, top: table.pos_y, width: TW, height: TH, touchAction: 'none' }}
+                style={{
+                  left: table.pos_x, top: table.pos_y, width: TW, height: TH, touchAction: 'none',
+                  ...(inZone ? { backgroundColor: 'rgba(0,0,0,0.5)', borderColor: zoneColor } : {}),
+                }}
                 onPointerDown={(e) => startDrag(e, 'table', table.id, table.pos_x, table.pos_y, table)}
               >
                 <span className={`text-sm font-bold leading-none ${isNew ? 'text-green-300' : isActive ? 'text-orange-300' : 'text-white'}`}>
                   {table.number}
                 </span>
                 {table.label && (
-                  <span className="text-[10px] text-zinc-400 leading-tight truncate max-w-[68px] px-1 text-center mt-0.5">
+                  <span className="text-[10px] leading-tight truncate max-w-[68px] px-1 text-center mt-0.5" style={inZone ? { color: zoneColor } : { color: '#a1a1aa' }}>
                     {table.label}
                   </span>
                 )}
@@ -595,7 +831,7 @@ export default function FloorPlan({
       <div className="flex items-center gap-4 text-xs text-zinc-600 flex-wrap">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border-2 border-zinc-700 bg-zinc-800 inline-block" />
-          Table normale
+          Table
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border-2 border-orange-500 bg-orange-500/15 inline-block" />
@@ -605,8 +841,12 @@ export default function FloorPlan({
           <span className="w-5 h-3 rounded bg-zinc-600/70 border border-zinc-500 inline-block" />
           Mur
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-3 rounded border-2 inline-block" style={{ borderColor: '#22c55e99', backgroundColor: '#22c55e1a' }} />
+          Zone
+        </span>
         <span className="ml-auto hidden sm:block">
-          Scroll = déplacer · Ctrl+Scroll = zoom · Espace+glisser = panoramique · Double-clic sur un niveau = renommer
+          Scroll = déplacer · Ctrl+Scroll = zoom · Espace+glisser = panoramique · Double-clic zone = renommer
         </span>
       </div>
 

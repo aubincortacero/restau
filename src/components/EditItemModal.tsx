@@ -8,7 +8,7 @@ import type { CategoryTypeId } from '@/lib/category-types'
 const INPUT = "bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 w-full"
 
 type Attributes = Record<string, string | string[]>
-type Size = { label: string; price: string }
+type Size = { label: string; price: string; hhPrice: string }
 
 interface ItemData {
   id: string
@@ -21,7 +21,7 @@ interface ItemData {
   is_vegan: boolean
   image_url: string | null
   attributes: Attributes | null
-  sizes: { label: string; price: number }[] | null
+  sizes: { label: string; price: number; happy_hour_price?: number }[] | null
 }
 
 interface Props {
@@ -37,8 +37,8 @@ function ModalForm({ item, categoryType, onClose }: Props & { onClose: () => voi
   const [useSizes, setUseSizes] = useState(() => !!(item.sizes && item.sizes.length > 0))
   const [sizes, setSizes] = useState<Size[]>(() =>
     item.sizes && item.sizes.length > 0
-      ? item.sizes.map(s => ({ label: s.label, price: String(s.price) }))
-      : [{ label: '', price: '' }]
+      ? item.sizes.map(s => ({ label: s.label, price: String(s.price), hhPrice: s.happy_hour_price != null ? String(s.happy_hour_price) : '' }))
+      : [{ label: '', price: '', hhPrice: '' }]
   )
 
   const [sliders, setSliders] = useState<Record<string, number>>(() => {
@@ -117,64 +117,86 @@ function ModalForm({ item, categoryType, onClose }: Props & { onClose: () => voi
         </div>
         {useSizes && (
           <div className="space-y-1.5">
+            <div className="grid grid-cols-[1fr_80px_80px_24px] gap-1.5 mb-1">
+              <span className="text-[10px] text-zinc-600 px-1">Format</span>
+              <span className="text-[10px] text-zinc-600 px-1">Prix</span>
+              <span className="text-[10px] text-amber-600 px-1">🍹 HH</span>
+              <span />
+            </div>
             {sizes.map((s, i) => (
-              <div key={i} className="flex items-center gap-1.5">
+              <div key={i} className="grid grid-cols-[1fr_80px_80px_24px] gap-1.5 items-center">
                 <input
                   value={s.label}
                   onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))}
-                  placeholder="Label (25cl, 50cl…)"
-                  className={INPUT + ' flex-1'}
+                  placeholder="25cl, 50cl…"
+                  className={INPUT}
                 />
-                <div className="relative w-24 shrink-0">
+                <div className="relative">
                   <input
                     value={s.price}
                     onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, price: e.target.value } : x))}
                     type="number" step="0.01" min="0"
                     placeholder="Prix"
-                    className={INPUT + ' pr-5'}
+                    className={INPUT + ' pr-4 text-xs'}
                   />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">€</span>
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 pointer-events-none">€</span>
+                </div>
+                <div className="relative">
+                  <input
+                    value={s.hhPrice}
+                    onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, hhPrice: e.target.value } : x))}
+                    type="number" step="0.01" min="0"
+                    placeholder="—"
+                    className={INPUT + ' pr-4 text-xs'}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-amber-600 pointer-events-none">🍹</span>
                 </div>
                 {sizes.length > 1 && (
                   <button type="button" onClick={() => setSizes(prev => prev.filter((_, idx) => idx !== i))}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-red-900/40 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors shrink-0">
+                    className="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-red-900/40 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors shrink-0">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                   </button>
                 )}
               </div>
             ))}
-            <button type="button" onClick={() => setSizes(prev => [...prev, { label: '', price: '' }])}
+            <button type="button" onClick={() => setSizes(prev => [...prev, { label: '', price: '', hhPrice: '' }])}
               className="text-xs text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1 mt-0.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-              Ajouter une taille
+              Ajouter un format
             </button>
             <input
               type="hidden"
               name="sizes"
               value={JSON.stringify(
-                sizes.filter(s => s.label && s.price).map(s => ({ label: s.label, price: parseFloat(s.price) }))
+                sizes.filter(s => s.label && s.price).map(s => ({
+                  label: s.label,
+                  price: parseFloat(s.price),
+                  ...(s.hhPrice ? { happy_hour_price: parseFloat(s.hhPrice) } : {}),
+                }))
               )}
             />
           </div>
         )}
       </div>
 
-      {/* Prix Happy Hour */}
-      <div>
-        <label className="block text-xs text-zinc-500 mb-1.5">Prix Happy Hour <span className="text-zinc-600">(optionnel)</span></label>
-        <div className="relative w-40">
-          <input
-            name="happy_hour_price"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={item.happy_hour_price ?? ''}
-            placeholder="—"
-            className={INPUT + ' pr-6'}
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-amber-500 pointer-events-none">🍹</span>
+      {/* Prix Happy Hour (uniquement si pas de tailles) */}
+      {!useSizes && (
+        <div>
+          <label className="block text-xs text-zinc-500 mb-1.5">Prix Happy Hour <span className="text-zinc-600">(optionnel)</span></label>
+          <div className="relative w-40">
+            <input
+              name="happy_hour_price"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={item.happy_hour_price ?? ''}
+              placeholder="—"
+              className={INPUT + ' pr-6'}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-amber-500 pointer-events-none">🍹</span>
+          </div>
         </div>
-      </div>
+      )}
       <input name="description" defaultValue={item.description ?? ''} placeholder="Description (optionnel)" className={INPUT} />
 
       {/* Image */}

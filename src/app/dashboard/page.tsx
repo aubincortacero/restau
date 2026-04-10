@@ -121,24 +121,45 @@ export default async function DashboardPage() {
       )}
 
       {/* Raccourcis */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {[
-          { href: '/dashboard/orders',             label: 'Commandes',   desc: 'Suivi en temps réel',    icon: '🧾' },
-          { href: '/dashboard/menu',               label: 'Menu',         desc: 'Catégories & articles',  icon: '📋' },
-          { href: '/dashboard/tables',             label: 'Tables & QR',  desc: 'Gérer vos QR codes',    icon: '🪑' },
-          { href: '/dashboard/settings/schedules', label: 'Horaires',     desc: 'Ouverture & Happy Hour', icon: '🕐' },
-        ].map(({ href, label, desc, icon }) => (
+          {
+            href: '/dashboard/orders',
+            label: 'Commandes',
+            desc: 'Suivi en temps réel',
+            bg: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80',
+          },
+          {
+            href: '/dashboard/menu',
+            label: 'Menu',
+            desc: 'Catégories & articles',
+            bg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+          },
+          {
+            href: '/dashboard/tables',
+            label: 'Tables & QR',
+            desc: 'Gérer vos QR codes',
+            bg: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
+          },
+          {
+            href: '/dashboard/website',
+            label: 'Site web',
+            desc: 'Personnaliser votre vitrine',
+            bg: 'https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?auto=format&fit=crop&w=800&q=80',
+          },
+        ].map(({ href, label, desc, bg }) => (
           <Link
             key={href}
             href={href}
-            className="flex items-center gap-4 border border-zinc-800 hover:border-orange-500/30 rounded-xl px-4 py-4 transition-colors group"
+            className="relative overflow-hidden rounded-xl h-36 sm:h-44 flex items-end group border border-zinc-800 hover:border-orange-500/40 transition-all"
+            style={{ backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
           >
-            <span className="text-2xl">{icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white group-hover:text-orange-400 transition-colors">{label}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/70 transition-all" />
+            <div className="relative z-10 p-3 sm:p-4 flex-1">
+              <p className="text-sm font-semibold text-white group-hover:text-orange-300 transition-colors leading-tight">{label}</p>
+              <p className="text-xs text-zinc-300/80 mt-0.5 hidden sm:block">{desc}</p>
             </div>
-            <svg className="w-4 h-4 text-zinc-600 group-hover:text-orange-400 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="relative z-10 w-4 h-4 mr-3 mb-3 sm:mr-4 sm:mb-4 text-zinc-400 group-hover:text-orange-400 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </Link>

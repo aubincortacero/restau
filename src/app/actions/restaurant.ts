@@ -763,8 +763,23 @@ export async function createTable(formData: FormData): Promise<{ error?: string 
     .select('*', { count: 'exact', head: true })
     .eq('restaurant_id', restaurant_id)
   const i = count ?? 0
-  const pos_x = 50 + (i % 5) * 160
-  const pos_y = 50 + Math.floor(i / 5) * 120
+
+  const zx = formData.get('zone_x') ? parseInt(formData.get('zone_x') as string) : null
+  const zy = formData.get('zone_y') ? parseInt(formData.get('zone_y') as string) : null
+  const zw = formData.get('zone_w') ? parseInt(formData.get('zone_w') as string) : null
+  const zh = formData.get('zone_h') ? parseInt(formData.get('zone_h') as string) : null
+
+  let pos_x: number, pos_y: number
+  if (zx != null && zy != null && zw != null && zh != null) {
+    const PAD = 12, TW = 76, TH = 60, GAP_X = 16, GAP_Y = 12
+    const cols = Math.max(1, Math.floor((zw - PAD * 2) / (TW + GAP_X)))
+    pos_x = Math.round(Math.min(zx + PAD + (i % cols) * (TW + GAP_X), zx + zw - TW - PAD))
+    pos_y = Math.round(Math.min(zy + PAD + Math.floor(i / cols) * (TH + GAP_Y), zy + zh - TH - PAD))
+  } else {
+    const COLS = 5, STEP_X = 160, STEP_Y = 120
+    pos_x = Math.round(1000 - Math.floor(COLS / 2) * STEP_X + (i % COLS) * STEP_X)
+    pos_y = Math.round(520 + Math.floor(i / COLS) * STEP_Y)
+  }
 
   const floor = parseInt((formData.get('floor') as string) || '0', 10)
 
@@ -805,14 +820,25 @@ export async function bulkCreateTables(formData: FormData) {
 
   const floor = parseInt((formData.get('floor') as string) || '0', 10)
 
-  const tablesToInsert = Array.from({ length: count }, (_, i) => ({
-    restaurant_id,
-    number: baseNumber + i,
-    label: zone,
-    floor,
-    pos_x: 50 + ((startIndex + i) % 5) * 160,
-    pos_y: 50 + Math.floor((startIndex + i) / 5) * 120,
-  }))
+  const zx = formData.get('zone_x') ? parseInt(formData.get('zone_x') as string) : null
+  const zy = formData.get('zone_y') ? parseInt(formData.get('zone_y') as string) : null
+  const zw = formData.get('zone_w') ? parseInt(formData.get('zone_w') as string) : null
+  const zh = formData.get('zone_h') ? parseInt(formData.get('zone_h') as string) : null
+
+  const tablesToInsert = Array.from({ length: count }, (_, i) => {
+    const idx = startIndex + i
+    let px: number, py: number
+    if (zx != null && zy != null && zw != null && zh != null) {
+      const PAD = 12, TW = 76, TH = 60, GAP_X = 16, GAP_Y = 12
+      const cols = Math.max(1, Math.floor((zw - PAD * 2) / (TW + GAP_X)))
+      px = Math.round(Math.min(zx + PAD + (idx % cols) * (TW + GAP_X), zx + zw - TW - PAD))
+      py = Math.round(Math.min(zy + PAD + Math.floor(idx / cols) * (TH + GAP_Y), zy + zh - TH - PAD))
+    } else {
+      px = Math.round(1000 - 2 * 160 + (idx % 5) * 160)
+      py = Math.round(520 + Math.floor(idx / 5) * 120)
+    }
+    return { restaurant_id, number: baseNumber + i, label: zone, floor, pos_x: px, pos_y: py }
+  })
 
   await supabase.from('tables').insert(tablesToInsert)
 
@@ -872,7 +898,12 @@ export async function deleteTableById(id: string, restaurantId: string) {
 export async function saveFloorPlan(
   restaurantId: string,
   tables: { id: string; pos_x: number; pos_y: number }[],
-  floors: { id: number; name: string; walls: { id: string; x: number; y: number; w: number; h: number }[] }[],
+  floors: {
+    id: number
+    name: string
+    walls: { id: string; x: number; y: number; w: number; h: number }[]
+    zones: { id: string; name: string; color: string; x: number; y: number; w: number; h: number }[]
+  }[],
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

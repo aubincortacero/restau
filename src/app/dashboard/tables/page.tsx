@@ -2,9 +2,8 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import FloorPlan, { type Wall, type Floor } from './FloorPlan'
-import TableAddForm from './TableAddForm'
-import QRExportButton from './QRExportButton'
+import TablesClientLayout from './TablesClientLayout'
+import { type Wall, type Zone, type Floor } from './FloorPlan'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +31,6 @@ export default async function TablesPage() {
   const proto = headersList.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
   const siteUrl = `${proto}://${host}`
 
-  // Positions par défaut pour les tables sans coordonnées
   const tablesWithPos = (tables ?? []).map((t, i) => ({
     ...t,
     floor: t.floor ?? 0,
@@ -40,62 +38,33 @@ export default async function TablesPage() {
     pos_y: t.pos_y ?? 50 + Math.floor(i / 4) * 140,
   }))
 
-  // Zones existantes (distinct, non nulles) pour l'autocomplete
-  const existingZones = [...new Set(
-    (tables ?? []).map((t) => t.label).filter((l): l is string => !!l)
-  )]
-
-  // Niveaux depuis restaurant.floor_plan (rétro-compat format plat { walls: [] })
   type FpNew = { floors?: Floor[] }
   type FpOld = { walls?: Wall[] }
   const fp = restaurant.floor_plan as FpNew | FpOld | null
   let floors: Floor[]
   if (fp && 'floors' in fp && fp.floors) {
-    floors = fp.floors
+    floors = fp.floors.map((f) => ({
+      ...f,
+      walls: f.walls ?? [],
+      zones: (f.zones ?? []).map((z: Zone) => ({
+        id: z.id, name: z.name, color: z.color,
+        x: z.x, y: z.y, w: z.w, h: z.h,
+      })),
+    }))
   } else {
     const oldWalls: Wall[] = ((fp as FpOld)?.walls ?? []).map((w: Wall) => ({
       id: w.id, x: w.x, y: w.y, w: w.w, h: w.h,
     }))
-    floors = [{ id: 0, name: 'RDC', walls: oldWalls }]
+    floors = [{ id: 0, name: 'RDC', walls: oldWalls, zones: [] }]
   }
 
-  const hasTables = tablesWithPos.length > 0
-
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-2xl font-semibold flex-1">Plan de salle</h1>
-        {hasTables && (
-          <QRExportButton
-            tables={tablesWithPos.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
-            siteUrl={siteUrl}
-            restaurantSlug={restaurant.slug}
-          />
-        )}
-      </div>
-
-      {/* Ajouter des tables */}
-      <TableAddForm
-        restaurantId={restaurant.id}
-        existingZones={existingZones}
-        floors={floors}
-        defaultOpen={!hasTables}
-      />
-
-      {/* Plan de salle */}
-      {!hasTables ? (
-        <div className="text-center py-20 text-zinc-500 text-sm border border-zinc-800 rounded-2xl">
-          Ajoutez votre première table pour commencer à construire votre plan.
-        </div>
-      ) : (
-        <FloorPlan
-          initialTables={tablesWithPos}
-          initialFloors={floors}
-          restaurantId={restaurant.id}
-          restaurantSlug={restaurant.slug}
-          siteUrl={siteUrl}
-        />
-      )}
-    </div>
+    <TablesClientLayout
+      tables={tablesWithPos}
+      floors={floors}
+      restaurantId={restaurant.id}
+      restaurantSlug={restaurant.slug}
+      siteUrl={siteUrl}
+    />
   )
 }

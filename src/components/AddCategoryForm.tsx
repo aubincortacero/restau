@@ -84,7 +84,7 @@ export default function AddCategoryForm({ restaurantId }: { restaurantId: string
             <p className="text-xs text-zinc-400 mb-2.5">
               Quel type de contenu pour <span className="text-white font-medium">&laquo;&nbsp;{name}&nbsp;&raquo;</span> ?
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="flex flex-col gap-0.5">
               {CATEGORY_TYPES.map((ct) => (
                 <label key={ct.id} className="cursor-pointer select-none">
                   <input
@@ -95,10 +95,9 @@ export default function AddCategoryForm({ restaurantId }: { restaurantId: string
                     onChange={() => setCategoryType(ct.id)}
                     className="sr-only peer"
                   />
-                  <div className="border border-zinc-700 bg-zinc-800/50 rounded-xl p-3 hover:border-zinc-600 transition-colors peer-checked:border-orange-500/60 peer-checked:bg-orange-500/[0.08]">
-                    <div className="text-xl mb-1.5 leading-none">{ct.emoji}</div>
-                    <p className="text-xs font-semibold text-white">{ct.label}</p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">{ct.description}</p>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors hover:bg-zinc-800 peer-checked:bg-orange-500/10">
+                    <span className="text-base leading-none shrink-0">{ct.emoji}</span>
+                    <span className="text-sm font-medium text-white peer-checked:text-orange-300 truncate">{ct.label}</span>
                   </div>
                 </label>
               ))}

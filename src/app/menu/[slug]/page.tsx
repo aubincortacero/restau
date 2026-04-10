@@ -16,7 +16,7 @@ type Item = {
   is_vegetarian: boolean
   is_vegan: boolean
   image_url: string | null
-  sizes: { label: string; price: number }[] | null
+  sizes: { label: string; price: number; happy_hour_price?: number }[] | null
 }
 
 export type PublicCategory = {

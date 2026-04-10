@@ -11,18 +11,23 @@ export async function GET(req: NextRequest) {
   if (detail) {
     const { data } = await supabase
       .from('orders')
-      .select('id, created_at, tables(number, label)')
+      .select('id, created_at, tables(number, label), order_items(quantity, unit_price)')
       .eq('restaurant_id', restaurantId)
       .eq('status', 'pending')
       .is('archived_at', null)
       .order('created_at', { ascending: true })
 
-    const orders = (data ?? []).map((o) => ({
-      id: o.id,
-      created_at: o.created_at,
-      table_number: (o.tables as unknown as { number: number; label: string | null } | null)?.number ?? null,
-      table_label: (o.tables as unknown as { number: number; label: string | null } | null)?.label ?? null,
-    }))
+    const orders = (data ?? []).map((o) => {
+      const items = (o.order_items as unknown as { quantity: number; unit_price: number }[]) ?? []
+      const total = items.reduce((sum, i) => sum + i.quantity * Number(i.unit_price), 0)
+      return {
+        id: o.id,
+        created_at: o.created_at,
+        table_number: (o.tables as unknown as { number: number; label: string | null } | null)?.number ?? null,
+        table_label: (o.tables as unknown as { number: number; label: string | null } | null)?.label ?? null,
+        total,
+      }
+    })
 
     return NextResponse.json({ count: orders.length, orders })
   }

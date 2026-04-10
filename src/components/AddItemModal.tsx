@@ -19,6 +19,8 @@ function ModalForm({ categoryId, categoryType, onClose }: Props & { onClose: () 
   const [formKey, setFormKey] = useState(0)
   const previewUrlRef = useRef<string | null>(null)
   const fields = CATEGORY_ATTRIBUTES[categoryType] ?? []
+  const [useSizes, setUseSizes] = useState(false)
+  const [sizes, setSizes] = useState<{ label: string; price: string; hhPrice: string }[]>([{ label: '', price: '', hhPrice: '' }])
 
   const [sliders, setSliders] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
@@ -54,6 +56,8 @@ function ModalForm({ categoryId, categoryType, onClose }: Props & { onClose: () 
       setImagePreview(null)
       previewUrlRef.current = null
       setFormKey((k) => k + 1)
+      setUseSizes(false)
+      setSizes([{ label: '', price: '', hhPrice: '' }])
       onClose()
     })
   }
@@ -65,27 +69,106 @@ function ModalForm({ categoryId, categoryType, onClose }: Props & { onClose: () 
       {/* Nom + Prix */}
       <div className="grid grid-cols-3 gap-2">
         <input name="name" required placeholder="Nom du plat *" className={INPUT + ' col-span-2'} />
-        <div className="relative">
-          <input name="price" type="number" step="0.01" min="0" required placeholder="Prix *" className={INPUT + ' pr-6'} />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">€</span>
-        </div>
+        {!useSizes && (
+          <div className="relative">
+            <input name="price" type="number" step="0.01" min="0" required placeholder="Prix *" className={INPUT + ' pr-6'} />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">€</span>
+          </div>
+        )}
+        {useSizes && <input type="hidden" name="price" value="0" />}
       </div>
 
-      {/* Prix Happy Hour */}
+      {/* Tailles / Variantes */}
       <div>
-        <label className="block text-xs text-zinc-500 mb-1.5">Prix Happy Hour <span className="text-zinc-600">(optionnel)</span></label>
-        <div className="relative w-40">
-          <input
-            name="happy_hour_price"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="—"
-            className={INPUT + ' pr-6'}
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-amber-500 pointer-events-none">🍹</span>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs text-zinc-500">Plusieurs tailles / formats</label>
+          <button
+            type="button"
+            onClick={() => setUseSizes(v => !v)}
+            className={`relative w-9 h-5 rounded-full transition-colors ${useSizes ? 'bg-orange-500' : 'bg-zinc-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${useSizes ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
         </div>
+        {useSizes && (
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-[1fr_80px_80px_24px] gap-1.5 mb-1">
+              <span className="text-[10px] text-zinc-600 px-1">Format</span>
+              <span className="text-[10px] text-zinc-600 px-1">Prix</span>
+              <span className="text-[10px] text-amber-600 px-1">🍹 HH</span>
+              <span />
+            </div>
+            {sizes.map((s, i) => (
+              <div key={i} className="grid grid-cols-[1fr_80px_80px_24px] gap-1.5 items-center">
+                <input
+                  value={s.label}
+                  onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))}
+                  placeholder="25cl, 50cl…"
+                  className={INPUT}
+                />
+                <div className="relative">
+                  <input
+                    value={s.price}
+                    onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, price: e.target.value } : x))}
+                    type="number" step="0.01" min="0" placeholder="Prix"
+                    className={INPUT + ' pr-4 text-xs'}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 pointer-events-none">€</span>
+                </div>
+                <div className="relative">
+                  <input
+                    value={s.hhPrice}
+                    onChange={e => setSizes(prev => prev.map((x, idx) => idx === i ? { ...x, hhPrice: e.target.value } : x))}
+                    type="number" step="0.01" min="0" placeholder="—"
+                    className={INPUT + ' pr-4 text-xs'}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-amber-600 pointer-events-none">🍹</span>
+                </div>
+                {sizes.length > 1 ? (
+                  <button type="button" onClick={() => setSizes(prev => prev.filter((_, idx) => idx !== i))}
+                    className="w-6 h-6 rounded-lg bg-zinc-800 hover:bg-red-900/40 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                  </button>
+                ) : <span />}
+              </div>
+            ))}
+            <button type="button" onClick={() => setSizes(prev => [...prev, { label: '', price: '', hhPrice: '' }])}
+              className="text-xs text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1 mt-0.5">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              Ajouter un format
+            </button>
+            <input
+              type="hidden"
+              name="sizes"
+              value={JSON.stringify(
+                sizes.filter(s => s.label && s.price).map(s => ({
+                  label: s.label,
+                  price: parseFloat(s.price),
+                  ...(s.hhPrice ? { happy_hour_price: parseFloat(s.hhPrice) } : {}),
+                }))
+              )}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Prix Happy Hour (uniquement si pas de tailles) */}
+      {!useSizes && (
+        <div>
+          <label className="block text-xs text-zinc-500 mb-1.5">Prix Happy Hour <span className="text-zinc-600">(optionnel)</span></label>
+          <div className="relative w-40">
+            <input
+              name="happy_hour_price"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="—"
+              className={INPUT + ' pr-6'}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-amber-500 pointer-events-none">🍹</span>
+          </div>
+        </div>
+      )}
 
       {/* Description */}
       <input name="description" placeholder="Description (optionnel)" className={INPUT} />
@@ -197,16 +280,14 @@ export default function AddItemModal({ categoryId, categoryType }: Props) {
 
   return (
     <>
-      <div className="px-5 py-3 bg-zinc-950/30 border-t border-zinc-800">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-orange-400 transition-colors cursor-pointer"
-        >
-          <IconPlus className="w-3.5 h-3.5" />
-          Ajouter un plat
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-zinc-500 hover:text-orange-400 hover:bg-orange-400/5 border border-dashed border-zinc-800 hover:border-orange-500/30 rounded-xl transition-colors cursor-pointer group"
+      >
+        <IconPlus className="w-3.5 h-3.5 shrink-0 group-hover:text-orange-400" />
+        Ajouter un plat
+      </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

@@ -6,16 +6,14 @@ import { IconLogo } from '@/components/icons'
 import { MobileNav } from '@/components/NavLinks'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import UserMenu from '@/components/UserMenu'
-import RestaurantPicker from '@/components/RestaurantPicker'
 import { getRestaurantsWithActive, ACTIVE_RESTAURANT_COOKIE } from '@/lib/active-restaurant'
 import { setActiveRestaurant, deleteRestaurant } from '@/app/actions/restaurant'
 import OrderNotificationBell from '@/components/OrderNotificationBell'
 import PendingOrdersFloat from '@/components/PendingOrdersFloat'
+import PendingOrdersSidebar from '@/components/PendingOrdersSidebar'
+import type { ChecklistItem } from '@/components/PendingOrdersSidebar'
 import UrgencyBanner from '@/components/UrgencyBanner'
-import SetupChecklist from '@/components/SetupChecklist'
 import { getSubscriptionStatus, isAccessGranted } from '@/lib/subscription'
-import ThemeProvider from '@/components/ThemeProvider'
-import ThemeToggle from '@/components/ThemeToggle'
 
 type OpeningHours = Record<string, { open: string; close: string; closed: boolean }>
 type HappyHour = { enabled: boolean; start: string; end: string; days: string[]; urgency_threshold?: number }
@@ -114,8 +112,24 @@ export default async function DashboardLayout({
 
   const urgencyThreshold = (restaurant?.happy_hour as HappyHour | null)?.urgency_threshold ?? 5
 
+  // ── Checklist guide de démarrage ──────────────────────────
+  let checklistItems: ChecklistItem[] | undefined
+  if (activeRestaurantId) {
+    const [catRes, tblRes, stripeRes, ordRes] = await Promise.all([
+      supabase.from('categories').select('id').eq('restaurant_id', activeRestaurantId).limit(1),
+      supabase.from('tables').select('id').eq('restaurant_id', activeRestaurantId).limit(1),
+      supabase.from('restaurants').select('stripe_account_id').eq('id', activeRestaurantId).single(),
+      supabase.from('orders').select('id').eq('restaurant_id', activeRestaurantId).limit(1),
+    ])
+    checklistItems = [
+      { id: 'menu',   label: 'Créer votre menu',         done: (catRes.data ?? []).length > 0,  href: '/dashboard/menu' },
+      { id: 'tables', label: 'Configurer vos tables',    done: (tblRes.data ?? []).length > 0,  href: '/dashboard/tables' },
+      { id: 'stripe', label: 'Connecter Stripe',         done: !!stripeRes.data?.stripe_account_id, href: '/dashboard/settings/stripe' },
+      { id: 'orders', label: 'Recevoir une commande',    done: (ordRes.data ?? []).length > 0,  href: '/dashboard/orders' },
+    ]
+  }
+
   return (
-    <ThemeProvider>
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
       <style>{`
         /* Couleur accent fixe backoffice */
@@ -144,36 +158,40 @@ export default async function DashboardLayout({
 
       <div className="flex flex-1 min-h-screen">
         {/* Sidebar desktop */}
-        <DashboardSidebar logoUrl={restaurant?.logo_url ?? null} />
+        <DashboardSidebar
+          logoUrl={restaurant?.logo_url ?? null}
+          restaurantId={restaurant?.id ?? null}
+          happyHour={pills?.happyHour ?? false}
+          displayName={displayName}
+          email={email}
+          avatarUrl={avatarUrl}
+          signOutAction={signOut}
+          restaurants={restaurants}
+          activeRestaurantId={activeRestaurantId}
+          setActiveAction={setActiveRestaurant}
+          deleteAction={deleteRestaurant}
+          subStatus={subStatus}
+          trialEndsAt={trialEndsAt?.toISOString() ?? null}
+        />
 
         {/* Colonne principale */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top header */}
-          <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10 shrink-0">
+          {/* Header mobile uniquement */}
+          <header className="md:hidden border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10 shrink-0">
             <div className="px-4 h-14 flex items-center justify-between">
-              {/* Logo mobile uniquement */}
-              <Link href="/dashboard" className="flex items-center gap-2 md:hidden shrink-0">
+              <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
                 <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
                   <IconLogo className="w-4 h-4 text-white" />
                 </div>
                 <span className="font-semibold text-sm">Qomand</span>
               </Link>
-
-              <div className="hidden md:block" />
-
               <div className="flex items-center gap-3">
                 {pills?.happyHour && (
-                  <span className="hidden sm:inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
-                    🍹 Happy Hour !
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
+                    🍹
                   </span>
                 )}
-
-                {restaurant && (
-                  <OrderNotificationBell restaurantId={restaurant.id} />
-                )}
-
-                <ThemeToggle />
-
+                {restaurant && <OrderNotificationBell restaurantId={restaurant.id} />}
                 <UserMenu
                   displayName={displayName}
                   email={email}
@@ -198,22 +216,26 @@ export default async function DashboardLayout({
             />
           )}
 
-          <main className="flex-1 px-4 py-8 pb-24 md:pb-8">
-            {children}
-          </main>
+          {/* Main content + Right sidebar */}
+          <div className="flex flex-1 min-h-0">
+            <main className="flex-1 min-w-0 px-4 py-8 pb-24 md:pb-8">
+              {children}
+            </main>
+            {restaurant && (
+              <PendingOrdersSidebar restaurantId={restaurant.id} checklistItems={checklistItems} />
+            )}
+          </div>
         </div>
       </div>
 
       {restaurant && (
-        <PendingOrdersFloat restaurantId={restaurant.id} />
+        <div className="xl:hidden">
+          <PendingOrdersFloat restaurantId={restaurant.id} />
+        </div>
       )}
 
-      <SetupChecklist />
-
-      {/* Bottom tab bar mobile */}
       <MobileNav restaurantSlug={restaurants.find((r) => r.id === activeRestaurantId)?.slug} />
     </div>
-    </ThemeProvider>
   )
 }
 
