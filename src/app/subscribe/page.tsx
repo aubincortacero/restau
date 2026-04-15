@@ -15,8 +15,8 @@ export default async function SubscribePage() {
 
   const { status } = await getSubscriptionStatus(user.id)
 
-  // Déjà abonné ou en trial valide → retour au dashboard
-  if (isAccessGranted(status)) redirect('/dashboard')
+  // Déjà abonné (plan actif) → retour au dashboard
+  if (status === 'active') redirect('/dashboard')
 
   const expired = status === 'expired'
   const admin = isAdmin(user.email)
