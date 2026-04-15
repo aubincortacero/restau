@@ -35,6 +35,7 @@ export default async function SubscribePage() {
       isAdmin={admin}
       email={user.email ?? ''}
       trialAlreadyUsed={!!trialUsed}
+      isTrialing={status === 'trialing'}
     />
   )
 }

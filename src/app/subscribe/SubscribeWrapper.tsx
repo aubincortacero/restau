@@ -11,9 +11,10 @@ interface Props {
   isAdmin: boolean
   email: string
   trialAlreadyUsed: boolean
+  isTrialing: boolean
 }
 
-export default function SubscribeWrapper({ expired, isAdmin, email, trialAlreadyUsed }: Props) {
+export default function SubscribeWrapper({ expired, isAdmin, email, trialAlreadyUsed, isTrialing }: Props) {
   const [ready, setReady] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('monthly')
@@ -140,6 +141,11 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
                   <p className="text-xs text-red-400/80 mt-0.5">Cet email a déjà bénéficié d&apos;un essai gratuit.</p>
                 </div>
               </div>
+            ) : isTrialing ? (
+              <div className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white/40 font-semibold text-base py-4 rounded-2xl cursor-default select-none">
+                <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                Vous y êtes déjà
+              </div>
             ) : (
               <form action={startTrial} className="w-full">
                 <button
@@ -157,7 +163,7 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
             <button
               type="submit"
               className={`w-full font-semibold text-sm py-4 rounded-2xl transition-colors cursor-pointer ${
-                expired
+                expired || isTrialing
                   ? 'bg-white hover:bg-zinc-100 text-zinc-950 shadow-xl'
                   : 'border border-white/25 hover:border-white/50 text-white bg-white/5 hover:bg-white/10 backdrop-blur-sm'
               }`}
