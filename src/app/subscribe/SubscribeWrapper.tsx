@@ -16,6 +16,7 @@ interface Props {
 export default function SubscribeWrapper({ expired, isAdmin, email, trialAlreadyUsed }: Props) {
   const [ready, setReady] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
+  const [plan, setPlan] = useState<'monthly' | 'yearly'>('monthly')
 
   const onboardingKey = `qomand_onboarding_done_${email}`
 
@@ -92,12 +93,41 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
         </h1>
 
         {/* Sous-titre */}
-        <p className="text-white/60 text-center text-sm max-w-xs mb-8 leading-relaxed">
+        <p className="text-white/60 text-center text-sm max-w-xs mb-6 leading-relaxed">
           {expired
-            ? '20 €/mois · abonnez-vous pour continuer à recevoir vos commandes.'
-            : '7 jours offerts, puis 20 €/mois. Menus, tables, paiements et commandes depuis un QR code.'
+            ? 'Abonnez-vous pour continuer à recevoir vos commandes.'
+            : '7 jours offerts, puis sans engagement. Menus, tables, paiements et commandes depuis un QR code.'
           }
         </p>
+
+        {/* Toggle mensuel / annuel */}
+        <div className="flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-2xl mb-5 w-full max-w-sm">
+          <button
+            type="button"
+            onClick={() => setPlan('monthly')}
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-colors cursor-pointer ${
+              plan === 'monthly'
+                ? 'bg-white/15 text-white shadow-sm'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            Mensuel — 20 €
+          </button>
+          <button
+            type="button"
+            onClick={() => setPlan('yearly')}
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-colors relative cursor-pointer ${
+              plan === 'yearly'
+                ? 'bg-white/15 text-white shadow-sm'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            Annuel — 200 €
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap">
+              2 mois offerts
+            </span>
+          </button>
+        </div>
 
         {/* CTA principal */}
         <div className="w-full max-w-sm flex flex-col gap-3">
@@ -123,7 +153,7 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
           )}
 
           <form action={createCheckoutSession} className="w-full">
-            <input type="hidden" name="plan" value="monthly" />
+            <input type="hidden" name="plan" value={plan} />
             <button
               type="submit"
               className={`w-full font-semibold text-sm py-4 rounded-2xl transition-colors cursor-pointer ${
@@ -132,7 +162,10 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
                   : 'border border-white/25 hover:border-white/50 text-white bg-white/5 hover:bg-white/10 backdrop-blur-sm'
               }`}
             >
-              {expired ? "S'abonner — 20 €/mois" : "S'abonner directement — 20 €/mois"}
+              {expired
+                ? plan === 'yearly' ? "S'abonner — 200 €/an" : "S'abonner — 20 €/mois"
+                : plan === 'yearly' ? "S'abonner directement — 200 €/an" : "S'abonner directement — 20 €/mois"
+              }
             </button>
           </form>
         </div>
