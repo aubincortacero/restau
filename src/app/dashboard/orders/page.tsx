@@ -134,7 +134,7 @@ export default async function OrdersPage() {
           <span className="text-zinc-600">Les commandes apparaîtront ici dès que vos clients commanderont.</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" data-page-tutorial="orders-list">
+        <div className="flex flex-col gap-5" data-page-tutorial="orders-list">
           {enriched.map((order) => {
             const statusInfo = STATUS_LABELS[order.status] ?? STATUS_LABELS.pending
             const payInfo = PAYMENT_STATUS[order.payment_status] ?? PAYMENT_STATUS.unpaid
