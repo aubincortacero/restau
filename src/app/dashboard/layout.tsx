@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { signOut, markTutorialSeen } from '@/app/actions/auth'
 import { IconLogo } from '@/components/icons'
 import { MobileNav } from '@/components/NavLinks'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -81,7 +81,7 @@ export default async function DashboardLayout({
   if (!isAccessGranted(subStatus)) redirect('/subscribe')
 
   const [profileRes, { restaurants, activeId }] = await Promise.all([
-    supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, avatar_url, tutorial_seen').eq('id', user.id).single(),
     getRestaurantsWithActive(user.id),
   ])
 
@@ -237,7 +237,7 @@ export default async function DashboardLayout({
 
       <MobileNav restaurantSlug={restaurants.find((r) => r.id === activeRestaurantId)?.slug} />
 
-      <TutorialOverlay />
+      <TutorialOverlay initialSeen={profile?.tutorial_seen ?? false} markSeen={markTutorialSeen} />
     </div>
   )
 }

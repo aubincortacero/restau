@@ -42,6 +42,13 @@ export async function signOut() {
   await supabase.auth.signOut()
 }
 
+export async function markTutorialSeen() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('profiles').update({ tutorial_seen: true }).eq('id', user.id)
+}
+
 export async function deleteAccount() {
   const supabase = await createClient()
 

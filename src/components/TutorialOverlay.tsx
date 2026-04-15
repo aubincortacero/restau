@@ -50,7 +50,13 @@ function snap(selector: string): Rect | null {
   return { x: r.left, y: r.top, width: r.width, height: r.height }
 }
 
-export default function TutorialOverlay() {
+export default function TutorialOverlay({
+  initialSeen,
+  markSeen,
+}: {
+  initialSeen: boolean
+  markSeen: () => Promise<void>
+}) {
   const [active, setActive] = useState(false)
   const [stepIdx, setStepIdx] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
@@ -84,7 +90,7 @@ export default function TutorialOverlay() {
       }, 80)
     }
 
-    if (!localStorage.getItem(STORAGE_KEY)) doStart()
+    if (!initialSeen && !localStorage.getItem(STORAGE_KEY)) doStart()
     window.addEventListener('tutorial:start', doStart)
     return () => window.removeEventListener('tutorial:start', doStart)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,6 +124,7 @@ export default function TutorialOverlay() {
   function finish() {
     setTipOpacity(0)
     setSpotOpacity(0)
+    markSeen()
     setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, '1')
       setActive(false)
