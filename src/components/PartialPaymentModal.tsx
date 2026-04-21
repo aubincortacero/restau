@@ -129,6 +129,15 @@ export function PartialPaymentModal({
   const [isLoadingPayment, setIsLoadingPayment] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
 
+  // Créer le stripePromise dynamiquement en fonction du compte Connect
+  const stripePromise = useMemo(
+    () => loadStripe(
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+      stripeAccountId ? { stripeAccount: stripeAccountId } : undefined
+    ),
+    [stripeAccountId]
+  )
+
   // Récupérer tous les items non entièrement payés (et avec un prix > 0)
   const availableItems: OrderItemWithPayment[] = session.orders.flatMap((order) =>
     order.order_items.filter((item) => item.remaining_quantity > 0 && item.unit_price > 0)
@@ -232,14 +241,6 @@ export function PartialPaymentModal({
   if (!isOpen) return null
 
   if (step === 'payment' && clientSecret) {
-    const stripePromise = useMemo(
-      () => loadStripe(
-        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-        stripeAccountId ? { stripeAccount: stripeAccountId } : undefined
-      ),
-      [stripeAccountId]
-    )
-
     const options = {
       clientSecret,
       appearance: {
