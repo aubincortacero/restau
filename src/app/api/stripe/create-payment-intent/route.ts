@@ -40,12 +40,13 @@ export async function POST(req: NextRequest) {
 
     // Récupérer les prix depuis la DB — ne jamais faire confiance au client
     const itemIds = items.map((i: { itemId: string }) => i.itemId)
+    const uniqueItemIds = [...new Set(itemIds)] // Déduplication pour éviter les erreurs si même item commandé 2x
     const { data: dbItems } = await supabase
       .from('items')
       .select('id, price, happy_hour_price, is_available, category_id')
-      .in('id', itemIds)
+      .in('id', uniqueItemIds)
 
-    if (!dbItems || dbItems.length !== itemIds.length) {
+    if (!dbItems || dbItems.length !== uniqueItemIds.length) {
       return NextResponse.json({ error: 'Articles introuvables' }, { status: 400 })
     }
 
@@ -107,7 +108,8 @@ export async function POST(req: NextRequest) {
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
     return NextResponse.json({ clientSecret: paymentIntent.client_secret })
-  } catch {
+  } catch (err) {
+    console.error('[create-payment-intent] Error:', err)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

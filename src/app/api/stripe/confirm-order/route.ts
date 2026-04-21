@@ -54,13 +54,14 @@ export async function POST(req: NextRequest) {
 
     const items: Array<{ itemId: string; quantity: number }> = JSON.parse(itemsJson)
     const itemIds = items.map((i) => i.itemId)
+    const uniqueItemIds = [...new Set(itemIds)] // Déduplication
 
     const { data: dbItems } = await supabase
       .from('items')
       .select('id, name, price, happy_hour_price, category_id')
-      .in('id', itemIds)
+      .in('id', uniqueItemIds)
 
-    if (!dbItems || dbItems.length !== itemIds.length) {
+    if (!dbItems || dbItems.length !== uniqueItemIds.length) {
       return NextResponse.json({ error: 'Articles introuvables' }, { status: 400 })
     }
 

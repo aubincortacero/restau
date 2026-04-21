@@ -161,10 +161,13 @@ export default function MenuAccordion({
     }
   }
 
-  function placeNonOnlineOrder() {
+  function placeNonOnlineOrder(overridePaymentMethod?: 'cash' | 'tab') {
     setOrderError(null)
+    const effectivePaymentMethod = overridePaymentMethod ?? pendingPaymentMethod
     console.log('[MenuAccordion] placeNonOnlineOrder called', {
-      paymentMethod: pendingPaymentMethod,
+      paymentMethod: effectivePaymentMethod,
+      overridePaymentMethod,
+      pendingPaymentMethod,
       fulfillmentType,
       tableId,
       restaurantId,
@@ -175,7 +178,7 @@ export default function MenuAccordion({
         tableId,
         items: cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity })),
         note,
-        paymentMethod: pendingPaymentMethod === 'tab' ? 'tab' : 'cash',
+        paymentMethod: effectivePaymentMethod === 'tab' ? 'tab' : 'cash',
         fulfillmentType,
         customerEmail: customerEmail || undefined,
         pickupCode: pickupCode || undefined,
@@ -183,8 +186,8 @@ export default function MenuAccordion({
       console.log('[MenuAccordion] placeOrder result:', result)
       if (result.success) {
         setSuccessPickupCode(result.pickupCode ?? null)
-        setSuccessWasCash(pendingPaymentMethod === 'cash')
-        setSuccessWasTab(pendingPaymentMethod === 'tab')
+        setSuccessWasCash(effectivePaymentMethod === 'cash')
+        setSuccessWasTab(effectivePaymentMethod === 'tab')
         setCartStep('success')
         setCart({})
         setNote('')
@@ -193,7 +196,7 @@ export default function MenuAccordion({
         try { localStorage.removeItem(cartKey) } catch { /* ignore */ }
         
         // Notifier ClientSessionWrapper qu'une commande a été placée (seulement en mode ardoise)
-        if (tableId && pendingPaymentMethod === 'tab') {
+        if (tableId && effectivePaymentMethod === 'tab') {
           console.log('[MenuAccordion] Dispatching order-placed event')
           window.dispatchEvent(new CustomEvent('order-placed'))
         }
@@ -671,7 +674,7 @@ export default function MenuAccordion({
                           setPickupCode(code)
                           setCartStep('email')
                         } else {
-                          placeNonOnlineOrder()
+                          placeNonOnlineOrder('cash')
                         }
                       }}
                       disabled={isPending}
@@ -691,9 +694,8 @@ export default function MenuAccordion({
                   {tableId && (
                     <button
                       onClick={() => {
-                        setPendingPaymentMethod('tab')
                         setFulfillmentType('table')
-                        placeNonOnlineOrder()
+                        placeNonOnlineOrder('tab')
                       }}
                       disabled={isPending}
                       className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-[var(--brand)]/40 bg-[var(--brand)]/10 hover:bg-[var(--brand)]/20 transition-all text-left active:scale-[0.99] disabled:opacity-60"
@@ -733,7 +735,7 @@ export default function MenuAccordion({
                       onClick={() => {
                         setFulfillmentType('table')
                         setPickupCode(null)
-                        if (pendingPaymentMethod === 'cash') placeNonOnlineOrder()
+                        if (pendingPaymentMethod === 'cash') placeNonOnlineOrder('cash')
                         else setCartStep('email')
                       }}
                       className="menu-choice-btn w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 bg-stone-900 transition-all text-left active:scale-[0.99]"
@@ -811,7 +813,7 @@ export default function MenuAccordion({
                   <button
                     onClick={() => {
                       if (fulfillmentType === 'pickup' && !customerEmail.includes('@')) return
-                      if (pendingPaymentMethod === 'cash') placeNonOnlineOrder()
+                      if (pendingPaymentMethod === 'cash') placeNonOnlineOrder('cash')
                       else setCartStep('stripe-form')
                     }}
                     className="w-full menu-btn-primary text-white font-bold py-4 transition-colors text-base"

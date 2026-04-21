@@ -149,8 +149,8 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden z-[80]">
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+        <div className="absolute left-full ml-2 top-0 w-80 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-[80]">
+          <div className="px-4 py-3 border-b border-zinc-700 flex items-center justify-between bg-zinc-800/50">
             <p className="text-sm font-semibold text-white">Nouvelles commandes</p>
             <div className="flex items-center gap-2">
               <button
@@ -172,17 +172,17 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
               </button>
             </div>
           </div>
-          <div className="max-h-96 overflow-y-auto divide-y divide-zinc-800">
+          <div className="max-h-96 overflow-y-auto divide-y divide-zinc-700 bg-zinc-900">
             {notifs.length === 0 && (
               <p className="text-sm text-zinc-500 text-center py-6">Aucune notification</p>
             )}
             {notifs.map((n) => (
-              <div key={n.id} className={`flex items-start gap-1 ${!n.read ? 'bg-orange-500/5' : ''}`}>
+              <div key={n.id} className={`flex items-start gap-1 ${!n.read ? 'bg-orange-500/10' : ''}`}>
                 <button
                   onClick={() => { router.push('/dashboard/orders'); setOpen(false) }}
-                  className="flex-1 text-left px-4 py-3 hover:bg-zinc-800/60 transition-colors flex items-start gap-3"
+                  className="flex-1 text-left px-4 py-3 hover:bg-zinc-800 transition-colors flex items-start gap-3"
                 >
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-orange-500' : 'bg-zinc-700'}`} />
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-orange-500' : 'bg-zinc-600'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white">
                       {n.table_number
@@ -191,14 +191,14 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
                     </p>
                     <p className="text-xs text-zinc-400 mt-0.5">{fmt(n.total)}</p>
                   </div>
-                  <span className="text-xs text-zinc-600 shrink-0">{timeAgo(n.created_at)}</span>
+                  <span className="text-xs text-zinc-500 shrink-0">{timeAgo(n.created_at)}</span>
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setNotifs((prev) => prev.filter((x) => x.id !== n.id)) }}
-                  className="p-3 text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
+                  className="p-3 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors shrink-0"
                   aria-label="Supprimer"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                   </svg>
                 </button>
