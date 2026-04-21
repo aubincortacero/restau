@@ -91,14 +91,30 @@ function StripePaymentForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto px-5 pb-4">
-        <PaymentElement options={{ layout: 'tabs' }} />
-        {error && <p className="text-xs text-red-400 mt-3 text-center">{error}</p>}
+        <PaymentElement 
+          options={{ 
+            layout: {
+              type: 'accordion',
+              defaultCollapsed: false,
+              radios: true,
+              spacedAccordionItems: true
+            },
+            wallets: {
+              applePay: 'auto',
+              googlePay: 'auto',
+            },
+            fields: {
+              billingDetails: 'never'
+            }
+          }} 
+        />
+        {error && <p className="text-sm text-red-400 mt-4 text-center bg-red-950/30 border border-red-500/30 rounded-lg px-4 py-3">{error}</p>}
       </div>
       <div className="px-5 py-4 shrink-0 border-t border-zinc-800/60 flex flex-col gap-2">
         <button
           type="submit"
           disabled={isPending || !stripe}
-          className="w-full px-4 py-4 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-4 py-4 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-base"
         >
           {isPending ? 'Paiement en cours...' : `Payer ${formatCurrency(totalAmount)}`}
         </button>
@@ -106,7 +122,7 @@ function StripePaymentForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="w-full px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors disabled:opacity-50"
+          className="w-full px-4 py-2.5 text-zinc-400 hover:text-zinc-300 font-medium transition-colors disabled:opacity-50 text-sm"
         >
           Annuler
         </button>
@@ -249,9 +265,39 @@ export function PartialPaymentModal({
           colorPrimary: '#f97316',
           colorBackground: '#18181b',
           colorText: '#fafafa',
-          colorDanger: '#f87171',
+          colorDanger: '#ef4444',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSizeBase: '15px',
+          fontWeightNormal: '500',
           borderRadius: '12px',
-          fontFamily: 'inherit',
+          spacingUnit: '4px',
+        },
+        rules: {
+          '.Label': {
+            fontSize: '14px',
+            fontWeight: '600',
+            marginBottom: '8px',
+            color: '#a1a1aa',
+          },
+          '.Input': {
+            fontSize: '16px',
+            padding: '14px 12px',
+            backgroundColor: '#27272a',
+            border: '1px solid #3f3f46',
+          },
+          '.Input:focus': {
+            border: '1px solid #f97316',
+            boxShadow: '0 0 0 1px #f97316',
+            outline: 'none',
+          },
+          '.Tab': {
+            border: '1px solid #3f3f46',
+            backgroundColor: '#18181b',
+          },
+          '.Tab--selected': {
+            border: '1px solid #f97316',
+            backgroundColor: '#18181b',
+          },
         },
       },
     }
