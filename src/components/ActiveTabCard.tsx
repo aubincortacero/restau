@@ -23,7 +23,7 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [deliveredOrders, setDeliveredOrders] = useState<Set<string>>(
-    new Set(session.orders.filter(o => o.status === 'delivered').map(o => o.id))
+    new Set(session.orders.filter(o => o.status === 'ready').map(o => o.id))
   )
 
   const { balance, orders, table } = session
@@ -38,13 +38,28 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
   }
 
   async function handleMarkDelivered(orderId: string) {
+    console.log('[ActiveTabCard] Marking order as delivered:', orderId)
+    
     // Optimistic update
     setDeliveredOrders(prev => new Set([...prev, orderId]))
     
-    const result = await markOrderDelivered(orderId)
-    
-    if (!result.success) {
-      // Rollback si erreur
+    try {
+      const result = await markOrderDelivered(orderId)
+      console.log('[ActiveTabCard] markOrderDelivered result:', result)
+      
+      if (!result.success) {
+        // Rollback si erreur
+        setDeliveredOrders(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(orderId)
+          return newSet
+        })
+        console.error('[ActiveTabCard] Error from server:', result.error)
+        alert(`Erreur lors de la mise à jour: ${result.error || 'erreur inconnue'}`)
+      }
+    } catch (error) {
+      console.error('[ActiveTabCard] Exception during markOrderDelivered:', error)
+      // Rollback si exception
       setDeliveredOrders(prev => {
         const newSet = new Set(prev)
         newSet.delete(orderId)

@@ -214,20 +214,27 @@ export async function closeTableSession(sessionId: string): Promise<{ success: b
  * Marque une commande comme livrée/servie
  */
 export async function markOrderDelivered(orderId: string): Promise<{ success: boolean; error?: string }> {
+  console.log('[markOrderDelivered] START - orderId:', orderId)
+  
   // Utiliser directement le client admin - c'est une server action authentifiée
   const adminClient = createAdminClient()
   
-  const { error } = await adminClient
+  // Utiliser 'ready' au lieu de 'delivered' car l'ENUM order_status n'a pas 'delivered'
+  const { error, data } = await adminClient
     .from('orders')
-    .update({ status: 'delivered' })
+    .update({ status: 'ready' })
     .eq('id', orderId)
+    .select()
+
+  console.log('[markOrderDelivered] Update result:', { error, data, orderId })
 
   if (error) {
-    console.error('Error marking order as delivered:', error)
+    console.error('[markOrderDelivered] Error marking order as delivered:', error)
     return { success: false, error: error.message }
   }
 
   revalidatePath('/dashboard/orders')
+  console.log('[markOrderDelivered] SUCCESS')
   return { success: true }
 }
 

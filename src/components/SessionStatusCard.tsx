@@ -24,13 +24,18 @@ export function SessionStatusCard({
   const isFullyPaid = balance.is_fully_paid
 
   const getStatusLabel = (status: string) => {
-    if (status === 'delivered') return 'Servie'
+    if (status === 'ready') return 'Servie'
     if (status === 'pending') return 'En attente'
+    if (status === 'confirmed') return 'Confirmée'
+    if (status === 'preparing') return 'En préparation'
+    if (status === 'done') return 'Terminée'
+    if (status === 'cancelled') return 'Annulée'
     return status
   }
 
   const getStatusColor = (status: string) => {
-    if (status === 'delivered') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    if (status === 'ready' || status === 'done') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    if (status === 'cancelled') return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
     return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
   }
 
