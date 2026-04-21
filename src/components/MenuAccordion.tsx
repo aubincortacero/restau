@@ -205,7 +205,7 @@ export default function MenuAccordion({
       `}</style>
       
       {/* Tabs horizontales scrollables */}
-      <div className="sticky top-0 z-30 bg-[#0a0908] border-b border-stone-900 -mx-4 px-4">
+      <div className="sticky top-[60px] z-30 bg-[#0a0908] border-b border-stone-900 -mx-4 px-4">
         <div className="flex gap-2 py-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
           {categories.map((cat) => {
             const isActive = activeTab === cat.id
