@@ -149,7 +149,7 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden z-50">
+        <div className="absolute right-0 top-11 w-80 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden z-[80]">
           <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
             <p className="text-sm font-semibold text-white">Nouvelles commandes</p>
             <div className="flex items-center gap-2">

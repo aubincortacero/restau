@@ -19,35 +19,41 @@ export function ClientSessionWrapper({
   slug,
 }: ClientSessionWrapperProps) {
   const [session, setSession] = useState<SessionWithDetails | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [showPayPartialModal, setShowPayPartialModal] = useState(false)
   const [showPayAllModal, setShowPayAllModal] = useState(false)
   const router = useRouter()
 
-  const loadSession = async () => {
-    setIsLoading(true)
+  const loadSession = async (isInitial = false) => {
+    console.log('[ClientSessionWrapper] loadSession called', { restaurantId, tableId, isInitial })
     // Récupérer la session active (sans créer si elle n'existe pas)
     const { session: tableSession } = await getActiveTableSession(restaurantId, tableId)
+    console.log('[ClientSessionWrapper] getActiveTableSession result:', tableSession)
     
     if (tableSession) {
       // Charger les détails complets
       const details = await getSessionDetails(tableSession.id)
+      console.log('[ClientSessionWrapper] getSessionDetails result:', details)
       setSession(details)
     } else {
+      console.log('[ClientSessionWrapper] No active session found')
       setSession(null)
     }
     
-    setIsLoading(false)
+    if (isInitial) {
+      setIsInitialLoading(false)
+    }
   }
 
   useEffect(() => {
-    loadSession()
+    loadSession(true)
     // Recharger toutes les 30 secondes pour avoir les updates en temps réel
-    const interval = setInterval(loadSession, 30000)
+    const interval = setInterval(() => loadSession(false), 30000)
     
     // Écouter l'événement de nouvelle commande pour refresh immédiat
     const handleOrderPlaced = () => {
-      loadSession()
+      console.log('[ClientSessionWrapper] order-placed event received')
+      loadSession(false)
     }
     window.addEventListener('order-placed', handleOrderPlaced)
     
@@ -57,7 +63,7 @@ export function ClientSessionWrapper({
     }
   }, [restaurantId, tableId])
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
       <div className="max-w-lg mx-auto px-5 py-4">
         <div className="bg-zinc-900 rounded-lg p-4 animate-pulse">

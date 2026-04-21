@@ -139,8 +139,8 @@ export default function MenuAccordion({
     const hasTable = fulfillmentModes.includes('table')
     const hasPickup = fulfillmentModes.includes('pickup')
 
-    // Si on est sur une table et que les deux modes sont dispo, proposer les 3 modes de paiement
-    if (hasTable && tableId) {
+    // Si on est sur une table, toujours proposer le choix de paiement (incluant l'ardoise)
+    if (tableId && hasTable) {
       setCartStep('payment-choice')
     } else if (hasOnline && hasCash) {
       setCartStep('payment-choice')
@@ -163,6 +163,12 @@ export default function MenuAccordion({
 
   function placeNonOnlineOrder() {
     setOrderError(null)
+    console.log('[MenuAccordion] placeNonOnlineOrder called', {
+      paymentMethod: pendingPaymentMethod,
+      fulfillmentType,
+      tableId,
+      restaurantId,
+    })
     startTransition(async () => {
       const result = await placeOrder({
         restaurantId,
@@ -174,6 +180,7 @@ export default function MenuAccordion({
         customerEmail: customerEmail || undefined,
         pickupCode: pickupCode || undefined,
       })
+      console.log('[MenuAccordion] placeOrder result:', result)
       if (result.success) {
         setSuccessPickupCode(result.pickupCode ?? null)
         setSuccessWasCash(pendingPaymentMethod === 'cash')
@@ -187,6 +194,7 @@ export default function MenuAccordion({
         
         // Notifier ClientSessionWrapper qu'une commande a été placée (seulement en mode ardoise)
         if (tableId && pendingPaymentMethod === 'tab') {
+          console.log('[MenuAccordion] Dispatching order-placed event')
           window.dispatchEvent(new CustomEvent('order-placed'))
         }
       } else {

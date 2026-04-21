@@ -1159,6 +1159,10 @@ export async function placeOrder(payload: {
   // Gestion des sessions de table : UNIQUEMENT si paymentMethod === 'tab'
   let sessionId: string | null = null
   if (payload.paymentMethod === 'tab' && fulfillmentType === 'table' && payload.tableId) {
+    console.log('[placeOrder] Creating/finding session for tab payment', {
+      restaurantId: payload.restaurantId,
+      tableId: payload.tableId,
+    })
     // Chercher une session active pour cette table
     const { data: existingSession } = await supabase
       .from('table_sessions')
@@ -1171,10 +1175,11 @@ export async function placeOrder(payload: {
       .maybeSingle()
 
     if (existingSession) {
+      console.log('[placeOrder] Found existing session:', existingSession.id)
       sessionId = existingSession.id
     } else {
       // Créer une nouvelle session
-      const { data: newSession } = await supabase
+      const { data: newSession, error: sessionError } = await supabase
         .from('table_sessions')
         .insert({
           restaurant_id: payload.restaurantId,
@@ -1188,9 +1193,18 @@ export async function placeOrder(payload: {
         .maybeSingle()
       
       if (newSession) {
+        console.log('[placeOrder] Created new session:', newSession.id)
         sessionId = newSession.id
+      } else {
+        console.error('[placeOrder] Failed to create session:', sessionError)
       }
     }
+  } else {
+    console.log('[placeOrder] Not creating session', {
+      paymentMethod: payload.paymentMethod,
+      fulfillmentType,
+      tableId: payload.tableId,
+    })
   }
 
   const { data: order, error: orderError } = await supabase
@@ -1209,6 +1223,8 @@ export async function placeOrder(payload: {
     })
     .select('id')
     .single()
+
+  console.log('[placeOrder] Order created:', { orderId: order?.id, sessionId, error: orderError })
 
   if (orderError || !order) {
     return { success: false, error: 'Erreur lors de la création de la commande' }
