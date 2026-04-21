@@ -95,33 +95,33 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
             {orders.map((order, idx) => (
               <div
                 key={order.id}
-                className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-4"
+                className="bg-gradient-to-br from-orange-950/60 to-orange-900/40 border-2 border-orange-500/50 rounded-xl p-4 shadow-lg shadow-orange-950/30"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold flex items-center justify-center">
+                    <span className="w-6 h-6 rounded-full bg-orange-500/30 text-orange-200 text-xs font-bold flex items-center justify-center border border-orange-400/40">
                       #{idx + 1}
                     </span>
-                    <span className="text-sm text-purple-400">
+                    <span className="text-sm text-orange-300 font-medium">
                       {timeAgo(order.created_at)}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold text-purple-200">
+                  <span className="text-base font-bold text-orange-100">
                     {fmt(order.order_items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0))}
                   </span>
                 </div>
                 <div className="space-y-1">
                   {order.order_items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between text-sm">
-                      <span className="text-purple-200">
-                        <span className="text-purple-400 font-semibold">{item.quantity}×</span> {item.item_name}
+                      <span className="text-white font-medium">
+                        <span className="text-orange-400 font-bold">{item.quantity}×</span> {item.item_name}
                       </span>
-                      <span className="text-purple-300">{fmt(item.unit_price * item.quantity)}</span>
+                      <span className="text-orange-200 font-semibold">{fmt(item.unit_price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
                 {order.customer_note && (
-                  <p className="text-xs text-purple-400 mt-2 italic">
+                  <p className="text-xs text-orange-300 mt-2 italic bg-orange-950/40 px-2 py-1 rounded">
                     💬 {order.customer_note}
                   </p>
                 )}

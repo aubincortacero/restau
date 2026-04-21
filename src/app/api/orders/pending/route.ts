@@ -11,13 +11,19 @@ export async function GET(req: NextRequest) {
   if (detail) {
     const { data } = await supabase
       .from('orders')
-      .select('id, created_at, tables(number, label), order_items(quantity, unit_price)')
+      .select('id, created_at, session_id, tables(number, label), table_sessions(closed_at), order_items(quantity, unit_price)')
       .eq('restaurant_id', restaurantId)
       .eq('status', 'pending')
       .is('archived_at', null)
       .order('created_at', { ascending: true })
 
-    const orders = (data ?? []).map((o) => {
+    // Ne garder que les commandes dont la session n'est pas fermée (ou sans session)
+    const activeOrders = (data ?? []).filter((o) => {
+      const session = o.table_sessions as unknown as { closed_at: string | null } | null
+      return !session || session.closed_at === null
+    })
+
+    const orders = activeOrders.map((o) => {
       const items = (o.order_items as unknown as { quantity: number; unit_price: number }[]) ?? []
       const total = items.reduce((sum, i) => sum + i.quantity * Number(i.unit_price), 0)
       return {
@@ -32,11 +38,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ count: orders.length, orders })
   }
 
-  const { count } = await supabase
+  // Pour le count simple, on doit aussi filtrer par session active
+  const { data: countData } = await supabase
     .from('orders')
-    .select('id', { count: 'exact', head: true })
+    .select('id, session_id, table_sessions(closed_at)')
     .eq('restaurant_id', restaurantId)
     .eq('status', 'pending')
+    .is('archived_at', null)
 
-  return NextResponse.json({ count: count ?? 0 })
+  const activeCount = (countData ?? []).filter((o) => {
+    const session = o.table_sessions as unknown as { closed_at: string | null } | null
+    return !session || session.closed_at === null
+  }).length
+
+  return NextResponse.json({ count: activeCount })
 }

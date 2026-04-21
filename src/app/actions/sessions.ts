@@ -183,14 +183,27 @@ export async function getSessionDetails(sessionId: string): Promise<SessionWithD
 export async function closeTableSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
 
-  const { error } = await supabase
+  // Fermer la session
+  const { error: sessionError } = await supabase
     .from('table_sessions')
     .update({ closed_at: new Date().toISOString() })
     .eq('id', sessionId)
 
-  if (error) {
-    console.error('Error closing session:', error)
-    return { success: false, error: error.message }
+  if (sessionError) {
+    console.error('Error closing session:', sessionError)
+    return { success: false, error: sessionError.message }
+  }
+
+  // Archiver toutes les commandes de cette session
+  const { error: ordersError } = await supabase
+    .from('orders')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('session_id', sessionId)
+    .is('archived_at', null)
+
+  if (ordersError) {
+    console.error('Error archiving session orders:', ordersError)
+    // On continue quand même, c'est pas bloquant
   }
 
   revalidatePath('/dashboard/orders')
