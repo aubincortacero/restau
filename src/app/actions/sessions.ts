@@ -151,6 +151,7 @@ export async function getSessionDetails(sessionId: string): Promise<SessionWithD
     order_items: (order.order_items ?? []).map((item: any) => ({
       id: item.id,
       item_name: item.items?.name ?? 'Article',
+      size_label: item.size_label ?? null,
       quantity: item.quantity,
       unit_price: Number(item.unit_price),
       paid_quantity: item.paid_quantity ?? 0,
