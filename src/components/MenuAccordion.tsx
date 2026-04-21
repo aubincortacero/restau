@@ -125,9 +125,6 @@ export default function MenuAccordion({
     })
   }
 
-  const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [touchOffset, setTouchOffset] = useState(0)
-
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientY)
   }
