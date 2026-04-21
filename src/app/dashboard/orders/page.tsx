@@ -367,6 +367,7 @@ export default async function OrdersPage() {
                         restaurant: restaurant.name,
                         items: items.map((oi) => ({
                           name: (oi.items as { name: string } | null)?.name ?? '—',
+                          size_label: oi.size_label,
                           quantity: oi.quantity,
                           unit_price: Number(oi.unit_price),
                           note: oi.note ?? null,
