@@ -112,8 +112,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (amountCents < 50) {
+      console.error('[create-payment-intent] Amount too low:', amountCents)
       return NextResponse.json({ error: 'Montant minimum 0,50 €' }, { status: 400 })
     }
+
+    console.log('[create-payment-intent] Creating payment intent with amount:', amountCents)
 
     const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount: amountCents,
@@ -132,14 +135,29 @@ export async function POST(req: NextRequest) {
 
     // Direct charge sur le compte Connect : les frais Stripe sont supportés par le restaurant
     if (restaurant.stripe_account_id) {
+      console.log('[create-payment-intent] Using Stripe Connect account:', restaurant.stripe_account_id)
       paymentIntentParams.application_fee_amount = Math.round(amountCents * 0.01)
-      const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams, {
-        stripeAccount: restaurant.stripe_account_id,
-      })
-      return NextResponse.json({
-        clientSecret: paymentIntent.client_secret,
-        stripeAccountId: restaurant.stripe_account_id,
-      })
+      
+      try {
+        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams, {
+          stripeAccount: restaurant.stripe_account_id,
+        })
+        return NextResponse.json({
+          clientSecret: paymentIntent.client_secret,
+          stripeAccountId: restaurant.stripe_account_id,
+        })
+      } catch (stripeError: any) {
+        console.error('[create-payment-intent] Stripe Connect error:', stripeError.message)
+        // Fallback: si le compte Connect ne fonctionne pas, utiliser le compte principal
+        console.log('[create-payment-intent] Falling back to platform account')
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountCents,
+          currency: 'eur',
+          statement_descriptor: 'QOMAND',
+          metadata: paymentIntentParams.metadata,
+        })
+        return NextResponse.json({ clientSecret: paymentIntent.client_secret })
+      }
     }
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)

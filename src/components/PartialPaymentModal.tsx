@@ -169,6 +169,13 @@ export function PartialPaymentModal({
     // Créer un payment intent pour le paiement partiel
     const amountCents = Math.round(totalAmount * 100)
     
+    console.log('[PartialPaymentModal] Creating payment intent:', { 
+      totalAmount, 
+      amountCents, 
+      restaurantId,
+      sessionId: session.id 
+    })
+    
     const res = await fetch('/api/stripe/create-payment-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -184,13 +191,14 @@ export function PartialPaymentModal({
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: 'Erreur inconnue' }))
-      console.error('Payment intent error:', errorData)
+      console.error('[PartialPaymentModal] Payment intent error:', errorData)
       alert(`Erreur lors de la création du paiement: ${errorData.error || 'Erreur inconnue'}`)
       setIsLoadingPayment(false)
       return
     }
 
     const data = await res.json()
+    console.log('[PartialPaymentModal] Payment intent created:', data)
     setClientSecret(data.clientSecret)
     setStripeAccountId(data.stripeAccountId || null)
     setStep('payment')
@@ -322,15 +330,8 @@ export function PartialPaymentModal({
                     </div>
 
                     {/* Sélecteur de quantité */}
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleQuantityChange(item.id, -1)}
-                        disabled={selectedQty === 0}
-                        className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xl flex items-center justify-center transition-colors"
-                      >
-                        −
-                      </button>
-                      <div className="flex-1 text-center">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
                         <p className="text-2xl font-black text-white tabular-nums">
                           {selectedQty}
                         </p>
@@ -338,13 +339,22 @@ export function PartialPaymentModal({
                           sur {item.remaining_quantity}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleQuantityChange(item.id, 1)}
-                        disabled={selectedQty >= item.remaining_quantity}
-                        className="w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-400 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xl flex items-center justify-center transition-colors"
-                      >
-                        +
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleQuantityChange(item.id, -1)}
+                          disabled={selectedQty === 0}
+                          className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xl flex items-center justify-center transition-colors"
+                        >
+                          −
+                        </button>
+                        <button
+                          onClick={() => handleQuantityChange(item.id, 1)}
+                          disabled={selectedQty >= item.remaining_quantity}
+                          className="w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-400 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xl flex items-center justify-center transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
 
                     {/* Boutons rapides */}
