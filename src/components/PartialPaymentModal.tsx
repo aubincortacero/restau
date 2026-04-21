@@ -96,7 +96,7 @@ function StripePaymentForm({
             layout: {
               type: 'accordion',
               defaultCollapsed: false,
-              radios: true,
+              radios: false,
               spacedAccordionItems: true
             },
             wallets: {
