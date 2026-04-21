@@ -164,6 +164,18 @@ export default function MenuAccordion({
   function placeNonOnlineOrder(overridePaymentMethod?: 'cash' | 'tab') {
     setOrderError(null)
     const effectivePaymentMethod = overridePaymentMethod ?? pendingPaymentMethod
+    
+    const payload = {
+      restaurantId,
+      tableId,
+      items: cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity })),
+      note,
+      paymentMethod: (effectivePaymentMethod === 'tab' ? 'tab' : 'cash') as 'cash' | 'tab',
+      fulfillmentType,
+      customerEmail: customerEmail || undefined,
+      pickupCode: pickupCode || undefined,
+    }
+    
     console.log('[MenuAccordion] placeNonOnlineOrder called', {
       paymentMethod: effectivePaymentMethod,
       overridePaymentMethod,
@@ -172,17 +184,10 @@ export default function MenuAccordion({
       tableId,
       restaurantId,
     })
+    console.log('[MenuAccordion] PAYLOAD SENT TO placeOrder:', JSON.stringify(payload, null, 2))
+    
     startTransition(async () => {
-      const result = await placeOrder({
-        restaurantId,
-        tableId,
-        items: cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity })),
-        note,
-        paymentMethod: effectivePaymentMethod === 'tab' ? 'tab' : 'cash',
-        fulfillmentType,
-        customerEmail: customerEmail || undefined,
-        pickupCode: pickupCode || undefined,
-      })
+      const result = await placeOrder(payload)
       console.log('[MenuAccordion] placeOrder result:', result)
       if (result.success) {
         setSuccessPickupCode(result.pickupCode ?? null)
