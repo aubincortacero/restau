@@ -1097,6 +1097,13 @@ export async function placeOrder(payload: {
   customerEmail?: string
   pickupCode?: string
 }): Promise<{ success: true; orderId: string; pickupCode?: string } | { success: false; error: string }> {
+  console.log('[placeOrder] 🚀 START - Received payload:', {
+    paymentMethod: payload.paymentMethod,
+    fulfillmentType: payload.fulfillmentType,
+    tableId: payload.tableId,
+    restaurantId: payload.restaurantId,
+  })
+  
   // Validate input
   if (!payload.restaurantId || !Array.isArray(payload.items) || payload.items.length === 0) {
     return { success: false, error: 'Panier vide ou données invalides' }
@@ -1158,8 +1165,17 @@ export async function placeOrder(payload: {
 
   // Gestion des sessions de table : UNIQUEMENT si paymentMethod === 'tab'
   let sessionId: string | null = null
+  console.log('[placeOrder] 🔍 Checking session conditions:', {
+    'payload.paymentMethod': payload.paymentMethod,
+    'payload.paymentMethod === "tab"': payload.paymentMethod === 'tab',
+    'fulfillmentType': fulfillmentType,
+    'fulfillmentType === "table"': fulfillmentType === 'table',
+    'payload.tableId': payload.tableId,
+    'ALL CONDITIONS MET': payload.paymentMethod === 'tab' && fulfillmentType === 'table' && payload.tableId,
+  })
+  
   if (payload.paymentMethod === 'tab' && fulfillmentType === 'table' && payload.tableId) {
-    console.log('[placeOrder] Creating/finding session for tab payment', {
+    console.log('[placeOrder] ✅ Creating/finding session for tab payment', {
       restaurantId: payload.restaurantId,
       tableId: payload.tableId,
     })

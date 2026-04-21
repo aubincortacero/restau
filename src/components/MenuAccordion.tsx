@@ -232,7 +232,7 @@ export default function MenuAccordion({
       
       {/* Tabs horizontales scrollables */}
       <div className="bg-[#0a0908] border-b border-stone-900 overflow-x-hidden">
-        <div className="flex gap-2 py-3 px-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-2 py-3 px-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
           {categories.map((cat) => {
             const isActive = activeTab === cat.id
             const catType = CATEGORY_TYPES.find(t => t.id === cat.category_type)
@@ -271,7 +271,7 @@ export default function MenuAccordion({
       </div>
 
       {/* Grille de produits */}
-      <div className="px-4 pt-4 pb-32">
+      <div className="px-5 pt-4 pb-32">
         {categories.map((cat) => {
           if (cat.id !== activeTab) return null
 
@@ -562,7 +562,7 @@ export default function MenuAccordion({
 
       {/* Sticky cart bar */}
       {totalQty > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-8 bg-gradient-to-t from-[#0a0908] via-[#0a0908]/95 to-transparent pointer-events-none">
+        <div className="fixed bottom-0 left-0 right-0 z-40 px-5 pb-6 pt-8 bg-gradient-to-t from-[#0a0908] via-[#0a0908]/95 to-transparent pointer-events-none">
           <button
             onClick={() => { setCartOpen(true); setCartStep('cart'); setOrderError(null) }}
             className="pointer-events-auto w-full max-w-lg mx-auto flex items-center justify-between menu-btn-primary text-white px-5 py-4 shadow-xl transition-colors"
