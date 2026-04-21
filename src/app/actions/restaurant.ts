@@ -1209,17 +1209,6 @@ export async function placeOrder(payload: {
     })
     .select('id')
     .single()
-      session_id: sessionId,
-      status: 'pending',
-      payment_method: payload.paymentMethod ?? 'cash',
-      payment_status: 'unpaid',
-      customer_note: payload.note.trim() || null,
-      fulfillment_type: fulfillmentType,
-      pickup_code: pickupCode,
-      customer_email: customerEmail,
-    })
-    .select('id')
-    .single()
 
   if (orderError || !order) {
     return { success: false, error: 'Erreur lors de la création de la commande' }
