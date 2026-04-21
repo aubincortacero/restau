@@ -24,7 +24,14 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'payment_intent.succeeded') {
     const pi = event.data.object as Stripe.PaymentIntent
-    const { restaurantId, tableId, note, items: itemsJson } = pi.metadata
+    const { restaurantId, isPartialPayment, items: itemsJson, note } = pi.metadata
+
+    // Si c'est un paiement partiel, ne rien faire ici
+    // Le paiement partiel est géré directement par createPartialPayment après la confirmation
+    if (isPartialPayment === 'true') {
+      console.log('[webhook] Partial payment succeeded, skipping order creation')
+      return NextResponse.json({ received: true })
+    }
 
     if (!restaurantId || !itemsJson) {
       return NextResponse.json({ error: 'Metadata manquante' }, { status: 400 })
@@ -48,7 +55,7 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .insert({
         restaurant_id: restaurantId,
-        table_id: tableId || null,
+        table_id: pi.metadata.tableId || null,
         status: 'pending',
         payment_method: 'online',
         payment_status: 'paid',

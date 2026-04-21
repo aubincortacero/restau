@@ -299,6 +299,39 @@ export async function createPartialPayment(
     }
   }
 
+  // Récupérer les commandes concernées et vérifier si elles sont entièrement payées
+  const orderItemIds = selectedItems.map((item) => item.order_item_id)
+  const { data: orderItems } = await supabase
+    .from('order_items')
+    .select('order_id, quantity, paid_quantity')
+    .in('id', orderItemIds)
+
+  if (orderItems) {
+    // Grouper par order_id
+    const orderIds = [...new Set(orderItems.map((item) => item.order_id))]
+
+    for (const orderId of orderIds) {
+      // Récupérer tous les items de cette commande
+      const { data: allItemsOfOrder } = await supabase
+        .from('order_items')
+        .select('quantity, paid_quantity')
+        .eq('order_id', orderId)
+
+      // Vérifier si tous les items sont entièrement payés
+      const isFullyPaid = allItemsOfOrder?.every(
+        (item) => item.paid_quantity >= item.quantity
+      )
+
+      if (isFullyPaid) {
+        // Mettre à jour le payment_status de la commande
+        await supabase
+          .from('orders')
+          .update({ payment_status: 'paid' })
+          .eq('id', orderId)
+      }
+    }
+  }
+
   revalidatePath('/dashboard/orders')
   return { success: true, payment: payment as PartialPayment }
 }

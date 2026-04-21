@@ -178,7 +178,9 @@ export function PartialPaymentModal({
     })
 
     if (!res.ok) {
-      alert('Erreur lors de la création du paiement')
+      const errorData = await res.json().catch(() => ({ error: 'Erreur inconnue' }))
+      console.error('Payment intent error:', errorData)
+      alert(`Erreur lors de la création du paiement: ${errorData.error || 'Erreur inconnue'}`)
       setIsLoadingPayment(false)
       return
     }

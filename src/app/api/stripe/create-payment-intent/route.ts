@@ -8,6 +8,8 @@ export async function POST(req: NextRequest) {
   try {
     const { restaurantId, tableId, items, note, fulfillmentType, pickupCode, customAmount } = await req.json()
 
+    console.log('[create-payment-intent] Request:', { restaurantId, tableId, hasItems: !!items, customAmount, fulfillmentType })
+
     if (!restaurantId) {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
     }
