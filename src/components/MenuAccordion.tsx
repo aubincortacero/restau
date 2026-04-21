@@ -263,7 +263,7 @@ export default function MenuAccordion({
                   >
                     {/* Image */}
                     {item.image_url ? (
-                      <div className="relative w-full aspect-[16/10] bg-stone-800">
+                      <div className="relative w-full aspect-[4/3] bg-stone-800">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.image_url}
@@ -271,55 +271,79 @@ export default function MenuAccordion({
                           className="w-full h-full object-cover"
                         />
                         {hhActive && item.happy_hour_price != null && (
-                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10">
                             <span>🎉</span>
                             <span>Happy Hour</span>
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <div className="relative w-full aspect-[16/10] bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center">
-                        <span className="text-6xl opacity-20">🍽️</span>
-                        {hhActive && item.happy_hour_price != null && (
-                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                            <span>🎉</span>
-                            <span>Happy Hour</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Contenu */}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-stone-100 text-base leading-tight mb-1">
+                        
+                        {/* Texte superposé sur l'image avec fond dégradé */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
+                          <h3 className="font-bold text-white text-base leading-tight mb-1">
                             {item.name}
                           </h3>
                           {item.description && (
-                            <p className="text-sm text-stone-400 leading-snug line-clamp-2">
+                            <p className="text-sm text-stone-200 leading-snug line-clamp-1">
                               {item.description}
                             </p>
                           )}
                           {/* Badges */}
-                          <div className="flex items-center gap-1.5 mt-2">
+                          <div className="flex items-center gap-1.5 mt-1.5">
                             {item.is_vegetarian && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-800/50">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/60 text-green-200 border border-green-700/50">
                                 🌱 Végétarien
                               </span>
                             )}
                             {item.is_vegan && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-800/50">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/60 text-green-200 border border-green-700/50">
                                 🌿 Vegan
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
+                    ) : (
+                      <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center">
+                        <span className="text-6xl opacity-20">🍽️</span>
+                        {hhActive && item.happy_hour_price != null && (
+                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10">
+                            <span>🎉</span>
+                            <span>Happy Hour</span>
+                          </div>
+                        )}
+                        
+                        {/* Texte superposé sur fond fallback */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
+                          <h3 className="font-bold text-white text-base leading-tight mb-1">
+                            {item.name}
+                          </h3>
+                          {item.description && (
+                            <p className="text-sm text-stone-200 leading-snug line-clamp-1">
+                              {item.description}
+                            </p>
+                          )}
+                          {/* Badges */}
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            {item.is_vegetarian && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/60 text-green-200 border border-green-700/50">
+                                🌱 Végétarien
+                              </span>
+                            )}
+                            {item.is_vegan && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/60 text-green-200 border border-green-700/50">
+                                🌿 Vegan
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
+                    {/* Contenu */}
+                    <div className="p-4">
                       {/* Prix et bouton d'ajout */}
                       {!hasSizes ? (
-                        <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center justify-between">
                           <div>
                             <span className="text-2xl font-bold text-white">
                               {fmt(effectivePrice)}
@@ -358,7 +382,7 @@ export default function MenuAccordion({
                           )}
                         </div>
                       ) : (
-                        <div className="mt-3 space-y-2">
+                        <div className="space-y-2">
                           {item.sizes?.map((size) => {
                             const sizePrice = hhActive && size.happy_hour_price != null ? size.happy_hour_price : size.price
                             const sizeQty = cart[`${item.id}:${size.label}`]?.quantity ?? 0

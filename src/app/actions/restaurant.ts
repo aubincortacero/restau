@@ -1124,12 +1124,13 @@ export async function placeOrder(payload: {
 
   // Fetch items from DB — never trust client-supplied prices
   const itemIds = payload.items.map(i => i.itemId)
+  const uniqueItemIds = [...new Set(itemIds)]
   const { data: dbItems } = await supabase
     .from('items')
     .select('id, name, price, happy_hour_price, is_available, category_id')
-    .in('id', itemIds)
+    .in('id', uniqueItemIds)
 
-  if (!dbItems || dbItems.length !== itemIds.length) {
+  if (!dbItems || dbItems.length !== uniqueItemIds.length) {
     return { success: false, error: 'Certains articles sont introuvables' }
   }
 
