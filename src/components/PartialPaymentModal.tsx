@@ -158,6 +158,14 @@ export function PartialPaymentModal({
     setSelectedItems(newMap)
   }
 
+  const handleSelectAll = () => {
+    const newMap = new Map<string, number>()
+    availableItems.forEach(item => {
+      newMap.set(item.id, item.remaining_quantity)
+    })
+    setSelectedItems(newMap)
+  }
+
   const handleProceedToPayment = async () => {
     if (totalAmount <= 0) {
       alert('Veuillez sélectionner au moins un article')
@@ -285,6 +293,17 @@ export function PartialPaymentModal({
               ✕
             </button>
           </div>
+          {availableItems.length > 0 && (
+            <button
+              onClick={handleSelectAll}
+              className="w-full mt-3 px-4 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              Tout prendre
+            </button>
+          )}
         </div>
 
         {/* Contenu scrollable */}
@@ -424,32 +443,24 @@ export function PartialPaymentModal({
               </>
             )}
 
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleProceedToPayment}
-                disabled={totalAmount <= 0 || isLoadingPayment}
-                className={`flex-1 px-4 py-4 rounded-xl font-bold transition-colors ${
-                  totalAmount > 0 && !isLoadingPayment
-                    ? 'bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white'
-                    : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                }`}
-              >
-                {isLoadingPayment ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-zinc-600 border-t-transparent rounded-full animate-spin" />
-                    Préparation...
-                  </span>
-                ) : (
-                  'Continuer'
-                )}
-              </button>
-            </div>
+            <button
+              onClick={handleProceedToPayment}
+              disabled={totalAmount <= 0 || isLoadingPayment}
+              className={`w-full px-4 py-4 rounded-xl font-bold transition-colors ${
+                totalAmount > 0 && !isLoadingPayment
+                  ? 'bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white'
+                  : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+              }`}
+            >
+              {isLoadingPayment ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-zinc-600 border-t-transparent rounded-full animate-spin" />
+                  Préparation...
+                </span>
+              ) : (
+                'Payer'
+              )}
+            </button>
           </div>
         )}
       </div>
