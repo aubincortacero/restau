@@ -170,7 +170,11 @@ export default function MenuAccordion({
     const payload = {
       restaurantId,
       tableId,
-      items: cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity })),
+      items: cartItems.map(i => ({ 
+        itemId: i.itemId, 
+        quantity: i.quantity,
+        sizeLabel: i.sizeLabel 
+      })),
       note,
       paymentMethod: (effectivePaymentMethod === 'tab' ? 'tab' : 'cash') as 'cash' | 'tab',
       fulfillmentType,
@@ -860,7 +864,7 @@ export default function MenuAccordion({
                 <StripeCheckoutForm
                   restaurantId={restaurantId}
                   tableId={tableId}
-                  items={cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity }))}
+                  items={cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity, sizeLabel: i.sizeLabel }))}
                   note={note}
                   totalPrice={totalPrice}
                   customerEmail={customerEmail || undefined}

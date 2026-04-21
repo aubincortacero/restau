@@ -37,13 +37,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Metadata manquante' }, { status: 400 })
     }
 
-    const items: Array<{ itemId: string; quantity: number }> = JSON.parse(itemsJson)
+    const items: Array<{ itemId: string; quantity: number; sizeLabel?: string }> = JSON.parse(itemsJson)
 
     // Recalculer les prix depuis la DB
     const itemIds = items.map((i) => i.itemId)
     const { data: dbItems } = await admin
       .from('items')
-      .select('id, price, happy_hour_price, category_id')
+      .select('id, price, happy_hour_price, category_id, sizes')
       .in('id', itemIds)
 
     if (!dbItems || dbItems.length !== itemIds.length) {
@@ -72,11 +72,25 @@ export async function POST(req: NextRequest) {
     await admin.from('order_items').insert(
       items.map((pi_item) => {
         const dbItem = dbItems.find((i) => i.id === pi_item.itemId)!
+        
+        // Si une taille est spécifiée, chercher son prix dans sizes
+        let unitPrice: number
+        if (pi_item.sizeLabel && dbItem.sizes && Array.isArray(dbItem.sizes)) {
+          const selectedSize = dbItem.sizes.find((s: any) => s.label === pi_item.sizeLabel)
+          if (selectedSize) {
+            unitPrice = Number(selectedSize.price)
+          } else {
+            unitPrice = Number(dbItem.price)
+          }
+        } else {
+          unitPrice = Number(dbItem.price)
+        }
+        
         return {
           order_id: order.id,
           item_id: pi_item.itemId,
           quantity: pi_item.quantity,
-          unit_price: Number(dbItem.price),
+          unit_price: unitPrice,
         }
       })
     )

@@ -1090,7 +1090,7 @@ function generatePickupCode(): string {
 export async function placeOrder(payload: {
   restaurantId: string
   tableId: string | null
-  items: Array<{ itemId: string; quantity: number }>
+  items: Array<{ itemId: string; quantity: number; sizeLabel?: string }>
   note: string
   paymentMethod?: 'cash' | 'online' | 'tab'
   fulfillmentType?: 'table' | 'pickup'
@@ -1140,7 +1140,7 @@ export async function placeOrder(payload: {
   const uniqueItemIds = [...new Set(itemIds)]
   const { data: dbItems } = await supabase
     .from('items')
-    .select('id, name, price, happy_hour_price, is_available, category_id')
+    .select('id, name, price, happy_hour_price, is_available, category_id, sizes')
     .in('id', uniqueItemIds)
 
   if (!dbItems || dbItems.length !== uniqueItemIds.length) {
@@ -1273,9 +1273,29 @@ export async function placeOrder(payload: {
     .insert(
       payload.items.map(pi => {
         const dbItem = dbItems.find(i => i.id === pi.itemId)!
-        const unitPrice = isHH && dbItem.happy_hour_price != null
-          ? Number(dbItem.happy_hour_price)
-          : Number(dbItem.price)
+        
+        // Si une taille est spécifiée, chercher son prix dans sizes
+        let unitPrice: number
+        if (pi.sizeLabel && dbItem.sizes && Array.isArray(dbItem.sizes)) {
+          const selectedSize = dbItem.sizes.find((s: any) => s.label === pi.sizeLabel)
+          if (selectedSize) {
+            // Utiliser le prix HH de la size si disponible, sinon le prix normal
+            unitPrice = isHH && selectedSize.happy_hour_price != null
+              ? Number(selectedSize.happy_hour_price)
+              : Number(selectedSize.price)
+          } else {
+            // Size non trouvée, utiliser prix de base
+            unitPrice = isHH && dbItem.happy_hour_price != null
+              ? Number(dbItem.happy_hour_price)
+              : Number(dbItem.price)
+          }
+        } else {
+          // Pas de size, utiliser le prix de base
+          unitPrice = isHH && dbItem.happy_hour_price != null
+            ? Number(dbItem.happy_hour_price)
+            : Number(dbItem.price)
+        }
+        
         return { order_id: order.id, item_id: pi.itemId, quantity: pi.quantity, unit_price: unitPrice }
       })
     )
@@ -1289,9 +1309,26 @@ export async function placeOrder(payload: {
   if (fulfillmentType === 'pickup' && pickupCode && customerEmail && resend) {
     const itemsForEmail = payload.items.map(pi => {
       const dbItem = dbItems.find(i => i.id === pi.itemId)!
-      const unitPrice = isHH && dbItem.happy_hour_price != null
-        ? Number(dbItem.happy_hour_price)
-        : Number(dbItem.price)
+      
+      // Si une taille est spécifiée, chercher son prix dans sizes
+      let unitPrice: number
+      if (pi.sizeLabel && dbItem.sizes && Array.isArray(dbItem.sizes)) {
+        const selectedSize = dbItem.sizes.find((s: any) => s.label === pi.sizeLabel)
+        if (selectedSize) {
+          unitPrice = isHH && selectedSize.happy_hour_price != null
+            ? Number(selectedSize.happy_hour_price)
+            : Number(selectedSize.price)
+        } else {
+          unitPrice = isHH && dbItem.happy_hour_price != null
+            ? Number(dbItem.happy_hour_price)
+            : Number(dbItem.price)
+        }
+      } else {
+        unitPrice = isHH && dbItem.happy_hour_price != null
+          ? Number(dbItem.happy_hour_price)
+          : Number(dbItem.price)
+      }
+      
       return { name: dbItem.name ?? '', quantity: pi.quantity, unit_price: unitPrice }
     })
     const total = itemsForEmail.reduce((s, i) => s + i.unit_price * i.quantity, 0)

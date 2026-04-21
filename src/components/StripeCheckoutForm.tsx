@@ -13,7 +13,7 @@ function fmt(p: number): string {
 type Props = {
   restaurantId: string
   tableId: string | null
-  items: Array<{ itemId: string; quantity: number }>
+  items: Array<{ itemId: string; quantity: number; sizeLabel?: string }>
   note: string
   totalPrice: number
   customerEmail?: string
