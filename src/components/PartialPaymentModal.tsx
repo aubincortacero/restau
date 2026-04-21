@@ -131,9 +131,9 @@ export function PartialPaymentModal({
   const [isLoadingPayment, setIsLoadingPayment] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
 
-  // Récupérer tous les items non entièrement payés
+  // Récupérer tous les items non entièrement payés (et avec un prix > 0)
   const availableItems: OrderItemWithPayment[] = session.orders.flatMap((order) =>
-    order.order_items.filter((item) => item.remaining_quantity > 0)
+    order.order_items.filter((item) => item.remaining_quantity > 0 && item.unit_price > 0)
   )
 
   // Calculer le total
@@ -200,7 +200,9 @@ export function PartialPaymentModal({
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: 'Erreur inconnue' }))
       console.error('[PartialPaymentModal] Payment intent error:', errorData)
-      alert(`Erreur lors de la création du paiement: ${errorData.error || 'Erreur inconnue'}`)
+      const errorMessage = errorData.error || 'Erreur inconnue'
+      const errorDetails = errorData.details ? `\n\nDétails: ${errorData.details}` : ''
+      alert(`Erreur lors de la création du paiement: ${errorMessage}${errorDetails}`)
       setIsLoadingPayment(false)
       return
     }

@@ -162,9 +162,14 @@ export async function POST(req: NextRequest) {
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
     return NextResponse.json({ clientSecret: paymentIntent.client_secret })
-  } catch (err) {
+  } catch (err: any) {
     console.error('[create-payment-intent] Error:', err)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    console.error('[create-payment-intent] Error message:', err.message)
+    console.error('[create-payment-intent] Error stack:', err.stack)
+    return NextResponse.json({ 
+      error: err.message || 'Erreur serveur',
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    }, { status: 500 })
   }
 }
 
