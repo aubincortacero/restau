@@ -91,6 +91,7 @@ export default function MenuClientLayout({
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(categories[0]?.id ?? null)
   const [showAddCategory, setShowAddCategory] = useState(false)
+  const [showCategorySelector, setShowCategorySelector] = useState(false)
 
   const selected = categories.find((c) => c.id === selectedId) ?? null
   const catType = (selected?.category_type ?? 'standard') as CategoryTypeId
@@ -110,9 +111,99 @@ export default function MenuClientLayout({
         </div>
       </div>
 
+      {/* Sélecteur de catégorie mobile */}
+      <div className="md:hidden mb-6">
+        <button
+          onClick={() => setShowCategorySelector(!showCategorySelector)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left"
+        >
+          {selected ? (
+            <div className="flex items-center gap-2.5">
+              <span className="text-base leading-none">{typeMeta.emoji}</span>
+              <span className="text-sm font-medium truncate">{selected.name}</span>
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${typeBadgeClass}`}>
+                {typeMeta.label}
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm text-zinc-400">Sélectionnez une catégorie</span>
+          )}
+          <svg
+            className={`w-5 h-5 text-zinc-400 transition-transform ${showCategorySelector ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+
+        {/* Dropdown des catégories */}
+        {showCategorySelector && (
+          <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-80 overflow-y-auto">
+            {categories.map((cat) => {
+              const ct = cat.category_type as CategoryTypeId
+              const meta = CATEGORY_TYPES.find((t) => t.id === ct) ?? CATEGORY_TYPES[0]
+              const isActive = cat.id === selectedId
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setSelectedId(cat.id)
+                    setShowCategorySelector(false)
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
+                    isActive
+                      ? 'bg-white/8 text-white font-medium'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                >
+                  <span className="text-base leading-none shrink-0">{meta.emoji}</span>
+                  <span className="truncate flex-1">{cat.name}</span>
+                  <span className="shrink-0 text-[10px] text-zinc-500 tabular-nums">
+                    {cat.items?.length ?? 0}
+                  </span>
+                </button>
+              )
+            })}
+
+            {/* Ajouter une catégorie dans le dropdown */}
+            <button
+              onClick={() => {
+                setShowAddCategory(true)
+                setShowCategorySelector(false)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50 transition-colors border border-dashed border-zinc-800 hover:border-zinc-700 mt-2"
+            >
+              <IconPlus className="w-3.5 h-3.5 shrink-0" />
+              Nouvelle catégorie
+            </button>
+          </div>
+        )}
+
+        {/* Formulaire d'ajout de catégorie mobile */}
+        {showAddCategory && (
+          <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-medium text-zinc-300">Nouvelle catégorie</p>
+              <button
+                onClick={() => setShowAddCategory(false)}
+                className="text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <AddCategoryForm restaurantId={restaurantId} />
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-6 items-start">
-        {/* ── Colonne gauche : liste des catégories ── */}
-        <nav className="w-48 shrink-0" data-page-tutorial="menu-cat-nav">
+        {/* ── Colonne gauche : liste des catégories (Desktop uniquement) ── */}
+        <nav className="hidden md:block w-48 shrink-0" data-page-tutorial="menu-cat-nav">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 px-3 mb-2">
             Catégories
           </p>

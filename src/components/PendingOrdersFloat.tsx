@@ -43,7 +43,7 @@ export default function PendingOrdersFloat({ restaurantId }: { restaurantId: str
   return (
     <button
       onClick={() => router.push('/dashboard/orders')}
-      className="fixed bottom-6 right-6 z-50 group flex items-center gap-3 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-2xl shadow-orange-900/40 transition-all hover:scale-105 active:scale-95"
+      className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 group flex items-center gap-3 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-2xl shadow-orange-900/40 transition-all hover:scale-105 active:scale-95"
     >
       {/* Icône cloche */}
       <div className="relative shrink-0">

@@ -1,14 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut, markTutorialSeen } from '@/app/actions/auth'
-import { IconLogo } from '@/components/icons'
 import { MobileNav } from '@/components/NavLinks'
 import DashboardSidebar from '@/components/DashboardSidebar'
-import UserMenu from '@/components/UserMenu'
+import DashboardMobileHeader from '@/components/DashboardMobileHeader'
 import { getRestaurantsWithActive, ACTIVE_RESTAURANT_COOKIE } from '@/lib/active-restaurant'
 import { setActiveRestaurant, deleteRestaurant } from '@/app/actions/restaurant'
-import OrderNotificationBell from '@/components/OrderNotificationBell'
 import PendingOrdersFloat from '@/components/PendingOrdersFloat'
 import PendingOrdersSidebar from '@/components/PendingOrdersSidebar'
 import type { ChecklistItem } from '@/components/PendingOrdersSidebar'
@@ -178,36 +175,21 @@ export default async function DashboardLayout({
         {/* Colonne principale */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header mobile uniquement */}
-          <header className="md:hidden border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10 shrink-0">
-            <div className="px-4 h-14 flex items-center justify-between">
-              <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-                <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
-                  <IconLogo className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-semibold text-sm">Qomand</span>
-              </Link>
-              <div className="flex items-center gap-3">
-                {pills?.happyHour && (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">
-                    🍹
-                  </span>
-                )}
-                {restaurant && <OrderNotificationBell restaurantId={restaurant.id} />}
-                <UserMenu
-                  displayName={displayName}
-                  email={email}
-                  avatarUrl={avatarUrl}
-                  signOutAction={signOut}
-                  restaurants={restaurants}
-                  activeRestaurantId={activeRestaurantId}
-                  setActiveAction={setActiveRestaurant}
-                  deleteAction={deleteRestaurant}
-                  subStatus={subStatus}
-                  trialEndsAt={trialEndsAt?.toISOString() ?? null}
-                />
-              </div>
-            </div>
-          </header>
+          <DashboardMobileHeader
+            logoUrl={restaurant?.logo_url ?? null}
+            restaurantId={restaurant?.id ?? null}
+            happyHour={pills?.happyHour ?? false}
+            displayName={displayName}
+            email={email}
+            avatarUrl={avatarUrl}
+            signOutAction={signOut}
+            restaurants={restaurants}
+            activeRestaurantId={activeRestaurantId}
+            setActiveAction={setActiveRestaurant}
+            deleteAction={deleteRestaurant}
+            subStatus={subStatus}
+            trialEndsAt={trialEndsAt?.toISOString() ?? null}
+          />
 
           {/* Bandeau d'urgence */}
           {restaurant && (

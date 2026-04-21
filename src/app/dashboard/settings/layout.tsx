@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SettingsNavLink from '@/components/SettingsNavLink'
+import SettingsMobileNav from '@/components/SettingsMobileNav'
 import Link from 'next/link'
 
 const SETTINGS_NAV = [
@@ -27,8 +28,11 @@ export default async function SettingsLayout({
         <p className="text-sm text-zinc-400 mt-0.5">Gérez votre profil et votre restaurant</p>
       </div>
 
+      {/* Navigation mobile */}
+      <SettingsMobileNav />
+
       <div className="flex gap-8 items-start">
-        {/* Sidebar */}
+        {/* Sidebar desktop */}
         <nav className="w-48 shrink-0 hidden md:block">
           <ul className="space-y-0.5">
             {SETTINGS_NAV.map((item) => (
