@@ -1096,7 +1096,13 @@ export async function placeOrder(payload: {
   fulfillmentType?: 'table' | 'pickup'
   customerEmail?: string
   pickupCode?: string
-}): Promise<{ success: true; orderId: string; pickupCode?: string } | { success: false; error: string }> {
+}): Promise<{ success: true; orderId: string; pickupCode?: string; debug?: any } | { success: false; error: string; debug?: any }> {
+  const debugInfo: any = {
+    receivedPaymentMethod: payload.paymentMethod,
+    receivedFulfillmentType: payload.fulfillmentType,
+    receivedTableId: payload.tableId,
+  }
+  
   console.log('[placeOrder] 🚀 START - Received payload:', {
     paymentMethod: payload.paymentMethod,
     fulfillmentType: payload.fulfillmentType,
@@ -1165,6 +1171,12 @@ export async function placeOrder(payload: {
 
   // Gestion des sessions de table : UNIQUEMENT si paymentMethod === 'tab'
   let sessionId: string | null = null
+  debugInfo.fulfillmentType = fulfillmentType
+  debugInfo.conditionPaymentMethod = payload.paymentMethod === 'tab'
+  debugInfo.conditionFulfillmentType = fulfillmentType === 'table'
+  debugInfo.conditionTableId = !!payload.tableId
+  debugInfo.allConditionsMet = payload.paymentMethod === 'tab' && fulfillmentType === 'table' && payload.tableId
+  
   console.log('[placeOrder] 🔍 Checking session conditions:', {
     'payload.paymentMethod': payload.paymentMethod,
     'payload.paymentMethod === "tab"': payload.paymentMethod === 'tab',
@@ -1175,6 +1187,7 @@ export async function placeOrder(payload: {
   })
   
   if (payload.paymentMethod === 'tab' && fulfillmentType === 'table' && payload.tableId) {
+    debugInfo.sessionCreationAttempted = true
     console.log('[placeOrder] ✅ Creating/finding session for tab payment', {
       restaurantId: payload.restaurantId,
       tableId: payload.tableId,
@@ -1193,7 +1206,10 @@ export async function placeOrder(payload: {
     if (existingSession) {
       console.log('[placeOrder] Found existing session:', existingSession.id)
       sessionId = existingSession.id
+      debugInfo.sessionFound = true
+      debugInfo.sessionId = existingSession.id
     } else {
+      debugInfo.sessionFound = false
       // Créer une nouvelle session
       const { data: newSession, error: sessionError } = await supabase
         .from('table_sessions')
@@ -1211,11 +1227,16 @@ export async function placeOrder(payload: {
       if (newSession) {
         console.log('[placeOrder] Created new session:', newSession.id)
         sessionId = newSession.id
+        debugInfo.sessionCreated = true
+        debugInfo.sessionId = newSession.id
       } else {
         console.error('[placeOrder] Failed to create session:', sessionError)
+        debugInfo.sessionCreated = false
+        debugInfo.sessionError = sessionError
       }
     }
   } else {
+    debugInfo.sessionCreationAttempted = false
     console.log('[placeOrder] Not creating session', {
       paymentMethod: payload.paymentMethod,
       fulfillmentType,
@@ -1295,8 +1316,9 @@ export async function placeOrder(payload: {
     }).catch(() => { /* email non bloquant */ })
   }
 
+  debugInfo.finalSessionId = sessionId
   revalidatePath('/dashboard/orders')
-  return { success: true, orderId: order.id, pickupCode: pickupCode ?? undefined }
+  return { success: true, orderId: order.id, pickupCode: pickupCode ?? undefined, debug: debugInfo }
 }
 
 export async function markOrderReady(formData: FormData) {

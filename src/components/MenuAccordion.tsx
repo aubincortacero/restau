@@ -189,6 +189,9 @@ export default function MenuAccordion({
     startTransition(async () => {
       const result = await placeOrder(payload)
       console.log('[MenuAccordion] placeOrder result:', result)
+      if (result.success && result.debug) {
+        console.log('🔍 DEBUG SESSION CREATION:', result.debug)
+      }
       if (result.success) {
         setSuccessPickupCode(result.pickupCode ?? null)
         setSuccessWasCash(effectivePaymentMethod === 'cash')
