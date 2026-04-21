@@ -253,9 +253,6 @@ export function PartialPaymentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
         {/* En-tête */}
         <div className="px-5 pt-4 pb-3 border-b border-zinc-800 shrink-0">
           <div className="flex justify-between items-start mb-2">
