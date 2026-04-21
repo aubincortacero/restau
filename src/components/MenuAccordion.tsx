@@ -98,6 +98,8 @@ export default function MenuAccordion({
   const [pickupCode, setPickupCode] = useState<string | null>(null)
   const [successPickupCode, setSuccessPickupCode] = useState<string | null>(null)
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'online' | 'tab'>('online')
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchOffset, setTouchOffset] = useState(0)
 
   function addItem(item: Item, price: number, sizeLabel?: string) {
     const key = sizeLabel ? `${item.id}:${sizeLabel}` : item.id
@@ -121,6 +123,30 @@ export default function MenuAccordion({
       if (qty <= 1) { const next = { ...prev }; delete next[id]; return next }
       return { ...prev, [id]: { ...prev[id], quantity: qty - 1 } }
     })
+  }
+
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchOffset, setTouchOffset] = useState(0)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientY)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return
+    const currentTouch = e.touches[0].clientY
+    const diff = currentTouch - touchStart
+    if (diff > 0) {
+      setTouchOffset(diff)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (touchOffset > 100) {
+      setCartOpen(false)
+    }
+    setTouchStart(null)
+    setTouchOffset(0)
   }
 
   const cartItems = Object.values(cart)
@@ -591,7 +617,13 @@ export default function MenuAccordion({
       {cartOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCartOpen(false)} />
-          <div className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-stone-800/80">
+          <div 
+            className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-stone-800/80 transition-transform"
+            style={{ transform: `translateY(${touchOffset}px)` }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 bg-stone-700 rounded-full" />
             </div>

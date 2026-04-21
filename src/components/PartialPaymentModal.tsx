@@ -128,6 +128,8 @@ export function PartialPaymentModal({
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [isLoadingPayment, setIsLoadingPayment] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchOffset, setTouchOffset] = useState(0)
 
   // Créer le stripePromise dynamiquement en fonction du compte Connect
   const stripePromise = useMemo(
@@ -171,6 +173,30 @@ export function PartialPaymentModal({
       newMap.set(item.id, item.remaining_quantity)
     })
     setSelectedItems(newMap)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientY)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return
+    const currentTouch = e.touches[0].clientY
+    const diff = currentTouch - touchStart
+    if (diff > 0) {
+      setTouchOffset(diff)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (touchOffset > 100) {
+      onClose()
+      setStep('select')
+      setSelectedItems(new Map())
+      setCustomerEmail('')
+    }
+    setTouchStart(null)
+    setTouchOffset(0)
   }
 
   const handleProceedToPayment = async () => {
@@ -257,21 +283,36 @@ export function PartialPaymentModal({
     }
 
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
-        <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
-          <div className="px-5 pt-4 pb-3 border-b border-zinc-800 shrink-0">
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={handleBackToSelection}
-                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 flex items-center justify-center transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                </svg>
-              </button>
-              <h2 className="text-xl font-bold text-white">Paiement en ligne</h2>
+      <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => {
+          onClose()
+          setStep('select')
+          setSelectedItems(new Map())
+          setCustomerEmail('')
+        }} />
+        <div 
+          className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-zinc-800/80 transition-transform"
+          style={{ transform: `translateY(${touchOffset}px)` }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+          </div>
+          <div className="px-5 pt-2 pb-3 shrink-0 flex items-center gap-3">
+            <button
+              onClick={handleBackToSelection}
+              className="w-8 h-8 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 flex items-center justify-center transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+              </svg>
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-stone-100">Paiement sécurisé</h2>
+              <p className="text-xs text-stone-500 mt-0.5">Propulsé par Stripe</p>
             </div>
-            <p className="text-sm text-zinc-400">Paiement sécurisé par Stripe</p>
           </div>
           <Elements stripe={stripePromise} options={options}>
             <StripePaymentForm 
@@ -296,10 +337,20 @@ export function PartialPaymentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div 
+        className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-zinc-800/80 transition-transform"
+        style={{ transform: `translateY(${touchOffset}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+        </div>
         {/* En-tête */}
-        <div className="px-5 pt-4 pb-3 border-b border-zinc-800 shrink-0">
+        <div className="px-5 pt-2 pb-3 border-b border-zinc-800 shrink-0">
           <div className="flex justify-between items-start mb-2">
             <div>
               <h2 className="text-xl font-bold text-white">Paiement partiel</h2>
