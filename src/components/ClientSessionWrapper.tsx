@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { SessionWithDetails } from '@/types/session'
 import { SessionStatusCard } from './SessionStatusCard'
 import { PartialPaymentModal } from './PartialPaymentModal'
-import { getSessionDetails, getOrCreateTableSession } from '@/app/actions/sessions'
+import { getSessionDetails, getActiveTableSession } from '@/app/actions/sessions'
 
 type ClientSessionWrapperProps = {
   restaurantId: string
@@ -26,13 +26,15 @@ export function ClientSessionWrapper({
 
   const loadSession = async () => {
     setIsLoading(true)
-    // Récupérer ou créer la session
-    const { session: tableSession } = await getOrCreateTableSession(restaurantId, tableId)
+    // Récupérer la session active (sans créer si elle n'existe pas)
+    const { session: tableSession } = await getActiveTableSession(restaurantId, tableId)
     
     if (tableSession) {
       // Charger les détails complets
       const details = await getSessionDetails(tableSession.id)
       setSession(details)
+    } else {
+      setSession(null)
     }
     
     setIsLoading(false)
@@ -42,7 +44,17 @@ export function ClientSessionWrapper({
     loadSession()
     // Recharger toutes les 30 secondes pour avoir les updates en temps réel
     const interval = setInterval(loadSession, 30000)
-    return () => clearInterval(interval)
+    
+    // Écouter l'événement de nouvelle commande pour refresh immédiat
+    const handleOrderPlaced = () => {
+      loadSession()
+    }
+    window.addEventListener('order-placed', handleOrderPlaced)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('order-placed', handleOrderPlaced)
+    }
   }, [restaurantId, tableId])
 
   if (isLoading) {

@@ -9,6 +9,29 @@ import type { TableSession, SessionWithDetails, PartialPayment, SessionBalance, 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
+ * Récupère une session active pour une table (sans créer)
+ */
+export async function getActiveTableSession(
+  restaurantId: string,
+  tableId: string
+): Promise<{ session: TableSession | null; error?: string }> {
+  const supabase = await createClient()
+
+  // Vérifier si une session active existe
+  const { data: existingSession } = await supabase
+    .from('table_sessions')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('table_id', tableId)
+    .is('closed_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return { session: existingSession }
+}
+
+/**
  * Récupère ou crée une session active pour une table
  */
 export async function getOrCreateTableSession(

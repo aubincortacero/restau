@@ -1092,7 +1092,7 @@ export async function placeOrder(payload: {
   tableId: string | null
   items: Array<{ itemId: string; quantity: number }>
   note: string
-  paymentMethod?: 'cash' | 'online'
+  paymentMethod?: 'cash' | 'online' | 'tab'
   fulfillmentType?: 'table' | 'pickup'
   customerEmail?: string
   pickupCode?: string
@@ -1156,9 +1156,9 @@ export async function placeOrder(payload: {
     ? (payload.pickupCode?.trim() || generatePickupCode())
     : null
 
-  // Gestion des sessions de table : si c'est une commande sur table, chercher ou créer une session
+  // Gestion des sessions de table : UNIQUEMENT si paymentMethod === 'tab'
   let sessionId: string | null = null
-  if (fulfillmentType === 'table' && payload.tableId) {
+  if (payload.paymentMethod === 'tab' && fulfillmentType === 'table' && payload.tableId) {
     // Chercher une session active pour cette table
     const { data: existingSession } = await supabase
       .from('table_sessions')
@@ -1198,6 +1198,17 @@ export async function placeOrder(payload: {
     .insert({
       restaurant_id: payload.restaurantId,
       table_id: payload.tableId ?? null,
+      session_id: sessionId,
+      status: 'pending',
+      payment_method: payload.paymentMethod === 'tab' ? 'cash' : (payload.paymentMethod ?? 'cash'),
+      payment_status: payload.paymentMethod === 'tab' ? 'unpaid' : 'unpaid',
+      customer_note: payload.note.trim() || null,
+      fulfillment_type: fulfillmentType,
+      pickup_code: pickupCode,
+      customer_email: customerEmail,
+    })
+    .select('id')
+    .single()
       session_id: sessionId,
       status: 'pending',
       payment_method: payload.paymentMethod ?? 'cash',

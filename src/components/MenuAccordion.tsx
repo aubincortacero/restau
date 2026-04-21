@@ -90,11 +90,12 @@ export default function MenuAccordion({
   const [cartStep, setCartStep] = useState<CartStep>('cart')
   const [orderError, setOrderError] = useState<string | null>(null)
   const [successWasCash, setSuccessWasCash] = useState(false)
+  const [successWasTab, setSuccessWasTab] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
   const [fulfillmentType, setFulfillmentType] = useState<'table' | 'pickup'>('table')
   const [pickupCode, setPickupCode] = useState<string | null>(null)
   const [successPickupCode, setSuccessPickupCode] = useState<string | null>(null)
-  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'online'>('online')
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'online' | 'tab'>('online')
 
   function addItem(item: Item, price: number, sizeLabel?: string) {
     const key = sizeLabel ? `${item.id}:${sizeLabel}` : item.id
@@ -138,7 +139,10 @@ export default function MenuAccordion({
     const hasTable = fulfillmentModes.includes('table')
     const hasPickup = fulfillmentModes.includes('pickup')
 
-    if (hasOnline && hasCash) {
+    // Si on est sur une table et que les deux modes sont dispo, proposer les 3 modes de paiement
+    if (hasTable && tableId) {
+      setCartStep('payment-choice')
+    } else if (hasOnline && hasCash) {
       setCartStep('payment-choice')
     } else if (hasTable && hasPickup) {
       // Un seul mode de paiement disponible : le mémoriser avant le choix de service
@@ -153,11 +157,11 @@ export default function MenuAccordion({
     } else if (hasOnline) {
       setCartStep('email')
     } else {
-      placeCashOrder()
+      placeNonOnlineOrder()
     }
   }
 
-  function placeCashOrder() {
+  function placeNonOnlineOrder() {
     setOrderError(null)
     startTransition(async () => {
       const result = await placeOrder({
@@ -165,20 +169,26 @@ export default function MenuAccordion({
         tableId,
         items: cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity })),
         note,
-        paymentMethod: 'cash',
+        paymentMethod: pendingPaymentMethod === 'tab' ? 'tab' : 'cash',
         fulfillmentType,
         customerEmail: customerEmail || undefined,
         pickupCode: pickupCode || undefined,
       })
       if (result.success) {
         setSuccessPickupCode(result.pickupCode ?? null)
-        setSuccessWasCash(true)
+        setSuccessWasCash(pendingPaymentMethod === 'cash')
+        setSuccessWasTab(pendingPaymentMethod === 'tab')
         setCartStep('success')
         setCart({})
         setNote('')
         setCustomerEmail('')
         setPickupCode(null)
         try { localStorage.removeItem(cartKey) } catch { /* ignore */ }
+        
+        // Notifier ClientSessionWrapper qu'une commande a été placée (seulement en mode ardoise)
+        if (tableId && pendingPaymentMethod === 'tab') {
+          window.dispatchEvent(new CustomEvent('order-placed'))
+        }
       } else {
         setOrderError(result.error)
       }
@@ -205,8 +215,8 @@ export default function MenuAccordion({
       `}</style>
       
       {/* Tabs horizontales scrollables */}
-      <div className="sticky top-[60px] z-30 bg-[#0a0908] border-b border-stone-900 -mx-4 px-4">
-        <div className="flex gap-2 py-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+      <div className="bg-[#0a0908] border-b border-stone-900 overflow-x-hidden">
+        <div className="flex gap-2 py-3 px-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
           {categories.map((cat) => {
             const isActive = activeTab === cat.id
             const catType = CATEGORY_TYPES.find(t => t.id === cat.category_type)
@@ -568,8 +578,16 @@ export default function MenuAccordion({
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-stone-100 mb-2">Commande envoyée !</h3>
+                <h3 className="text-xl font-bold text-stone-100 mb-2">
+                  {successWasTab ? 'Ajoutée à votre ardoise !' : 'Commande envoyée !'}
+                </h3>
                 {tableLabel && !successPickupCode && <p className="text-xs text-stone-500 mb-2 font-medium">{tableLabel}</p>}
+                {successWasTab && !successPickupCode && (
+                  <div className="flex items-center gap-2 bg-[var(--brand)]/10 border border-[var(--brand)]/30 rounded-2xl px-4 py-3 mb-4 text-sm text-stone-300">
+                    <span className="text-xl shrink-0">📋</span>
+                    Votre commande a été ajoutée à l&apos;ardoise. Vous pouvez commander à nouveau et régler le tout à la fin.
+                  </div>
+                )}
                 {successWasCash && !successPickupCode && (
                   <div className="flex items-center gap-2 bg-stone-800/60 border border-stone-700/50 rounded-2xl px-4 py-3 mb-4 text-sm text-stone-300">
                     <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
@@ -592,7 +610,7 @@ export default function MenuAccordion({
                     Votre commande a bien été transmise. Le service va s&apos;en occuper dans quelques instants.
                   </p>
                 )}
-                <button onClick={() => { setCartOpen(false); setSuccessPickupCode(null); setSuccessWasCash(false) }} className="bg-stone-800 hover:bg-stone-700 text-stone-100 font-semibold px-8 py-3 rounded-2xl transition-colors">
+                <button onClick={() => { setCartOpen(false); setSuccessPickupCode(null); setSuccessWasCash(false); setSuccessWasTab(false) }} className="bg-stone-800 hover:bg-stone-700 text-stone-100 font-semibold px-8 py-3 rounded-2xl transition-colors">
                   Fermer
                 </button>
               </div>
@@ -609,54 +627,80 @@ export default function MenuAccordion({
                   </div>
                 </div>
                 <div className="flex-1 px-5 pb-4 flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      setPendingPaymentMethod('online')
-                      const hasPickup = fulfillmentModes.includes('pickup')
-                      const hasTable = fulfillmentModes.includes('table')
-                      if (hasPickup && hasTable) setCartStep('fulfillment-choice')
-                      else setCartStep('email')
-                    }}
-                    className="menu-choice-btn w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 bg-stone-900 transition-all text-left active:scale-[0.99]"
-                  >
-                    <div className="menu-choice-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-stone-100">Payer maintenant</p>
-                      <p className="text-xs text-stone-500 mt-0.5">Par carte bancaire — paiement sécurisé</p>
-                    </div>
-                    <span className="text-stone-100 font-bold text-base shrink-0">{fmt(totalPrice)}</span>
-                  </button>
+                  {acceptedPaymentMethods.includes('online') && (
+                    <button
+                      onClick={() => {
+                        setPendingPaymentMethod('online')
+                        const hasPickup = fulfillmentModes.includes('pickup')
+                        const hasTable = fulfillmentModes.includes('table')
+                        if (hasPickup && hasTable) setCartStep('fulfillment-choice')
+                        else setCartStep('email')
+                      }}
+                      className="menu-choice-btn w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 bg-stone-900 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="menu-choice-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-stone-100">Payer maintenant</p>
+                        <p className="text-xs text-stone-500 mt-0.5">Par carte bancaire — paiement sécurisé</p>
+                      </div>
+                      <span className="text-stone-100 font-bold text-base shrink-0">{fmt(totalPrice)}</span>
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => {
-                      setPendingPaymentMethod('cash')
-                      const hasPickup = fulfillmentModes.includes('pickup')
-                      const hasTable = fulfillmentModes.includes('table')
-                      if (hasPickup && hasTable) {
-                        setCartStep('fulfillment-choice')
-                      } else if (hasPickup) {
-                        setFulfillmentType('pickup')
-                        const code = genPickupCode()
-                        setPickupCode(code)
-                        setCartStep('email')
-                      } else {
-                        placeCashOrder()
-                      }
-                    }}
-                    disabled={isPending}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-stone-600 bg-stone-900 hover:bg-stone-800/60 transition-all text-left active:scale-[0.99] disabled:opacity-60"
-                  >
-                    <div className="w-11 h-11 rounded-2xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-stone-100">Payer à la caisse</p>
-                      <p className="text-xs text-stone-500 mt-0.5">Espèces ou carte à la fin du repas</p>
-                    </div>
-                    {isPending && <div className="w-4 h-4 border-2 border-stone-500 border-t-transparent rounded-full animate-spin shrink-0" />}
-                  </button>
+                  {acceptedPaymentMethods.includes('cash') && (
+                    <button
+                      onClick={() => {
+                        setPendingPaymentMethod('cash')
+                        const hasPickup = fulfillmentModes.includes('pickup')
+                        const hasTable = fulfillmentModes.includes('table')
+                        if (hasPickup && hasTable) {
+                          setCartStep('fulfillment-choice')
+                        } else if (hasPickup) {
+                          setFulfillmentType('pickup')
+                          const code = genPickupCode()
+                          setPickupCode(code)
+                          setCartStep('email')
+                        } else {
+                          placeNonOnlineOrder()
+                        }
+                      }}
+                      disabled={isPending}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 hover:border-stone-600 bg-stone-900 hover:bg-stone-800/60 transition-all text-left active:scale-[0.99] disabled:opacity-60"
+                    >
+                      <div className="w-11 h-11 rounded-2xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-stone-100">Payer à la caisse</p>
+                        <p className="text-xs text-stone-500 mt-0.5">Commande unique, règlement immédiat</p>
+                      </div>
+                      {isPending && <div className="w-4 h-4 border-2 border-stone-500 border-t-transparent rounded-full animate-spin shrink-0" />}
+                    </button>
+                  )}
+
+                  {tableId && (
+                    <button
+                      onClick={() => {
+                        setPendingPaymentMethod('tab')
+                        setFulfillmentType('table')
+                        placeNonOnlineOrder()
+                      }}
+                      disabled={isPending}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-[var(--brand)]/40 bg-[var(--brand)]/10 hover:bg-[var(--brand)]/20 transition-all text-left active:scale-[0.99] disabled:opacity-60"
+                    >
+                      <div className="w-11 h-11 rounded-2xl bg-[var(--brand)]/20 border border-[var(--brand)]/40 flex items-center justify-center shrink-0 text-2xl">
+                        📋
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-stone-100">Ouvrir une ardoise</p>
+                        <p className="text-xs text-stone-400 mt-0.5">Commandez plusieurs fois, payez à la fin</p>
+                      </div>
+                      {isPending && <div className="w-4 h-4 border-2 border-stone-500 border-t-transparent rounded-full animate-spin shrink-0" />}
+                    </button>
+                  )}
+                  
                   {orderError && <p className="text-xs text-red-400 text-center">{orderError}</p>}
                 </div>
               </>
@@ -681,7 +725,7 @@ export default function MenuAccordion({
                       onClick={() => {
                         setFulfillmentType('table')
                         setPickupCode(null)
-                        if (pendingPaymentMethod === 'cash') placeCashOrder()
+                        if (pendingPaymentMethod === 'cash') placeNonOnlineOrder()
                         else setCartStep('email')
                       }}
                       className="menu-choice-btn w-full flex items-center gap-4 p-4 rounded-2xl border border-stone-700 bg-stone-900 transition-all text-left active:scale-[0.99]"
@@ -759,7 +803,7 @@ export default function MenuAccordion({
                   <button
                     onClick={() => {
                       if (fulfillmentType === 'pickup' && !customerEmail.includes('@')) return
-                      if (pendingPaymentMethod === 'cash') placeCashOrder()
+                      if (pendingPaymentMethod === 'cash') placeNonOnlineOrder()
                       else setCartStep('stripe-form')
                     }}
                     className="w-full menu-btn-primary text-white font-bold py-4 transition-colors text-base"
@@ -803,7 +847,18 @@ export default function MenuAccordion({
                   fulfillmentType={fulfillmentType}
                   pickupCode={pickupCode || undefined}
                   brandColor={brandColor}
-                  onSuccess={() => { setCartStep('success'); setCart({}); setNote(''); setCustomerEmail(''); setPickupCode(null); try { localStorage.removeItem(cartKey) } catch { /* ignore */ } }}
+                  onSuccess={() => { 
+                    setCartStep('success'); 
+                    setCart({}); 
+                    setNote(''); 
+                    setCustomerEmail(''); 
+                    setPickupCode(null); 
+                    try { localStorage.removeItem(cartKey) } catch { /* ignore */ }
+                    // Notifier ClientSessionWrapper qu'une commande a été placée
+                    if (tableId) {
+                      window.dispatchEvent(new CustomEvent('order-placed'))
+                    }
+                  }}
                   onBack={() => setCartStep('email')}
                 />
               </>
