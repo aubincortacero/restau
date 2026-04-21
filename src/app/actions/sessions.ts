@@ -90,7 +90,7 @@ export async function getOrCreateTableSession(
  * Récupère les détails complets d'une session (avec commandes, paiements, balance)
  */
 export async function getSessionDetails(sessionId: string): Promise<SessionWithDetails | null> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   console.log('[getSessionDetails] Fetching session:', sessionId)
 
