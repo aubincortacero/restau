@@ -95,7 +95,6 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentT
             layout: {
               type: 'accordion',
               defaultCollapsed: false,
-              radios: false,
               spacedAccordionItems: true
             },
             wallets: {
