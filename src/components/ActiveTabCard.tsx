@@ -200,30 +200,6 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
               )
             })}
 
-            {/* Balance */}
-            <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border-2 border-purple-400/40 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-purple-300">Total</span>
-                <span className="text-xl font-black text-purple-100">{fmt(balance.total_amount)}</span>
-              </div>
-              {balance.paid_amount > 0 && (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-purple-400">Déjà payé</span>
-                    <span className="text-sm font-semibold text-emerald-400">
-                      - {fmt(balance.paid_amount)}
-                    </span>
-                  </div>
-                  <div className="border-t border-purple-400/30 pt-2 flex items-center justify-between">
-                    <span className="text-sm font-bold text-purple-200">Reste à payer</span>
-                    <span className="text-lg font-black text-purple-100">
-                      {fmt(balance.remaining_amount)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-
             {/* Actions */}
             <div className="pt-2 flex gap-2">
               <button
