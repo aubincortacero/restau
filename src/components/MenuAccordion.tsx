@@ -7,7 +7,14 @@ import { placeOrder } from '@/app/actions/restaurant'
 import StripeCheckoutForm from '@/components/StripeCheckoutForm'
 
 type Item = PublicCategory['items'][number]
-type CartItem = { id: string; name: string; price: number; quantity: number; sizeLabel?: string }
+type CartItem = { 
+  id: string
+  itemId: string // UUID original de l'item
+  name: string
+  price: number
+  quantity: number
+  sizeLabel?: string
+}
 type CartStep = 'cart' | 'payment-choice' | 'fulfillment-choice' | 'email' | 'stripe-form' | 'success'
 
 const CATEGORY_CIRCLE: Record<string, string> = {
@@ -48,13 +55,30 @@ export default function MenuAccordion({
   fulfillmentModes: string[]
   brandColor?: string
 }) {
-  const [openIds, setOpenIds] = useState<string[]>(
-    categories.length > 0 ? [categories[0].id] : []
+  const [activeTab, setActiveTab] = useState<string>(
+    categories.length > 0 ? categories[0].id : ''
   )
   const cartKey = `cart_${restaurantId}`
   const [cart, setCart] = useState<Record<string, CartItem>>(() => {
     if (typeof window === 'undefined') return {}
-    try { return JSON.parse(localStorage.getItem(cartKey) ?? '{}') } catch { return {} }
+    try {
+      const stored = JSON.parse(localStorage.getItem(cartKey) ?? '{}')
+      // Migration : ajouter itemId si manquant (extraire de la clé)
+      const migrated: Record<string, CartItem> = {}
+      for (const [key, item] of Object.entries(stored)) {
+        const cartItem = item as any
+        if (!cartItem.itemId) {
+          // Extraire l'UUID de la clé (avant le ":")
+          const itemId = key.includes(':') ? key.split(':')[0] : key
+          migrated[key] = { ...cartItem, itemId }
+        } else {
+          migrated[key] = cartItem
+        }
+      }
+      return migrated
+    } catch {
+      return {}
+    }
   })
 
   useEffect(() => {
@@ -72,18 +96,19 @@ export default function MenuAccordion({
   const [successPickupCode, setSuccessPickupCode] = useState<string | null>(null)
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'online'>('online')
 
-  function toggleCat(id: string) {
-    setOpenIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    )
-  }
-
   function addItem(item: Item, price: number, sizeLabel?: string) {
     const key = sizeLabel ? `${item.id}:${sizeLabel}` : item.id
     const name = sizeLabel ? `${item.name} \u2014 ${sizeLabel}` : item.name
     setCart(prev => ({
       ...prev,
-      [key]: { id: key, name, price, quantity: (prev[key]?.quantity ?? 0) + 1, sizeLabel },
+      [key]: { 
+        id: key, 
+        itemId: item.id, // UUID original de l'item
+        name, 
+        price, 
+        quantity: (prev[key]?.quantity ?? 0) + 1, 
+        sizeLabel 
+      },
     }))
   }
 
@@ -138,7 +163,7 @@ export default function MenuAccordion({
       const result = await placeOrder({
         restaurantId,
         tableId,
-        items: cartItems.map(i => ({ itemId: i.id, quantity: i.quantity })),
+        items: cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity })),
         note,
         paymentMethod: 'cash',
         fulfillmentType,
@@ -175,72 +200,215 @@ export default function MenuAccordion({
         .menu-pickup-text { color: var(--brand); }
         .menu-item-plus { background-color: var(--brand); border-radius: 10px; }
         .menu-item-plus:hover { filter: brightness(1.1); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-      <div className="px-3 pt-2 pb-32">
-        {categories.map(cat => {
-          const isOpen = openIds.includes(cat.id)
-          const catType = CATEGORY_TYPES.find(t => t.id === cat.category_type)
-          const emoji = catType?.emoji ?? '🍽️'
-          const circleClass = CATEGORY_CIRCLE[cat.category_type] ?? CATEGORY_CIRCLE.standard
-          const catCartQty = cat.items.reduce((s, i) => s + (cart[i.id]?.quantity ?? 0), 0)
+      
+      {/* Tabs horizontales scrollables */}
+      <div className="sticky top-0 z-30 bg-[#0a0908] border-b border-stone-900 -mx-4 px-4">
+        <div className="flex gap-2 py-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+          {categories.map((cat) => {
+            const isActive = activeTab === cat.id
+            const catType = CATEGORY_TYPES.find(t => t.id === cat.category_type)
+            const emoji = catType?.emoji ?? '🍽️'
+            const catCartQty = cat.items.reduce((s, i) => {
+              const totalQty = cart[i.id]?.quantity ?? 0
+              const sizeQty = i.sizes?.reduce((sum, size) => 
+                sum + (cart[`${i.id}:${size.label}`]?.quantity ?? 0), 0) ?? 0
+              return s + totalQty + sizeQty
+            }, 0)
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveTab(cat.id)}
+                className={`snap-start shrink-0 relative px-5 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                  isActive 
+                    ? 'text-white shadow-lg' 
+                    : 'bg-stone-900 text-stone-400 hover:bg-stone-800 hover:text-stone-300'
+                }`}
+                style={isActive ? { backgroundColor: brandColor } : undefined}
+              >
+                <span className="flex items-center gap-2">
+                  <span>{emoji}</span>
+                  <span>{cat.name}</span>
+                </span>
+                {catCartQty > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {catCartQty}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Grille de produits */}
+      <div className="px-4 pt-4 pb-32">
+        {categories.map((cat) => {
+          if (cat.id !== activeTab) return null
 
           return (
-            <div key={cat.id} className="rounded-2xl overflow-hidden mb-2.5 bg-stone-900">
-              {/* En-tête catégorie */}
-              <button
-                onClick={() => toggleCat(cat.id)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-stone-800/80 transition-colors"
-              >
-                <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 relative ${circleClass}`}>
-                  {emoji}
-                  {catCartQty > 0 && (
-                    <span className="menu-cart-badge absolute -top-1 -right-1 w-5 h-5 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                      {catCartQty}
-                    </span>
-                  )}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-bold text-stone-100 text-[15px] leading-tight">{cat.name}</span>
-                  <span className="text-xs text-stone-500 mt-0.5 block">
-                    {cat.items.length} plat{cat.items.length > 1 ? 's' : ''}
-                  </span>
-                </span>
-                <svg
-                  className={`w-4 h-4 text-stone-500 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
-                </svg>
-              </button>
+            <div key={cat.id} className="grid grid-cols-1 gap-4">
+              {cat.items.map((item) => {
+                const effectivePrice = hhActive && item.happy_hour_price != null ? item.happy_hour_price : item.price
+                const qty = cart[item.id]?.quantity ?? 0
+                const hasSizes = item.sizes && item.sizes.length > 0
 
-              {/* Plats — fond plus sombre pour montrer qu'ils sont dans la catégorie */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="bg-[#111110] divide-y divide-stone-800/50 border-t border-stone-800/60">
-                  {cat.items.map((item, idx) => {
-                    const effectivePrice = hhActive && item.happy_hour_price != null ? item.happy_hour_price : item.price
-                    const qtyBySize = item.sizes
-                      ? item.sizes.reduce<Record<string, number>>((acc, s) => {
-                          acc[s.label] = cart[`${item.id}:${s.label}`]?.quantity ?? 0
-                          return acc
-                        }, {})
-                      : undefined
-                    return (
-                      <ItemRow
-                        key={item.id}
-                        item={item}
-                        hhActive={hhActive}
-                        last={idx === cat.items.length - 1}
-                        qty={cart[item.id]?.quantity ?? 0}
-                        qtyBySize={qtyBySize}
-                        onAdd={() => addItem(item, effectivePrice)}
-                        onAddSize={(label, price) => addItem(item, price, label)}
-                        onRemove={() => removeItem(item.id)}
-                        onRemoveSize={(label) => removeItem(`${item.id}:${label}`)}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-stone-900 rounded-2xl overflow-hidden relative"
+                  >
+                    {/* Image */}
+                    {item.image_url ? (
+                      <div className="relative w-full aspect-[16/10] bg-stone-800">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {hhActive && item.happy_hour_price != null && (
+                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <span>🎉</span>
+                            <span>Happy Hour</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="relative w-full aspect-[16/10] bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center">
+                        <span className="text-6xl opacity-20">🍽️</span>
+                        {hhActive && item.happy_hour_price != null && (
+                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <span>🎉</span>
+                            <span>Happy Hour</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Contenu */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-stone-100 text-base leading-tight mb-1">
+                            {item.name}
+                          </h3>
+                          {item.description && (
+                            <p className="text-sm text-stone-400 leading-snug line-clamp-2">
+                              {item.description}
+                            </p>
+                          )}
+                          {/* Badges */}
+                          <div className="flex items-center gap-1.5 mt-2">
+                            {item.is_vegetarian && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-800/50">
+                                🌱 Végétarien
+                              </span>
+                            )}
+                            {item.is_vegan && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-800/50">
+                                🌿 Vegan
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Prix et bouton d'ajout */}
+                      {!hasSizes ? (
+                        <div className="flex items-center justify-between mt-3">
+                          <div>
+                            <span className="text-2xl font-bold text-white">
+                              {fmt(effectivePrice)}
+                            </span>
+                            {hhActive && item.happy_hour_price != null && (
+                              <span className="ml-2 text-sm text-stone-500 line-through">
+                                {fmt(item.price)}
+                              </span>
+                            )}
+                          </div>
+                          {qty > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                className="w-10 h-10 rounded-full bg-stone-800 text-stone-300 hover:bg-stone-700 flex items-center justify-center font-bold text-lg transition-colors"
+                              >
+                                −
+                              </button>
+                              <span className="text-white font-bold text-lg min-w-[2rem] text-center">
+                                {qty}
+                              </span>
+                              <button
+                                onClick={() => addItem(item, effectivePrice)}
+                                className="menu-item-plus w-10 h-10 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-lg transition-all shadow-lg"
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => addItem(item, effectivePrice)}
+                              className="menu-item-plus w-12 h-12 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-2xl transition-all shadow-lg"
+                            >
+                              +
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          {item.sizes.map((size) => {
+                            const sizePrice = hhActive && size.happy_hour_price != null ? size.happy_hour_price : size.price
+                            const sizeQty = cart[`${item.id}:${size.label}`]?.quantity ?? 0
+                            
+                            return (
+                              <div key={size.label} className="flex items-center justify-between p-2 rounded-lg bg-stone-800/50">
+                                <div>
+                                  <span className="text-stone-300 text-sm font-medium">{size.label}</span>
+                                  <span className="ml-3 text-white font-bold">{fmt(sizePrice)}</span>
+                                  {hhActive && size.happy_hour_price != null && (
+                                    <span className="ml-2 text-xs text-stone-500 line-through">
+                                      {fmt(size.price)}
+                                    </span>
+                                  )}
+                                </div>
+                                {sizeQty > 0 ? (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => removeItem(`${item.id}:${size.label}`)}
+                                      className="w-8 h-8 rounded-full bg-stone-700 text-stone-300 hover:bg-stone-600 flex items-center justify-center font-bold transition-colors"
+                                    >
+                                      −
+                                    </button>
+                                    <span className="text-white font-bold min-w-[1.5rem] text-center">
+                                      {sizeQty}
+                                    </span>
+                                    <button
+                                      onClick={() => addItem(item, sizePrice, size.label)}
+                                      className="menu-item-plus w-8 h-8 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold transition-all"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => addItem(item, sizePrice, size.label)}
+                                    className="menu-item-plus w-9 h-9 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-xl transition-all shadow-md"
+                                  >
+                                    +
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )
         })}
@@ -508,7 +676,7 @@ export default function MenuAccordion({
                 <StripeCheckoutForm
                   restaurantId={restaurantId}
                   tableId={tableId}
-                  items={cartItems.map(i => ({ itemId: i.id, quantity: i.quantity }))}
+                  items={cartItems.map(i => ({ itemId: i.itemId, quantity: i.quantity }))}
                   note={note}
                   totalPrice={totalPrice}
                   customerEmail={customerEmail || undefined}
