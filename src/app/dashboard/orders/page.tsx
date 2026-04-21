@@ -88,7 +88,7 @@ export default async function OrdersPage() {
       fulfillment_type, pickup_code, customer_email,
       tables(number, label),
       order_items(
-        quantity, unit_price, note,
+        quantity, unit_price, note, size_label,
         items(name)
       )
     `)
@@ -145,7 +145,7 @@ export default async function OrdersPage() {
           </h2>
           <div className="flex flex-col gap-4">
             {activeSessions.map((session) => (
-              <ActiveTabCard key={session.id} session={session} />
+              <ActiveTabCard key={session.id} session={session} restaurantName={restaurant.name} />
             ))}
           </div>
         </div>
@@ -250,7 +250,7 @@ export default async function OrdersPage() {
                       <div key={i} className={`flex justify-between items-baseline px-3 py-2 text-sm ${i > 0 ? 'border-t border-zinc-800' : ''}`}>
                         <span className={isActive ? 'text-white' : 'text-zinc-300'}>
                           <span className={`font-bold mr-1.5 ${isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
-                          {(oi.items as { name: string } | null)?.name ?? '—'}
+                          {(oi.items as { name: string } | null)?.name ?? '—'}{oi.size_label ? ` ${oi.size_label}` : ''}
                           {oi.note && <span className="text-zinc-500 font-normal"> · {oi.note}</span>}
                         </span>
                         <span className={`shrink-0 ml-3 tabular-nums ${isActive ? 'text-zinc-400' : 'text-zinc-500'}`}>
@@ -390,5 +390,6 @@ type OrderItem = {
   quantity: number
   unit_price: number
   note: string | null
+  size_label: string | null
   items: { name: string } | null
 }

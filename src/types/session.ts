@@ -30,6 +30,7 @@ export type PartialPayment = {
 export type PaymentItem = {
   order_item_id: string
   item_name: string
+  size_label?: string | null
   quantity: number
   unit_price: number
   total: number
@@ -45,6 +46,7 @@ export type SessionBalance = {
 export type OrderItemWithPayment = {
   id: string
   item_name: string
+  size_label: string | null
   quantity: number
   unit_price: number
   paid_quantity: number
@@ -73,6 +75,7 @@ export type SessionWithDetails = TableSession & {
 export type SelectedItemForPayment = {
   order_item_id: string
   item_name: string
+  size_label: string | null
   quantity: number // quantité sélectionnée à payer
   unit_price: number
   max_quantity: number // quantité max disponible (non encore payée)

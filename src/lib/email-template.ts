@@ -1,7 +1,7 @@
 export type OrderEmailData = {
   restaurantName: string
   tableLabel: string
-  items: Array<{ name: string; quantity: number; unit_price: number }>
+  items: Array<{ name: string; size_label?: string | null; quantity: number; unit_price: number }>
   total: number
   orderId: string
   createdAt: string
@@ -15,7 +15,7 @@ export function renderOrderEmail(data: OrderEmailData): string {
     .map(
       (item) => `
       <tr>
-        <td style="padding:8px 0;border-bottom:1px solid #1e2028;color:#d4d4d8;font-size:14px;">${item.name}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #1e2028;color:#d4d4d8;font-size:14px;">${item.name}${item.size_label ? ` ${item.size_label}` : ''}</td>
         <td style="padding:8px 0;border-bottom:1px solid #1e2028;color:#a1a1aa;font-size:14px;text-align:center;">${item.quantity}</td>
         <td style="padding:8px 0;border-bottom:1px solid #1e2028;color:#d4d4d8;font-size:14px;text-align:right;">${(item.unit_price * item.quantity).toFixed(2)} €</td>
       </tr>`,

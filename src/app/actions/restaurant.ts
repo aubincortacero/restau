@@ -1296,7 +1296,13 @@ export async function placeOrder(payload: {
             : Number(dbItem.price)
         }
         
-        return { order_id: order.id, item_id: pi.itemId, quantity: pi.quantity, unit_price: unitPrice }
+        return { 
+          order_id: order.id, 
+          item_id: pi.itemId, 
+          quantity: pi.quantity, 
+          unit_price: unitPrice,
+          size_label: pi.sizeLabel || null
+        }
       })
     )
 
@@ -1329,7 +1335,7 @@ export async function placeOrder(payload: {
           : Number(dbItem.price)
       }
       
-      return { name: dbItem.name ?? '', quantity: pi.quantity, unit_price: unitPrice }
+      return { name: dbItem.name ?? '', size_label: pi.sizeLabel, quantity: pi.quantity, unit_price: unitPrice }
     })
     const total = itemsForEmail.reduce((s, i) => s + i.unit_price * i.quantity, 0)
     const createdAt = new Date().toLocaleString('fr-FR', {

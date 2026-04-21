@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { closeTableSession, markOrderDelivered } from '@/app/actions/sessions'
 import type { SessionWithDetails } from '@/types/session'
+import { ArdoiseTicketModal } from './ArdoiseTicketModal'
 
 function fmt(p: number): string {
   return new Intl.NumberFormat('fr-FR', {
@@ -19,7 +20,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 3600)}h`
 }
 
-export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
+export function ActiveTabCard({ session, restaurantName }: { session: SessionWithDetails; restaurantName: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [deliveredOrders, setDeliveredOrders] = useState<Set<string>>(
@@ -179,7 +180,7 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
                     {order.order_items.map((item) => (
                       <div key={item.id} className="flex items-center justify-between text-sm">
                         <span className={`font-medium ${isDelivered ? 'text-zinc-500' : 'text-white'}`}>
-                          <span className={`font-bold ${isDelivered ? 'text-zinc-600' : 'text-orange-400'}`}>{item.quantity}×</span> {item.item_name}
+                          <span className={`font-bold ${isDelivered ? 'text-zinc-600' : 'text-orange-400'}`}>{item.quantity}×</span> {item.item_name}{item.size_label ? ` ${item.size_label}` : ''}
                         </span>
                         <span className={`font-semibold ${isDelivered ? 'text-zinc-600' : 'text-orange-200'}`}>
                           {fmt(item.unit_price * item.quantity)}
@@ -201,11 +202,12 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
             })}
 
             {/* Actions */}
-            <div className="pt-2 flex gap-2">
+            <div className="pt-2 space-y-2">
+              <ArdoiseTicketModal session={session} restaurantName={restaurantName} />
               <button
                 onClick={handleClose}
                 disabled={isClosing || balance.remaining_amount > 0}
-                className="flex-1 py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isClosing ? 'Fermeture...' : balance.remaining_amount > 0 ? 'Encaisser d\'abord' : 'Fermer l\'ardoise'}
               </button>

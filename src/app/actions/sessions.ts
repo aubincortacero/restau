@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { TableSession, SessionWithDetails, PartialPayment, SessionBalance, SelectedItemForPayment } from '@/types/session'
+import { Resend } from 'resend'
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Gestion des sessions
@@ -116,6 +119,7 @@ export async function getSessionDetails(sessionId: string): Promise<SessionWithD
         unit_price,
         paid_quantity,
         paid_amount,
+        size_label,
         items(name)
       )
     `)
@@ -270,6 +274,7 @@ export async function createPartialPayment(
   const paymentItems = selectedItems.map((item) => ({
     order_item_id: item.order_item_id,
     item_name: item.item_name,
+    size_label: item.size_label,
     quantity: item.quantity,
     unit_price: item.unit_price,
     total: item.quantity * item.unit_price,
@@ -342,6 +347,160 @@ export async function createPartialPayment(
   }
 
   revalidatePath('/dashboard/orders')
+  
+  // Envoyer le PDF par email si l'email est fourni
+  if (customerEmail && resend && paymentMethod === 'online') {
+    try {
+      // Récupérer les informations de la session et du restaurant
+      const { data: sessionData } = await adminClient
+        .from('table_sessions')
+        .select('restaurant_id, table_id, tables(number, label), restaurants(name)')
+        .eq('id', sessionId)
+        .single()
+
+      if (sessionData) {
+        const restaurantName = (sessionData.restaurants as any)?.name || 'Restaurant'
+        const tableNumber = (sessionData.tables as any)?.number || ''
+        const tableLabel = (sessionData.tables as any)?.label || ''
+        const tableDisplay = tableLabel ? `Table ${tableNumber} — ${tableLabel}` : `Table ${tableNumber}`
+
+        // Générer le PDF
+        const jsPDF = (await import('jspdf')).jsPDF
+        const doc = new jsPDF({ unit: 'mm', format: [80, 200], orientation: 'portrait' })
+
+        const date = new Date(payment.created_at).toLocaleString('fr-FR', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+          timeZone: 'Europe/Paris',
+        })
+
+        let y = 8
+        const lineH = 5
+        const w = 72
+
+        // Header
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.text(restaurantName, w / 2, y, { align: 'center' })
+        y += lineH
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.text('REÇU DE PAIEMENT PARTIEL', w / 2, y, { align: 'center' })
+        y += lineH
+
+        doc.setLineDashPattern([1, 1], 0)
+        doc.line(4, y, w - 2, y)
+        y += 4
+
+        doc.setFontSize(8)
+        doc.text(`Date : ${date}`, 4, y); y += lineH
+        doc.text(tableDisplay, 4, y); y += lineH
+        doc.text('Paiement : En ligne', 4, y); y += lineH
+
+        doc.line(4, y, w - 2, y)
+        y += 4
+
+        // Articles
+        doc.setFont('helvetica', 'bold')
+        doc.text('Article', 4, y)
+        doc.text('Total', w - 2, y, { align: 'right' })
+        y += lineH
+        doc.setFont('helvetica', 'normal')
+
+        for (const item of paymentItems) {
+          const total = item.total.toFixed(2) + ' EUR'
+          const label = `${item.quantity}x ${item.item_name}${item.size_label ? ' ' + item.size_label : ''}`
+          const lines = doc.splitTextToSize(label, w - 20) as string[]
+          doc.text(lines, 4, y)
+          doc.text(total, w - 2, y, { align: 'right' })
+          y += lines.length * lineH
+        }
+
+        doc.line(4, y, w - 2, y)
+        y += 4
+
+        // Total
+        const ht = totalAmount / 1.1
+        const tva = totalAmount - ht
+
+        doc.text('Montant HT :', 4, y)
+        doc.text(`${ht.toFixed(2)} EUR`, w - 2, y, { align: 'right' })
+        y += lineH
+
+        doc.text('TVA 10% :', 4, y)
+        doc.text(`${tva.toFixed(2)} EUR`, w - 2, y, { align: 'right' })
+        y += lineH
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.text('TOTAL TTC :', 4, y)
+        doc.text(`${totalAmount.toFixed(2)} EUR`, w - 2, y, { align: 'right' })
+        y += lineH + 2
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.line(4, y, w - 2, y)
+        y += 4
+        doc.text('Merci de votre visite !', w / 2, y, { align: 'center' })
+        y += lineH
+        doc.text(`Réf. #${payment.id.slice(0, 8).toUpperCase()}`, w / 2, y, { align: 'center' })
+
+        // Générer le PDF en base64
+        const pdfBase64 = doc.output('datauristring').split(',')[1]
+
+        // Envoyer l'email avec le PDF
+        await resend.emails.send({
+          from: 'Qomand <noreply@qomand.fr>',
+          to: customerEmail,
+          subject: `Reçu de paiement - ${restaurantName}`,
+          html: `
+            <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #18181b; font-size: 24px; margin-bottom: 8px;">Reçu de paiement</h1>
+              <p style="color: #71717a; margin-bottom: 24px;">Votre paiement a bien été enregistré</p>
+              
+              <div style="background: #f4f4f5; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <h2 style="color: #27272a; font-size: 16px; margin: 0 0 12px 0;">${restaurantName}</h2>
+                <p style="margin: 4px 0; color: #52525b; font-size: 14px;"><strong>Table :</strong> ${tableDisplay}</p>
+                <p style="margin: 4px 0; color: #52525b; font-size: 14px;"><strong>Date :</strong> ${date}</p>
+              </div>
+              
+              <div style="margin-bottom: 24px;">
+                <h3 style="color: #27272a; font-size: 14px; margin-bottom: 12px;">Articles payés</h3>
+                ${paymentItems.map(item => `
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e4e4e7;">
+                    <span style="color: #3f3f46;">${item.quantity}x ${item.item_name}${item.size_label ? ' ' + item.size_label : ''}</span>
+                    <span style="color: #18181b; font-weight: 600;">${item.total.toFixed(2)} €</span>
+                  </div>
+                `).join('')}
+              </div>
+              
+              <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin-bottom: 24px;">
+                <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 600;">Total payé : ${totalAmount.toFixed(2)} €</p>
+              </div>
+              
+              <p style="color: #71717a; font-size: 13px; margin-top: 32px;">
+                Vous trouverez le reçu détaillé en pièce jointe.<br>
+                Référence : #${payment.id.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
+          `,
+          attachments: [
+            {
+              filename: `recu-${payment.id.slice(0, 8)}.pdf`,
+              content: pdfBase64,
+            },
+          ],
+        })
+
+        console.log('[createPartialPayment] Email sent to:', customerEmail)
+      }
+    } catch (emailError) {
+      console.error('[createPartialPayment] Error sending email:', emailError)
+      // Ne pas faire échouer le paiement si l'email échoue
+    }
+  }
+  
   return { success: true, payment: payment as PartialPayment }
 }
 

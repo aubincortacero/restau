@@ -22,6 +22,7 @@ function StripePaymentForm({
   stripeAccountId, 
   selectedItems,
   session,
+  customerEmail,
   onSuccess, 
   onCancel 
 }: {
@@ -29,6 +30,7 @@ function StripePaymentForm({
   stripeAccountId: string | null
   selectedItems: SelectedItemForPayment[]
   session: SessionWithDetails
+  customerEmail: string
   onSuccess: () => void
   onCancel: () => void
 }) {
@@ -73,7 +75,9 @@ function StripePaymentForm({
         session.id,
         selectedItems,
         'online',
-        paymentIntent.id
+        paymentIntent.id,
+        undefined,
+        customerEmail || undefined
       )
 
       if (result.success) {
@@ -125,6 +129,7 @@ export function PartialPaymentModal({
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [isLoadingPayment, setIsLoadingPayment] = useState(false)
+  const [customerEmail, setCustomerEmail] = useState('')
 
   // Récupérer tous les items non entièrement payés
   const availableItems: OrderItemWithPayment[] = session.orders.flatMap((order) =>
@@ -202,6 +207,7 @@ export function PartialPaymentModal({
     .map((item) => ({
       order_item_id: item.id,
       item_name: item.item_name,
+      size_label: item.size_label,
       quantity: selectedItems.get(item.id)!,
       unit_price: item.unit_price,
       max_quantity: item.remaining_quantity,
@@ -238,11 +244,13 @@ export function PartialPaymentModal({
               stripeAccountId={stripeAccountId}
               selectedItems={itemsForPayment}
               session={session}
+              customerEmail={customerEmail}
               onSuccess={() => {
                 onSuccess()
                 onClose()
                 setStep('select')
                 setSelectedItems(new Map())
+                setCustomerEmail('')
               }}
               onCancel={handleBackToSelection}
             />
@@ -299,7 +307,9 @@ export function PartialPaymentModal({
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <p className="font-semibold text-white">{item.item_name}</p>
+                        <p className="font-semibold text-white">
+                          {item.item_name}{item.size_label ? ` ${item.size_label}` : ''}
+                        </p>
                         <p className="text-sm text-zinc-400 mt-0.5">
                           {item.remaining_quantity} restant{item.remaining_quantity > 1 ? 's' : ''} × {formatCurrency(item.unit_price)}
                         </p>
@@ -378,14 +388,30 @@ export function PartialPaymentModal({
             </div>
             
             {totalAmount > 0 && (
-              <div className="bg-orange-950/30 border border-orange-500/30 rounded-xl px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-orange-300">
-                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  <span>Paiement en ligne par carte bancaire</span>
+              <>
+                <div className="bg-orange-950/30 border border-orange-500/30 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm text-orange-300">
+                    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <span>Paiement en ligne par carte bancaire</span>
+                  </div>
                 </div>
-              </div>
+                
+                <div>
+                  <label htmlFor="customer-email" className="block text-sm font-medium text-zinc-300 mb-2">
+                    Email pour recevoir le reçu
+                  </label>
+                  <input
+                    id="customer-email"
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="votre@email.com"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-colors"
+                  />
+                </div>
+              </>
             )}
 
             <div className="flex gap-2">

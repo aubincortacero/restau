@@ -32,6 +32,7 @@ type OrderItem = {
   quantity: number
   unit_price: number
   note: string | null
+  size_label: string | null
   items: { name: string } | null
 }
 
@@ -70,7 +71,7 @@ export default async function ArchivesPage({
       id, status, payment_method, payment_status,
       customer_note, created_at, archived_at,
       tables(number, label),
-      order_items(quantity, unit_price, note, items(name))
+      order_items(quantity, unit_price, note, size_label, items(name))
     `, { count: 'exact' })
     .eq('restaurant_id', restaurant.id)
     .not('archived_at', 'is', null)
@@ -287,6 +288,7 @@ export default async function ArchivesPage({
                           restaurant: restaurant.name,
                           items: items.map((oi) => ({
                             name: (oi.items as { name: string } | null)?.name ?? '—',
+                            size_label: oi.size_label,
                             quantity: oi.quantity,
                             unit_price: Number(oi.unit_price),
                             note: oi.note ?? null,
@@ -340,6 +342,7 @@ export default async function ArchivesPage({
                             restaurant: restaurant.name,
                             items: items.map((oi) => ({
                               name: (oi.items as { name: string } | null)?.name ?? '—',
+                              size_label: oi.size_label,
                               quantity: oi.quantity,
                               unit_price: Number(oi.unit_price),
                               note: oi.note ?? null,

@@ -14,6 +14,7 @@ type OrderForTicket = {
   restaurant: string
   items: {
     name: string
+    size_label: string | null
     quantity: number
     unit_price: number
     note: string | null
@@ -70,7 +71,7 @@ export default function TicketActions({ order, inverted }: { order: OrderForTick
 
     for (const item of order.items) {
       const total = (item.quantity * item.unit_price).toFixed(2) + ' EUR'
-      const label = `${item.quantity}x ${item.name}`
+      const label = `${item.quantity}x ${item.name}${item.size_label ? ' ' + item.size_label : ''}`
       const lines = doc.splitTextToSize(label, w - 20) as string[]
       doc.text(lines, 4, y)
       doc.text(total, w - 2, y, { align: 'right' })

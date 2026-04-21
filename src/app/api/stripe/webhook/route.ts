@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
           item_id: pi_item.itemId,
           quantity: pi_item.quantity,
           unit_price: unitPrice,
+          size_label: pi_item.sizeLabel || null,
         }
       })
     )
