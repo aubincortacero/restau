@@ -40,13 +40,13 @@ export default async function WebsiteLayout({
         </p>
       </div>
 
-      {/* Navigation (responsive intégrée) */}
-      <WebsiteNav
-        restaurantId={restaurant.id}
-        pages={pages ?? []}
-      />
-
       <div className="flex gap-8 items-start">
+        {/* Navigation (responsive intégrée) */}
+        <WebsiteNav
+          restaurantId={restaurant.id}
+          pages={pages ?? []}
+        />
+
         {/* Contenu */}
         <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
           {children}

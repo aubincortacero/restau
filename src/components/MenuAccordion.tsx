@@ -278,17 +278,22 @@ export default function MenuAccordion({
                         )}
                         
                         {/* Texte superposé sur l'image avec fond dégradé */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
-                          <h3 className="font-bold text-white text-base leading-tight mb-1">
-                            {item.name}
-                          </h3>
-                          {item.description && (
-                            <p className="text-sm text-stone-200 leading-snug line-clamp-1">
-                              {item.description}
-                            </p>
-                          )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-3 pt-10">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-white text-base leading-tight mb-1">
+                                {item.name}
+                              </h3>
+                              {item.description && (
+                                <p className="text-sm text-stone-200 leading-snug line-clamp-1">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
                           {/* Badges */}
-                          <div className="flex items-center gap-1.5 mt-1.5">
+                          <div className="flex items-center gap-1.5 mb-2">
                             {item.is_vegetarian && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/60 text-green-200 border border-green-700/50">
                                 🌱 Végétarien
@@ -300,6 +305,95 @@ export default function MenuAccordion({
                               </span>
                             )}
                           </div>
+
+                          {/* Prix et bouton */}
+                          {!hasSizes ? (
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-2xl font-bold text-white">
+                                  {fmt(effectivePrice)}
+                                </span>
+                                {hhActive && item.happy_hour_price != null && (
+                                  <span className="ml-2 text-sm text-stone-400 line-through">
+                                    {fmt(item.price)}
+                                  </span>
+                                )}
+                              </div>
+                              {qty > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => removeItem(item.id)}
+                                    className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 flex items-center justify-center font-bold text-lg transition-colors border border-white/20"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="text-white font-bold text-lg min-w-[2rem] text-center">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    onClick={() => addItem(item, effectivePrice)}
+                                    className="menu-item-plus w-9 h-9 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-lg transition-all shadow-lg border border-white/20"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => addItem(item, effectivePrice)}
+                                  className="menu-item-plus w-11 h-11 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-2xl transition-all shadow-lg border border-white/20"
+                                >
+                                  +
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {item.sizes?.map((size) => {
+                                const sizePrice = hhActive && size.happy_hour_price != null ? size.happy_hour_price : size.price
+                                const sizeQty = cart[`${item.id}:${size.label}`]?.quantity ?? 0
+                                
+                                return (
+                                  <div key={size.label} className="flex items-center justify-between p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10">
+                                    <div>
+                                      <span className="text-white text-sm font-medium">{size.label}</span>
+                                      <span className="ml-3 text-white font-bold">{fmt(sizePrice)}</span>
+                                      {hhActive && size.happy_hour_price != null && (
+                                        <span className="ml-2 text-xs text-stone-400 line-through">
+                                          {fmt(size.price)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {sizeQty > 0 ? (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => removeItem(`${item.id}:${size.label}`)}
+                                          className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 flex items-center justify-center font-bold transition-colors border border-white/20"
+                                        >
+                                          −
+                                        </button>
+                                        <span className="text-white font-bold min-w-[1.5rem] text-center">
+                                          {sizeQty}
+                                        </span>
+                                        <button
+                                          onClick={() => addItem(item, sizePrice, size.label)}
+                                          className="menu-item-plus w-8 h-8 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold transition-all border border-white/20"
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => addItem(item, sizePrice, size.label)}
+                                        className="menu-item-plus w-9 h-9 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-xl transition-all shadow-md border border-white/20"
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -313,17 +407,22 @@ export default function MenuAccordion({
                         )}
                         
                         {/* Texte superposé sur fond fallback */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
-                          <h3 className="font-bold text-white text-base leading-tight mb-1">
-                            {item.name}
-                          </h3>
-                          {item.description && (
-                            <p className="text-sm text-stone-200 leading-snug line-clamp-1">
-                              {item.description}
-                            </p>
-                          )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-3 pt-10">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-white text-base leading-tight mb-1">
+                                {item.name}
+                              </h3>
+                              {item.description && (
+                                <p className="text-sm text-stone-200 leading-snug line-clamp-1">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
                           {/* Badges */}
-                          <div className="flex items-center gap-1.5 mt-1.5">
+                          <div className="flex items-center gap-1.5 mb-2">
                             {item.is_vegetarian && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/60 text-green-200 border border-green-700/50">
                                 🌱 Végétarien
@@ -335,101 +434,98 @@ export default function MenuAccordion({
                               </span>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Contenu */}
-                    <div className="p-4">
-                      {/* Prix et bouton d'ajout */}
-                      {!hasSizes ? (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-2xl font-bold text-white">
-                              {fmt(effectivePrice)}
-                            </span>
-                            {hhActive && item.happy_hour_price != null && (
-                              <span className="ml-2 text-sm text-stone-500 line-through">
-                                {fmt(item.price)}
-                              </span>
-                            )}
-                          </div>
-                          {qty > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => removeItem(item.id)}
-                                className="w-10 h-10 rounded-full bg-stone-800 text-stone-300 hover:bg-stone-700 flex items-center justify-center font-bold text-lg transition-colors"
-                              >
-                                −
-                              </button>
-                              <span className="text-white font-bold text-lg min-w-[2rem] text-center">
-                                {qty}
-                              </span>
-                              <button
-                                onClick={() => addItem(item, effectivePrice)}
-                                className="menu-item-plus w-10 h-10 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-lg transition-all shadow-lg"
-                              >
-                                +
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => addItem(item, effectivePrice)}
-                              className="menu-item-plus w-12 h-12 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-2xl transition-all shadow-lg"
-                            >
-                              +
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {item.sizes?.map((size) => {
-                            const sizePrice = hhActive && size.happy_hour_price != null ? size.happy_hour_price : size.price
-                            const sizeQty = cart[`${item.id}:${size.label}`]?.quantity ?? 0
-                            
-                            return (
-                              <div key={size.label} className="flex items-center justify-between p-2 rounded-lg bg-stone-800/50">
-                                <div>
-                                  <span className="text-stone-300 text-sm font-medium">{size.label}</span>
-                                  <span className="ml-3 text-white font-bold">{fmt(sizePrice)}</span>
-                                  {hhActive && size.happy_hour_price != null && (
-                                    <span className="ml-2 text-xs text-stone-500 line-through">
-                                      {fmt(size.price)}
-                                    </span>
-                                  )}
-                                </div>
-                                {sizeQty > 0 ? (
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => removeItem(`${item.id}:${size.label}`)}
-                                      className="w-8 h-8 rounded-full bg-stone-700 text-stone-300 hover:bg-stone-600 flex items-center justify-center font-bold transition-colors"
-                                    >
-                                      −
-                                    </button>
-                                    <span className="text-white font-bold min-w-[1.5rem] text-center">
-                                      {sizeQty}
-                                    </span>
-                                    <button
-                                      onClick={() => addItem(item, sizePrice, size.label)}
-                                      className="menu-item-plus w-8 h-8 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold transition-all"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                ) : (
+                          {/* Prix et bouton */}
+                          {!hasSizes ? (
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-2xl font-bold text-white">
+                                  {fmt(effectivePrice)}
+                                </span>
+                                {hhActive && item.happy_hour_price != null && (
+                                  <span className="ml-2 text-sm text-stone-400 line-through">
+                                    {fmt(item.price)}
+                                  </span>
+                                )}
+                              </div>
+                              {qty > 0 ? (
+                                <div className="flex items-center gap-2">
                                   <button
-                                    onClick={() => addItem(item, sizePrice, size.label)}
-                                    className="menu-item-plus w-9 h-9 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-xl transition-all shadow-md"
+                                    onClick={() => removeItem(item.id)}
+                                    className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 flex items-center justify-center font-bold text-lg transition-colors border border-white/20"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="text-white font-bold text-lg min-w-[2rem] text-center">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    onClick={() => addItem(item, effectivePrice)}
+                                    className="menu-item-plus w-9 h-9 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-lg transition-all shadow-lg border border-white/20"
                                   >
                                     +
                                   </button>
-                                )}
-                              </div>
-                            )
-                          })}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => addItem(item, effectivePrice)}
+                                  className="menu-item-plus w-11 h-11 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-2xl transition-all shadow-lg border border-white/20"
+                                >
+                                  +
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {item.sizes?.map((size) => {
+                                const sizePrice = hhActive && size.happy_hour_price != null ? size.happy_hour_price : size.price
+                                const sizeQty = cart[`${item.id}:${size.label}`]?.quantity ?? 0
+                                
+                                return (
+                                  <div key={size.label} className="flex items-center justify-between p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10">
+                                    <div>
+                                      <span className="text-white text-sm font-medium">{size.label}</span>
+                                      <span className="ml-3 text-white font-bold">{fmt(sizePrice)}</span>
+                                      {hhActive && size.happy_hour_price != null && (
+                                        <span className="ml-2 text-xs text-stone-400 line-through">
+                                          {fmt(size.price)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {sizeQty > 0 ? (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => removeItem(`${item.id}:${size.label}`)}
+                                          className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 flex items-center justify-center font-bold transition-colors border border-white/20"
+                                        >
+                                          −
+                                        </button>
+                                        <span className="text-white font-bold min-w-[1.5rem] text-center">
+                                          {sizeQty}
+                                        </span>
+                                        <button
+                                          onClick={() => addItem(item, sizePrice, size.label)}
+                                          className="menu-item-plus w-8 h-8 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold transition-all border border-white/20"
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => addItem(item, sizePrice, size.label)}
+                                        className="menu-item-plus w-9 h-9 rounded-full text-white hover:brightness-110 flex items-center justify-center font-bold text-xl transition-all shadow-md border border-white/20"
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
