@@ -112,10 +112,18 @@ export default function MenuClientLayout({
       </div>
 
       {/* Sélecteur de catégorie mobile */}
-      <div className="md:hidden mb-6">
+      <div className="md:hidden mb-6 relative">
+        {/* Overlay */}
+        {showCategorySelector && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowCategorySelector(false)}
+          />
+        )}
+        
         <button
           onClick={() => setShowCategorySelector(!showCategorySelector)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left"
+          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left relative z-50"
         >
           {selected ? (
             <div className="flex items-center gap-2.5">
@@ -141,7 +149,7 @@ export default function MenuClientLayout({
 
         {/* Dropdown des catégories */}
         {showCategorySelector && (
-          <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-80 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-80 overflow-y-auto z-50 shadow-2xl">
             {categories.map((cat) => {
               const ct = cat.category_type as CategoryTypeId
               const meta = CATEGORY_TYPES.find((t) => t.id === ct) ?? CATEGORY_TYPES[0]
@@ -184,7 +192,13 @@ export default function MenuClientLayout({
 
         {/* Formulaire d'ajout de catégorie mobile */}
         {showAddCategory && (
-          <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+          <>
+            {/* Overlay */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowAddCategory(false)}
+            />
+            <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-3 z-50 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium text-zinc-300">Nouvelle catégorie</p>
               <button
@@ -198,6 +212,7 @@ export default function MenuClientLayout({
             </div>
             <AddCategoryForm restaurantId={restaurantId} />
           </div>
+          </>
         )}
       </div>
 

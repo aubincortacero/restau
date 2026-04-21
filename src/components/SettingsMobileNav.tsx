@@ -21,10 +21,18 @@ export default function SettingsMobileNav() {
   ) ?? SETTINGS_NAV[0]
 
   return (
-    <div className="md:hidden mb-6">
+    <div className="md:hidden mb-6 relative">
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+      
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left relative z-50"
       >
         <span className={`text-sm font-medium ${currentItem.danger ? 'text-red-400' : 'text-white'}`}>
           {currentItem.label}
@@ -41,7 +49,7 @@ export default function SettingsMobileNav() {
       </button>
 
       {isOpen && (
-        <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 z-50 shadow-2xl">
           {SETTINGS_NAV.map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             return (

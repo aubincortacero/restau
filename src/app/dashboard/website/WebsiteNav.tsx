@@ -49,10 +49,18 @@ export default function WebsiteNav({
   return (
     <>
       {/* Menu mobile */}
-      <div className="md:hidden mb-6 w-full">
+      <div className="md:hidden mb-6 w-full relative">
+        {/* Overlay */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+        
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left"
+          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left relative z-50"
         >
           <span className="text-sm font-medium text-white">{currentLabel}</span>
           <svg
@@ -67,7 +75,7 @@ export default function WebsiteNav({
         </button>
 
         {mobileMenuOpen && (
-          <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-80 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-80 overflow-y-auto z-50 shadow-2xl">
             {/* Menu intégrée */}
             <Link
               href="/dashboard/website/menu"

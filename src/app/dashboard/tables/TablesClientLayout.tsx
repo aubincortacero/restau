@@ -58,6 +58,7 @@ export default function TablesClientLayout({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   const [activeTableIds, setActiveTableIds] = useState<Set<string>>(new Set())
+  const [mobileTablesOpen, setMobileTablesOpen] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -105,20 +106,122 @@ export default function TablesClientLayout({
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-2xl font-semibold flex-1">Plan de salle</h1>
-        {hasTables && (
-          <div data-page-tutorial="tables-qr">
-            <QRExportButton
-              tables={tables.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
-              siteUrl={siteUrl}
-              restaurantSlug={restaurantSlug}
+        <div className="flex items-center gap-3">
+          {/* Bouton ajouter des tables (mobile) */}
+          <div className="md:hidden" data-page-tutorial="tables-add">
+            <TableAddForm
+              restaurantId={restaurantId}
+              floors={currentFloors}
+              defaultOpen={!hasTables}
             />
+          </div>
+          {hasTables && (
+            <div data-page-tutorial="tables-qr">
+              <QRExportButton
+                tables={tables.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
+                siteUrl={siteUrl}
+                restaurantSlug={restaurantSlug}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sélecteur de table mobile */}
+      <div className="md:hidden mb-6 relative">
+        {/* Overlay */}
+        {mobileTablesOpen && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setMobileTablesOpen(false)}
+          />
+        )}
+        
+        <button
+          onClick={() => setMobileTablesOpen(!mobileTablesOpen)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left relative z-50"
+        >
+          {selectedId ? (
+            <div className="flex items-center gap-2.5">
+              <span className="text-base font-black tabular-nums text-orange-400">
+                {tables.find(t => t.id === selectedId)?.number}
+              </span>
+              <span className="text-sm font-medium text-white">
+                {tables.find(t => t.id === selectedId)?.label ?? `Table ${tables.find(t => t.id === selectedId)?.number}`}
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm text-zinc-400">Sélectionnez une table</span>
+          )}
+          <svg
+            className={`w-5 h-5 text-zinc-400 transition-transform ${mobileTablesOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+
+        {/* Dropdown des tables */}
+        {mobileTablesOpen && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-80 overflow-y-auto z-50 shadow-2xl">
+            {!hasTables ? (
+              <p className="text-xs text-zinc-600 px-3 py-2">Aucune table</p>
+            ) : (
+              <>
+                {grouped.map(({ floor, tables: floorTables }) => (
+                  <div key={floor.id}>
+                    {floors.length > 1 && (
+                      <p className="text-[10px] text-zinc-600 px-3 pt-2 pb-1 font-medium uppercase tracking-wider">
+                        {floor.name}
+                      </p>
+                    )}
+                    {floorTables.map((table) => {
+                      const isActive = table.id === selectedId
+                      const isDeleting = deletingId === table.id
+                      const hasOrder = activeTableIds.has(table.id)
+                      return (
+                        <button
+                          key={table.id}
+                          onClick={() => {
+                            setSelectedId(isActive ? null : table.id)
+                            setMobileTablesOpen(false)
+                          }}
+                          disabled={isDeleting}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
+                            isActive
+                              ? 'bg-white/8 text-white font-medium'
+                              : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                          } ${isDeleting ? 'opacity-40' : ''}`}
+                        >
+                          <span className={`text-base font-black tabular-nums leading-none w-6 text-center shrink-0 ${isActive ? 'text-orange-400' : ''}`}>
+                            {table.number}
+                          </span>
+                          <span className="truncate flex-1 text-xs">
+                            {isDeleting ? <span className="text-red-400 italic">Suppression…</span> : (table.label ?? `Table ${table.number}`)}
+                          </span>
+                          {hasOrder && (
+                            <span className="shrink-0 relative flex h-2 w-2 mr-1">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
 
       <div className="flex gap-6 items-start">
-        {/* ── Colonne gauche : liste des tables ── */}
-        <div className="w-48 shrink-0" data-page-tutorial="tables-add">
+        {/* ── Colonne gauche : liste des tables (Desktop uniquement) ── */}
+        <div className="hidden md:block w-48 shrink-0" data-page-tutorial="tables-add">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 px-3 mb-2">
             Tables
           </p>
