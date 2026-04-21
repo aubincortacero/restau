@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { TableSession, SessionWithDetails, PartialPayment, SessionBalance, SelectedItemForPayment } from '@/types/session'
 
@@ -10,15 +11,18 @@ import type { TableSession, SessionWithDetails, PartialPayment, SessionBalance, 
 
 /**
  * Récupère une session active pour une table (sans créer)
+ * Utilise le client admin pour permettre l'accès public aux clients non-authentifiés
  */
 export async function getActiveTableSession(
   restaurantId: string,
   tableId: string
 ): Promise<{ session: TableSession | null; error?: string }> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
+
+  console.log('[getActiveTableSession] Looking for session', { restaurantId, tableId })
 
   // Vérifier si une session active existe
-  const { data: existingSession } = await supabase
+  const { data: existingSession, error } = await supabase
     .from('table_sessions')
     .select('*')
     .eq('restaurant_id', restaurantId)
@@ -27,6 +31,8 @@ export async function getActiveTableSession(
     .order('started_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  console.log('[getActiveTableSession] Result:', { existingSession, error })
 
   return { session: existingSession }
 }

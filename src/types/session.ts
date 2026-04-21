@@ -58,6 +58,7 @@ export type OrderWithItems = {
   created_at: string
   status: string
   payment_status: string
+  customer_note: string | null
   order_items: OrderItemWithPayment[]
 }
 

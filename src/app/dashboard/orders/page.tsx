@@ -8,7 +8,7 @@ import { updateOrderStatus, archiveOrder, markOrderReady, collectCashPayment } f
 import OrderTimer from '@/components/OrderTimer'
 import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
 import { getActiveTableSessions } from '@/app/actions/sessions'
-import { DashboardSessionCard } from '@/components/DashboardSessionCard'
+import { ActiveTabCard } from '@/components/ActiveTabCard'
 
 const ORDERS_TUTORIAL_STEPS: PageTutorialStep[] = [
   {
@@ -105,28 +105,7 @@ export default async function OrdersPage() {
     return { ...order, ttc, ht, tva }
   })
 
-  // Récupérer les soldes des sessions actives pour les commandes en ardoise
-  const sessionIds = [...new Set(enriched.filter(o => o.session_id).map(o => o.session_id!))]
-  const sessionBalances = new Map<string, { total: number; paid: number; remaining: number }>()
-  
-  if (sessionIds.length > 0) {
-    for (const sessionId of sessionIds) {
-      const { data: balanceData } = await supabase
-        .rpc('get_session_balance', { session_uuid: sessionId })
-        .single()
-      
-      if (balanceData) {
-        const balance = balanceData as { total_amount: number; paid_amount: number; remaining_amount: number; is_fully_paid: boolean }
-        sessionBalances.set(sessionId, {
-          total: balance.total_amount,
-          paid: balance.paid_amount,
-          remaining: balance.remaining_amount,
-        })
-      }
-    }
-  }
-
-  const totalPending = enriched.filter((o) => o.status === 'pending').length
+  const totalPending = enriched.filter((o) => o.status === 'pending' && !o.session_id).length
 
   // Récupérer les sessions actives
   const activeSessions = await getActiveTableSessions(restaurant.id)
@@ -154,29 +133,38 @@ export default async function OrdersPage() {
         </Link>
       </div>
 
-      {/* Sessions actives (paiement partiel) */}
+      {/* Ardoises actives */}
       {activeSessions.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="text-blue-400">📊</span>
-            Sessions en cours ({activeSessions.length})
+            <span className="text-2xl">📋</span>
+            <span>Ardoises en cours</span>
+            <span className="text-sm text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded-full">
+              {activeSessions.length}
+            </span>
           </h2>
           <div className="flex flex-col gap-4">
             {activeSessions.map((session) => (
-              <DashboardSessionCard key={session.id} session={session} />
+              <ActiveTabCard key={session.id} session={session} />
             ))}
           </div>
         </div>
       )}
 
-      {enriched.length === 0 ? (
+      {/* Commandes individuelles (hors ardoise) */}
+      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <span className="text-2xl">🧾</span>
+        <span>Commandes individuelles</span>
+      </h2>
+
+      {enriched.filter(o => !o.session_id).length === 0 ? (
         <div data-page-tutorial="orders-list" className="text-center py-20 text-zinc-500 text-sm">
-          Aucune commande pour l&apos;instant.<br />
+          Aucune commande individuelle pour l&apos;instant.<br />
           <span className="text-zinc-600">Les commandes apparaîtront ici dès que vos clients commanderont.</span>
         </div>
       ) : (
         <div className="flex flex-col gap-5" data-page-tutorial="orders-list">
-          {enriched.map((order) => {
+          {enriched.filter(order => !order.session_id).map((order) => {
             const statusInfo = STATUS_LABELS[order.status] ?? STATUS_LABELS.pending
             const payInfo = PAYMENT_STATUS[order.payment_status] ?? PAYMENT_STATUS.unpaid
             const table = order.tables as unknown as { number: number; label: string | null } | null
@@ -186,27 +174,23 @@ export default async function OrdersPage() {
             const isActive = isPending || isReady
             const isPickup = order.fulfillment_type === 'pickup'
             const isCashUnpaid = order.payment_method === 'cash' && order.payment_status === 'unpaid'
-            const isTabOrder = !!order.session_id
-            const sessionBalance = order.session_id ? sessionBalances.get(order.session_id) : null
 
             return (
               <div
                 key={order.id}
                 className={`rounded-2xl overflow-hidden flex flex-col ${
-                  isTabOrder
-                    ? 'bg-zinc-900 border-[2.5px] border-purple-500/60 shadow-lg shadow-purple-950/40'
-                    : isPending 
-                      ? 'bg-zinc-900 border-[2.5px] border-orange-500 shadow-lg shadow-orange-950/40' 
-                      : isReady 
-                        ? 'bg-zinc-900 border-[2.5px] border-blue-500 shadow-lg shadow-blue-950/40' 
-                        : 'bg-zinc-900 border border-zinc-800'
+                  isPending 
+                    ? 'bg-zinc-900 border-[2.5px] border-orange-500 shadow-lg shadow-orange-950/40' 
+                    : isReady 
+                      ? 'bg-zinc-900 border-[2.5px] border-blue-500 shadow-lg shadow-blue-950/40' 
+                      : 'bg-zinc-900 border border-zinc-800'
                 }`}
               >
                 {/* En-tête */}
                 <div className="px-5 pt-5 pb-4 flex items-center gap-4">
                   {/* Numéro de table — très visible */}
                   <div className={`text-5xl font-black tabular-nums leading-none shrink-0 ${
-                    isTabOrder ? 'text-purple-400' : isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'
+                    isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'
                   }`}>
                     {table?.number ?? '?'}
                   </div>
@@ -214,7 +198,7 @@ export default async function OrdersPage() {
                   {/* Infos centrales */}
                   <div className="flex-1 min-w-0">
                     {table?.label && (
-                      <p className={`text-base font-semibold leading-tight truncate ${isActive || isTabOrder ? 'text-white' : 'text-zinc-300'}`}>
+                      <p className={`text-base font-semibold leading-tight truncate ${isActive ? 'text-white' : 'text-zinc-300'}`}>
                         {table.label}
                       </p>
                     )}
@@ -224,23 +208,16 @@ export default async function OrdersPage() {
                       ) : (
                         <span className="text-xs text-zinc-600">{formatDate(order.created_at)}</span>
                       )}
-                      {isTabOrder && sessionBalance && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                          📋 Ardoise · {sessionBalance.paid.toFixed(2)}€ / {sessionBalance.total.toFixed(2)}€
-                        </span>
-                      )}
-                      {!isTabOrder && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${payInfo.color}`}>
-                          {payInfo.label}
-                        </span>
-                      )}
-                      {!isActive && !isTabOrder && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${payInfo.color}`}>
+                        {payInfo.label}
+                      </span>
+                      {!isActive && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
                           {statusInfo.label}
                         </span>
                       )}
                     </div>
-                    <div className={`flex items-center gap-1 mt-1 text-xs ${isActive || isTabOrder ? 'text-zinc-500' : 'text-zinc-600'}`}>
+                    <div className={`flex items-center gap-1 mt-1 text-xs ${isActive ? 'text-zinc-500' : 'text-zinc-600'}`}>
                       {order.payment_method === 'online'
                         ? <><IconCreditCard className="w-3.5 h-3.5" /> En ligne</>
                         : <><IconBanknote className="w-3.5 h-3.5" /> Caisse</>
@@ -254,29 +231,29 @@ export default async function OrdersPage() {
                   </div>
 
                   {/* Montant */}
-                  <div className={`text-2xl font-bold tabular-nums shrink-0 ${isActive || isTabOrder ? 'text-white' : 'text-zinc-400'}`}>
+                  <div className={`text-2xl font-bold tabular-nums shrink-0 ${isActive ? 'text-white' : 'text-zinc-400'}`}>
                     {order.ttc.toFixed(2)} €
                   </div>
                 </div>
 
                 {/* Note client */}
                 {order.customer_note && (
-                  <div className={`mx-5 mb-3 text-sm italic rounded-xl px-3 py-2 ${isActive || isTabOrder ? 'text-zinc-400 bg-zinc-800/60' : 'text-zinc-500 bg-zinc-800/60'}`}>
+                  <div className={`mx-5 mb-3 text-sm italic rounded-xl px-3 py-2 ${isActive ? 'text-zinc-400 bg-zinc-800/60' : 'text-zinc-500 bg-zinc-800/60'}`}>
                     &ldquo;{order.customer_note}&rdquo;
                   </div>
                 )}
 
                 {/* Séparateur + Articles */}
                 {items.length > 0 && (
-                  <div className={`mx-5 mb-4 rounded-xl overflow-hidden border ${isActive || isTabOrder ? 'border-zinc-800' : 'border-zinc-800/60'}`}>
+                  <div className={`mx-5 mb-4 rounded-xl overflow-hidden border ${isActive ? 'border-zinc-800' : 'border-zinc-800/60'}`}>
                     {items.map((oi, i) => (
                       <div key={i} className={`flex justify-between items-baseline px-3 py-2 text-sm ${i > 0 ? 'border-t border-zinc-800' : ''}`}>
-                        <span className={isActive || isTabOrder ? 'text-white' : 'text-zinc-300'}>
-                          <span className={`font-bold mr-1.5 ${isTabOrder ? 'text-purple-400' : isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
+                        <span className={isActive ? 'text-white' : 'text-zinc-300'}>
+                          <span className={`font-bold mr-1.5 ${isPending ? 'text-orange-400' : isReady ? 'text-blue-400' : 'text-zinc-500'}`}>{oi.quantity}×</span>
                           {(oi.items as { name: string } | null)?.name ?? '—'}
                           {oi.note && <span className="text-zinc-500 font-normal"> · {oi.note}</span>}
                         </span>
-                        <span className={`shrink-0 ml-3 tabular-nums ${isActive || isTabOrder ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                        <span className={`shrink-0 ml-3 tabular-nums ${isActive ? 'text-zinc-400' : 'text-zinc-500'}`}>
                           {(oi.quantity * Number(oi.unit_price)).toFixed(2)} €
                         </span>
                       </div>
