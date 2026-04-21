@@ -40,6 +40,7 @@ export default function MenuAccordion({
   tableId,
   tableLabel,
   restaurantId,
+  hasActiveSession = false,
   acceptedPaymentMethods,
   onlineBlocked,
   fulfillmentModes,
@@ -50,6 +51,7 @@ export default function MenuAccordion({
   tableId: string | null
   tableLabel: string | null
   restaurantId: string
+  hasActiveSession?: boolean
   acceptedPaymentMethods: string[]
   onlineBlocked: boolean
   fulfillmentModes: string[]
@@ -712,8 +714,8 @@ export default function MenuAccordion({
                         📋
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold text-stone-100">Ouvrir une ardoise</p>
-                        <p className="text-xs text-stone-400 mt-0.5">Commandez plusieurs fois, payez à la fin</p>
+                        <p className="font-semibold text-stone-100">{hasActiveSession ? 'Mettre sur l\'ardoise' : 'Ouvrir une ardoise'}</p>
+                        <p className="text-xs text-stone-400 mt-0.5">{hasActiveSession ? 'Ajouter à votre ardoise en cours' : 'Commandez plusieurs fois, payez à la fin'}</p>
                       </div>
                       {isPending && <div className="w-4 h-4 border-2 border-stone-500 border-t-transparent rounded-full animate-spin shrink-0" />}
                     </button>

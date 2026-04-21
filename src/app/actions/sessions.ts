@@ -210,6 +210,37 @@ export async function closeTableSession(sessionId: string): Promise<{ success: b
   return { success: true }
 }
 
+/**
+ * Marque une commande comme livrée/servie
+ */
+export async function markOrderDelivered(orderId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: 'delivered' })
+    .eq('id', orderId)
+
+  if (error) {
+    console.error('Error marking order as delivered:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/dashboard/orders')
+  return { success: true }
+}
+    .eq('session_id', sessionId)
+    .is('archived_at', null)
+
+  if (ordersError) {
+    console.error('Error archiving session orders:', ordersError)
+    // On continue quand même, c'est pas bloquant
+  }
+
+  revalidatePath('/dashboard/orders')
+  return { success: true }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Paiements partiels
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

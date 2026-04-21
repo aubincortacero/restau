@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { closeTableSession } from '@/app/actions/sessions'
+import { closeTableSession, markOrderDelivered } from '@/app/actions/sessions'
 import type { SessionWithDetails } from '@/types/session'
 
 function fmt(p: number): string {
@@ -22,6 +22,9 @@ function timeAgo(iso: string): string {
 export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const [deliveredOrders, setDeliveredOrders] = useState<Set<string>>(
+    new Set(session.orders.filter(o => o.status === 'delivered').map(o => o.id))
+  )
 
   const { balance, orders, table } = session
   const orderCount = orders.length
@@ -32,6 +35,23 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
     setIsClosing(true)
     await closeTableSession(session.id)
     setIsClosing(false)
+  }
+
+  async function handleMarkDelivered(orderId: string) {
+    // Optimistic update
+    setDeliveredOrders(prev => new Set([...prev, orderId]))
+    
+    const result = await markOrderDelivered(orderId)
+    
+    if (!result.success) {
+      // Rollback si erreur
+      setDeliveredOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        return newSet
+      })
+      alert('Erreur lors de la mise à jour')
+    }
   }
 
   return (
@@ -72,41 +92,78 @@ export function ActiveTabCard({ session }: { session: SessionWithDetails }) {
               {fmt(balance.paid_amount)} payé
             </p>
           )}
-        </div>
-        <svg
-          className={`w-5 h-5 text-purple-400 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-        </svg>
-      </button>
-
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="border-t border-purple-500/20 bg-black/20">
-          {/* Liste des commandes */}
-          <div className="p-5 space-y-3">
-            <p className="text-sm font-semibold text-purple-300 uppercase tracking-wide">
-              Commandes de cette ardoise
-            </p>
-            {orders.map((order, idx) => (
-              <div
-                key={order.id}
-                className="bg-gradient-to-br from-orange-950/60 to-orange-900/40 border-2 border-orange-500/50 rounded-xl p-4 shadow-lg shadow-orange-950/30"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-orange-500/30 text-orange-200 text-xs font-bold flex items-center justify-center border border-orange-400/40">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-sm text-orange-300 font-medium">
-                      {timeAgo(order.created_at)}
-                    </span>
+        </div>{
+              const isDelivered = deliveredOrders.has(order.id)
+              
+              return (
+                <div
+                  key={order.id}
+                  className={`rounded-xl p-4 shadow-lg transition-all ${
+                    isDelivered
+                      ? 'bg-zinc-900/40 border border-zinc-700/50 opacity-60'
+                      : 'bg-gradient-to-br from-orange-950/60 to-orange-900/40 border-2 border-orange-500/50 shadow-orange-950/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center border ${
+                        isDelivered
+                          ? 'bg-zinc-700/30 text-zinc-500 border-zinc-600/40'
+                          : 'bg-orange-500/30 text-orange-200 border-orange-400/40'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+                      <span className={`text-sm font-medium ${isDelivered ? 'text-zinc-500' : 'text-orange-300'}`}>
+                        {timeAgo(order.created_at)}
+                      </span>
+                      {isDelivered && (
+                        <span className="text-xs bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          ✓ Servie
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-base font-bold ${isDelivered ? 'text-zinc-500' : 'text-orange-100'}`}>
+                        {fmt(order.order_items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0))}
+                      </span>
+                      {!isDelivered && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleMarkDelivered(order.id)
+                          }}
+                          className="ml-2 px-2.5 py-1 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                          title="Marquer comme servie"
+                        >
+                          Servie
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-base font-bold text-orange-100">
+                  <div className="space-y-1">
+                    {order.order_items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-sm">
+                        <span className={`font-medium ${isDelivered ? 'text-zinc-500' : 'text-white'}`}>
+                          <span className={`font-bold ${isDelivered ? 'text-zinc-600' : 'text-orange-400'}`}>{item.quantity}×</span> {item.item_name}
+                        </span>
+                        <span className={`font-semibold ${isDelivered ? 'text-zinc-600' : 'text-orange-200'}`}>
+                          {fmt(item.unit_price * item.quantity)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {order.customer_note && (
+                    <p className={`text-xs mt-2 italic px-2 py-1 rounded ${
+                      isDelivered
+                        ? 'text-zinc-600 bg-zinc-800/40'
+                        : 'text-orange-300 bg-orange-950/40'
+                    }`}>
+                      💬 {order.customer_note}
+                    </p>
+                  )}
+                </div>
+              )
+            }     <span className="text-base font-bold text-orange-100">
                     {fmt(order.order_items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0))}
                   </span>
                 </div>

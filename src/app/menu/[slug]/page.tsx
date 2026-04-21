@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import MenuAccordion from '@/components/MenuAccordion'
 import HappyHourCountdown from '@/components/HappyHourCountdown'
 import { ClientSessionWrapper } from '@/components/ClientSessionWrapper'
@@ -149,6 +150,20 @@ export default async function PublicMenuPage({
     }))
     .filter(c => c.items.length > 0)
 
+  // Vérifier s'il y a une session active pour cette table
+  let hasActiveSession = false
+  if (tableId) {
+    const adminSupabase = createAdminClient()
+    const { data: activeSession } = await adminSupabase
+      .from('table_sessions')
+      .select('id')
+      .eq('restaurant_id', restaurant.id)
+      .eq('table_id', tableId)
+      .is('closed_at', null)
+      .maybeSingle()
+    hasActiveSession = !!activeSession
+  }
+
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0)
 
   const brandColor = (restaurant.brand_color as string | null) ?? '#f97316'
@@ -277,6 +292,7 @@ export default async function PublicMenuPage({
             tableId={tableId ?? null}
             tableLabel={tableLabel}
             restaurantId={restaurant.id}
+            hasActiveSession={hasActiveSession}
             acceptedPaymentMethods={
               (restaurant.accepted_payment_methods as string[] | null ?? ['online', 'cash'])
                 .filter(m => m !== 'online' || !!restaurant.stripe_charges_enabled)

@@ -102,6 +102,7 @@ export function ClientSessionWrapper({
       {/* Modal paiement partiel */}
       <PartialPaymentModal
         session={session}
+        restaurantId={restaurantId}
         isOpen={showPayPartialModal}
         onClose={() => setShowPayPartialModal(false)}
         onSuccess={loadSession}
@@ -111,6 +112,7 @@ export function ClientSessionWrapper({
       {showPayAllModal && (
         <PartialPaymentModal
           session={session}
+          restaurantId={restaurantId}
           isOpen={showPayAllModal}
           onClose={() => setShowPayAllModal(false)}
           onSuccess={loadSession}

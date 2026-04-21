@@ -6,20 +6,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(req: NextRequest) {
   try {
-    const { restaurantId, tableId, items, note, fulfillmentType, pickupCode } = await req.json()
+    const { restaurantId, tableId, items, note, fulfillmentType, pickupCode, customAmount } = await req.json()
 
-    if (!restaurantId || !Array.isArray(items) || items.length === 0) {
+    if (!restaurantId) {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
     }
 
     const UUID_RE = /^[0-9a-f-]{36}$/i
     if (!UUID_RE.test(restaurantId)) {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
-    }
-    for (const item of items) {
-      if (!UUID_RE.test(item.itemId) || item.quantity < 1 || item.quantity > 99) {
-        return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
-      }
     }
 
     const supabase = createAdminClient()
@@ -38,43 +33,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Paiement en ligne non accepté' }, { status: 400 })
     }
 
-    // Récupérer les prix depuis la DB — ne jamais faire confiance au client
-    const itemIds = items.map((i: { itemId: string }) => i.itemId)
-    const uniqueItemIds = [...new Set(itemIds)] // Déduplication pour éviter les erreurs si même item commandé 2x
-    const { data: dbItems } = await supabase
-      .from('items')
-      .select('id, price, happy_hour_price, is_available, category_id')
-      .in('id', uniqueItemIds)
+    let amountCents: number
 
-    if (!dbItems || dbItems.length !== uniqueItemIds.length) {
-      return NextResponse.json({ error: 'Articles introuvables' }, { status: 400 })
+    // Si customAmount est fourni (paiement partiel), l'utiliser directement
+    if (typeof customAmount === 'number') {
+      amountCents = customAmount
+    } else {
+      // Sinon, calculer depuis les items
+      if (!Array.isArray(items) || items.length === 0) {
+        return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+      }
+
+      for (const item of items) {
+        if (!UUID_RE.test(item.itemId) || item.quantity < 1 || item.quantity > 99) {
+          return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+        }
+      }
+
+      // Récupérer les prix depuis la DB — ne jamais faire confiance au client
+      const itemIds = items.map((i: { itemId: string }) => i.itemId)
+      const uniqueItemIds = [...new Set(itemIds)] // Déduplication pour éviter les erreurs si même item commandé 2x
+      const { data: dbItems } = await supabase
+        .from('items')
+        .select('id, price, happy_hour_price, is_available, category_id')
+        .in('id', uniqueItemIds)
+
+      if (!dbItems || dbItems.length !== uniqueItemIds.length) {
+        return NextResponse.json({ error: 'Articles introuvables' }, { status: 400 })
+      }
+
+      // Vérifier l'appartenance au restaurant
+      const catIds = [...new Set(dbItems.map((i) => i.category_id))]
+      const { data: cats } = await supabase
+        .from('categories')
+        .select('id')
+        .in('id', catIds)
+        .eq('restaurant_id', restaurantId)
+
+      if (!cats || cats.length !== catIds.length) {
+        return NextResponse.json({ error: 'Articles invalides' }, { status: 400 })
+      }
+
+      if (dbItems.some((i) => !i.is_available)) {
+        return NextResponse.json({ error: 'Certains articles ne sont plus disponibles' }, { status: 400 })
+      }
+
+      // Calculer le montant côté serveur
+      const isHH = checkHHActive(restaurant.happy_hour as HHData | null)
+      amountCents = items.reduce((sum: number, pi: { itemId: string; quantity: number }) => {
+        const dbItem = dbItems.find((i) => i.id === pi.itemId)!
+        const unitPrice = isHH && dbItem.happy_hour_price != null
+          ? Number(dbItem.happy_hour_price)
+          : Number(dbItem.price)
+        return sum + Math.round(unitPrice * 100) * pi.quantity
+      }, 0)
     }
-
-    // Vérifier l'appartenance au restaurant
-    const catIds = [...new Set(dbItems.map((i) => i.category_id))]
-    const { data: cats } = await supabase
-      .from('categories')
-      .select('id')
-      .in('id', catIds)
-      .eq('restaurant_id', restaurantId)
-
-    if (!cats || cats.length !== catIds.length) {
-      return NextResponse.json({ error: 'Articles invalides' }, { status: 400 })
-    }
-
-    if (dbItems.some((i) => !i.is_available)) {
-      return NextResponse.json({ error: 'Certains articles ne sont plus disponibles' }, { status: 400 })
-    }
-
-    // Calculer le montant côté serveur
-    const isHH = checkHHActive(restaurant.happy_hour as HHData | null)
-    const amountCents = items.reduce((sum: number, pi: { itemId: string; quantity: number }) => {
-      const dbItem = dbItems.find((i) => i.id === pi.itemId)!
-      const unitPrice = isHH && dbItem.happy_hour_price != null
-        ? Number(dbItem.happy_hour_price)
-        : Number(dbItem.price)
-      return sum + Math.round(unitPrice * 100) * pi.quantity
-    }, 0)
 
     if (amountCents < 50) {
       return NextResponse.json({ error: 'Montant minimum 0,50 €' }, { status: 400 })
@@ -88,9 +101,10 @@ export async function POST(req: NextRequest) {
         restaurantId,
         tableId: tableId ?? '',
         note: (note ?? '').slice(0, 500),
-        items: JSON.stringify(items),
+        items: typeof customAmount === 'number' ? '' : JSON.stringify(items),
         fulfillmentType: fulfillmentType === 'pickup' ? 'pickup' : 'table',
         pickupCode: (fulfillmentType === 'pickup' && pickupCode) ? String(pickupCode) : '',
+        isPartialPayment: typeof customAmount === 'number' ? 'true' : 'false',
       },
     }
 

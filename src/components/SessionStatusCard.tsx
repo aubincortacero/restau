@@ -143,30 +143,24 @@ export function SessionStatusCard({
 
       {/* Actions */}
       <div className="flex gap-2 pt-2">
-        <button
-          onClick={onOrderMore}
-          className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-        >
-          Commander +
-        </button>
         {!isFullyPaid && (
           <>
             <button
               onClick={onPayPartial}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-3 bg-orange-500 hover:bg-orange-400 text-white font-semibold rounded-xl transition-colors"
             >
               Payer une partie
             </button>
             <button
               onClick={onPayAll}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
             >
               Tout payer
             </button>
           </>
         )}
         {isFullyPaid && (
-          <div className="flex-1 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-center font-medium">
+          <div className="flex-1 px-4 py-3 bg-emerald-500/20 text-emerald-400 rounded-xl text-center font-semibold border border-emerald-500/30">
             ✓ Tout payé
           </div>
         )}

@@ -1,15 +1,116 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import type { SessionWithDetails, SelectedItemForPayment, OrderItemWithPayment } from '@/types/session'
 import { formatCurrency } from '@/lib/utils'
 import { createPartialPayment } from '@/app/actions/sessions'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 type PartialPaymentModalProps = {
   session: SessionWithDetails
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  restaurantId: string
+}
+
+function StripePaymentForm({ 
+  totalAmount, 
+  stripeAccountId, 
+  selectedItems,
+  session,
+  onSuccess, 
+  onCancel 
+}: {
+  totalAmount: number
+  stripeAccountId: string | null
+  selectedItems: SelectedItemForPayment[]
+  session: SessionWithDetails
+  onSuccess: () => void
+  onCancel: () => void
+}) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!stripe || !elements) return
+
+    setIsPending(true)
+    setError(null)
+
+    const { error: submitError } = await elements.submit()
+    if (submitError) {
+      setError(submitError.message ?? 'Erreur')
+      setIsPending(false)
+      return
+    }
+
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+      confirmParams: {
+        payment_method_data: {
+          billing_details: { name: 'Client' },
+        },
+      },
+    })
+
+    if (confirmError) {
+      setError(confirmError.message ?? 'Paiement refusé')
+      setIsPending(false)
+      return
+    }
+
+    if (paymentIntent?.id) {
+      // Créer le paiement partiel
+      const result = await createPartialPayment(
+        session.id,
+        selectedItems,
+        'online',
+        paymentIntent.id
+      )
+
+      if (result.success) {
+        onSuccess()
+      } else {
+        setError(result.error ?? 'Erreur lors de la validation')
+      }
+    }
+
+    setIsPending(false)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto px-5 pb-4">
+        <PaymentElement options={{ layout: 'tabs' }} />
+        {error && <p className="text-xs text-red-400 mt-3 text-center">{error}</p>}
+      </div>
+      <div className="px-5 py-4 shrink-0 border-t border-zinc-800/60 flex flex-col gap-2">
+        <button
+          type="submit"
+          disabled={isPending || !stripe}
+          className="w-full px-4 py-4 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isPending ? 'Paiement en cours...' : `Payer ${formatCurrency(totalAmount)}`}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="w-full px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors disabled:opacity-50"
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  )
 }
 
 export function PartialPaymentModal({
@@ -17,12 +118,13 @@ export function PartialPaymentModal({
   isOpen,
   onClose,
   onSuccess,
+  restaurantId,
 }: PartialPaymentModalProps) {
   const [selectedItems, setSelectedItems] = useState<Map<string, number>>(new Map())
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online')
-  const [customerName, setCustomerName] = useState('')
-  const [customerEmail, setCustomerEmail] = useState('')
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [step, setStep] = useState<'select' | 'payment'>('select')
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
+  const [isLoadingPayment, setIsLoadingPayment] = useState(false)
 
   // Récupérer tous les items non entièrement payés
   const availableItems: OrderItemWithPayment[] = session.orders.flatMap((order) =>
@@ -35,118 +137,153 @@ export function PartialPaymentModal({
     return sum + selectedQty * item.unit_price
   }, 0)
 
-  const handleQuantityChange = (itemId: string, quantity: number) => {
+  const handleQuantityChange = (itemId: string, delta: number) => {
+    const item = availableItems.find(i => i.id === itemId)
+    if (!item) return
+    
+    const currentQty = selectedItems.get(itemId) || 0
+    const newQty = Math.max(0, Math.min(item.remaining_quantity, currentQty + delta))
+    
     const newMap = new Map(selectedItems)
-    if (quantity > 0) {
-      newMap.set(itemId, quantity)
+    if (newQty > 0) {
+      newMap.set(itemId, newQty)
     } else {
       newMap.delete(itemId)
     }
     setSelectedItems(newMap)
   }
 
-  const handlePayment = async () => {
+  const handleProceedToPayment = async () => {
     if (totalAmount <= 0) {
       alert('Veuillez sélectionner au moins un article')
       return
     }
 
-    setIsProcessing(true)
+    setIsLoadingPayment(true)
 
-    const itemsForPayment: SelectedItemForPayment[] = availableItems
-      .filter((item) => (selectedItems.get(item.id) || 0) > 0)
-      .map((item) => ({
-        order_item_id: item.id,
-        item_name: item.item_name,
-        quantity: selectedItems.get(item.id)!,
-        unit_price: item.unit_price,
-        max_quantity: item.remaining_quantity,
-      }))
+    // Créer un payment intent pour le paiement partiel
+    const amountCents = Math.round(totalAmount * 100)
+    
+    const res = await fetch('/api/stripe/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurantId,
+        tableId: session.table.id,
+        items: [], // Pour un paiement partiel, on ne passe pas les items du menu
+        note: `Paiement partiel - Session ${session.id}`,
+        customAmount: amountCents,
+        fulfillmentType: 'table',
+      }),
+    })
 
-    if (paymentMethod === 'online') {
-      // TODO: Intégrer Stripe pour le paiement en ligne
-      // Pour l'instant, on simule un paiement réussi
-      const result = await createPartialPayment(
-        session.id,
-        itemsForPayment,
-        'online',
-        `pi_simulated_${Date.now()}`,
-        customerName || undefined,
-        customerEmail || undefined
-      )
-
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        alert(`Erreur : ${result.error}`)
-      }
-    } else {
-      // Paiement en espèces (cash)
-      const result = await createPartialPayment(
-        session.id,
-        itemsForPayment,
-        'cash',
-        undefined,
-        customerName || undefined,
-        customerEmail || undefined
-      )
-
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        alert(`Erreur : ${result.error}`)
-      }
+    if (!res.ok) {
+      alert('Erreur lors de la création du paiement')
+      setIsLoadingPayment(false)
+      return
     }
 
-    setIsProcessing(false)
+    const data = await res.json()
+    setClientSecret(data.clientSecret)
+    setStripeAccountId(data.stripeAccountId || null)
+    setStep('payment')
+    setIsLoadingPayment(false)
   }
+
+  const handleBackToSelection = () => {
+    setStep('select')
+    setClientSecret(null)
+  }
+
+  const itemsForPayment: SelectedItemForPayment[] = availableItems
+    .filter((item) => (selectedItems.get(item.id) || 0) > 0)
+    .map((item) => ({
+      order_item_id: item.id,
+      item_name: item.item_name,
+      quantity: selectedItems.get(item.id)!,
+      unit_price: item.unit_price,
+      max_quantity: item.remaining_quantity,
+    }))
 
   if (!isOpen) return null
 
+  if (step === 'payment' && clientSecret) {
+    const options = {
+      clientSecret,
+      ...(stripeAccountId ? { stripeAccount: stripeAccountId } : {}),
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
+          <div className="px-5 pt-4 pb-3 border-b border-zinc-800 shrink-0">
+            <div className="flex items-center gap-3 mb-2">
+              <button
+                onClick={handleBackToSelection}
+                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 flex items-center justify-center transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+              </button>
+              <h2 className="text-xl font-bold text-white">Paiement en ligne</h2>
+            </div>
+            <p className="text-sm text-zinc-400">Paiement sécurisé par Stripe</p>
+          </div>
+          <Elements stripe={stripePromise} options={options}>
+            <StripePaymentForm 
+              totalAmount={totalAmount}
+              stripeAccountId={stripeAccountId}
+              selectedItems={itemsForPayment}
+              session={session}
+              onSuccess={() => {
+                onSuccess()
+                onClose()
+                setStep('select')
+                setSelectedItems(new Map())
+              }}
+              onCancel={handleBackToSelection}
+            />
+          </Elements>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col border border-zinc-800 shadow-2xl">
         {/* En-tête */}
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Paiement partiel</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          >
-            ✕
-          </button>
+        <div className="px-5 pt-4 pb-3 border-b border-zinc-800 shrink-0">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <h2 className="text-xl font-bold text-white">Paiement partiel</h2>
+              <p className="text-sm text-zinc-400 mt-0.5">Sélectionnez les articles à payer</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 flex items-center justify-center transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        {/* Contenu */}
-        <div className="p-4 space-y-4">
-          {/* Informations client (optionnel) */}
-          <div className="space-y-2">
-            <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-              Informations (optionnel)
-            </h3>
-            <input
-              type="text"
-              placeholder="Nom du client"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-sm"
-            />
-            <input
-              type="email"
-              placeholder="Email du client"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-sm"
-            />
-          </div>
-
-          {/* Sélection des articles */}
-          <div className="space-y-2">
-            <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-              Articles à payer ({availableItems.length})
-            </h3>
+        {/* Contenu scrollable */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {availableItems.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                <svg className="w-8 h-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-zinc-400 font-medium">Tout est déjà payé !</p>
+            </div>
+          ) : (
             <div className="space-y-3">
               {availableItems.map((item) => {
                 const selectedQty = selectedItems.get(item.id) || 0
@@ -155,133 +292,131 @@ export function PartialPaymentModal({
                 return (
                   <div
                     key={item.id}
-                    className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 space-y-2"
+                    className={`rounded-xl p-4 border-2 transition-all ${
+                      selectedQty > 0
+                        ? 'bg-orange-950/30 border-orange-500/50'
+                        : 'bg-zinc-800/40 border-zinc-700 hover:border-zinc-600'
+                    }`}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-sm">{item.item_name}</p>
-                        <p className="text-xs text-gray-500">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <p className="font-semibold text-white">{item.item_name}</p>
+                        <p className="text-sm text-zinc-400 mt-0.5">
                           {item.remaining_quantity} restant{item.remaining_quantity > 1 ? 's' : ''} × {formatCurrency(item.unit_price)}
                         </p>
                       </div>
                       {selectedQty > 0 && (
-                        <p className="font-semibold text-sm text-blue-600 dark:text-blue-400">
+                        <p className="font-bold text-lg text-orange-400 tabular-nums">
                           {formatCurrency(itemTotal)}
                         </p>
                       )}
                     </div>
 
-                    {/* Slider de quantité */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>Quantité à payer</span>
-                        <span>{selectedQty} / {item.remaining_quantity}</span>
+                    {/* Sélecteur de quantité */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleQuantityChange(item.id, -1)}
+                        disabled={selectedQty === 0}
+                        className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xl flex items-center justify-center transition-colors"
+                      >
+                        −
+                      </button>
+                      <div className="flex-1 text-center">
+                        <p className="text-2xl font-black text-white tabular-nums">
+                          {selectedQty}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          sur {item.remaining_quantity}
+                        </p>
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max={item.remaining_quantity}
-                        value={selectedQty}
-                        onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                      <div className="flex gap-2">
-                        {[...Array(Math.min(item.remaining_quantity, 5))].map((_, i) => {
-                          const qty = i + 1
-                          return (
-                            <button
-                              key={qty}
-                              onClick={() => handleQuantityChange(item.id, qty)}
-                              className={`px-2 py-1 text-xs rounded ${
-                                selectedQty === qty
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                              }`}
-                            >
-                              {qty}
-                            </button>
-                          )
-                        })}
-                        {item.remaining_quantity > 5 && (
+                      <button
+                        onClick={() => handleQuantityChange(item.id, 1)}
+                        disabled={selectedQty >= item.remaining_quantity}
+                        className="w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-400 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xl flex items-center justify-center transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Boutons rapides */}
+                    {item.remaining_quantity > 1 && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => handleQuantityChange(item.id, item.remaining_quantity - selectedQty)}
+                          className="flex-1 py-2 px-3 text-xs font-medium rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors"
+                        >
+                          Tout ({item.remaining_quantity})
+                        </button>
+                        {selectedQty > 0 && (
                           <button
-                            onClick={() => handleQuantityChange(item.id, item.remaining_quantity)}
-                            className={`px-2 py-1 text-xs rounded ${
-                              selectedQty === item.remaining_quantity
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                            }`}
+                            onClick={() => {
+                              const newMap = new Map(selectedItems)
+                              newMap.delete(item.id)
+                              setSelectedItems(newMap)
+                            }}
+                            className="py-2 px-3 text-xs font-medium rounded-lg bg-zinc-700 hover:bg-red-900/30 text-zinc-400 hover:text-red-400 transition-colors"
                           >
-                            Tout
+                            Annuler
                           </button>
                         )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 )
               })}
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Méthode de paiement */}
-          <div className="space-y-2">
-            <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-              Méthode de paiement
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
+        {/* Pied de page avec total et CTA */}
+        {availableItems.length > 0 && (
+          <div className="px-5 py-4 border-t border-zinc-800 shrink-0 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-zinc-300">Total à payer</span>
+              <span className="text-3xl font-black text-white tabular-nums">
+                {formatCurrency(totalAmount)}
+              </span>
+            </div>
+            
+            {totalAmount > 0 && (
+              <div className="bg-orange-950/30 border border-orange-500/30 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-orange-300">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  <span>Paiement en ligne par carte bancaire</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
               <button
-                onClick={() => setPaymentMethod('online')}
-                className={`px-4 py-3 rounded-lg border-2 transition-colors ${
-                  paymentMethod === 'online'
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                }`}
+                onClick={onClose}
+                className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl transition-colors"
               >
-                <div className="text-2xl mb-1">💳</div>
-                <div className="text-sm font-medium">Carte bancaire</div>
+                Annuler
               </button>
               <button
-                onClick={() => setPaymentMethod('cash')}
-                className={`px-4 py-3 rounded-lg border-2 transition-colors ${
-                  paymentMethod === 'cash'
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                onClick={handleProceedToPayment}
+                disabled={totalAmount <= 0 || isLoadingPayment}
+                className={`flex-1 px-4 py-4 rounded-xl font-bold transition-colors ${
+                  totalAmount > 0 && !isLoadingPayment
+                    ? 'bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white'
+                    : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                 }`}
               >
-                <div className="text-2xl mb-1">💵</div>
-                <div className="text-sm font-medium">Espèces</div>
+                {isLoadingPayment ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-zinc-600 border-t-transparent rounded-full animate-spin" />
+                    Préparation...
+                  </span>
+                ) : (
+                  'Continuer'
+                )}
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Pied de page avec total et bouton */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-lg">Total à payer</span>
-            <span className="font-bold text-2xl text-blue-600 dark:text-blue-400">
-              {formatCurrency(totalAmount)}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handlePayment}
-              disabled={totalAmount <= 0 || isProcessing}
-              className={`flex-1 px-4 py-3 rounded-lg transition-colors ${
-                totalAmount > 0 && !isProcessing
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isProcessing ? 'Traitement...' : 'Payer'}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
