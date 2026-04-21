@@ -101,6 +101,13 @@ export async function getSessionDetails(sessionId: string): Promise<SessionWithD
     .rpc('get_session_balance', { session_uuid: sessionId })
     .single()
 
+  const balanceRaw = balanceData as {
+    total_amount: number
+    paid_amount: number
+    remaining_amount: number
+    is_fully_paid: boolean
+  } | null
+
   // Formater les order_items
   const formattedOrders = (orders ?? []).map((order: any) => ({
     ...order,
@@ -116,7 +123,12 @@ export async function getSessionDetails(sessionId: string): Promise<SessionWithD
     })),
   }))
 
-  const balance: SessionBalance = balanceData ?? {
+  const balance: SessionBalance = balanceRaw ? {
+    total_amount: Number(balanceRaw.total_amount),
+    paid_amount: Number(balanceRaw.paid_amount),
+    remaining_amount: Number(balanceRaw.remaining_amount),
+    is_fully_paid: balanceRaw.is_fully_paid,
+  } : {
     total_amount: Number(session.total_amount),
     paid_amount: Number(session.paid_amount),
     remaining_amount: Number(session.total_amount) - Number(session.paid_amount),
@@ -240,7 +252,14 @@ export async function recordCashPayment(
     .rpc('get_session_balance', { session_uuid: sessionId })
     .single()
 
-  if (balanceData && amount > Number(balanceData.remaining_amount)) {
+  const balanceRaw = balanceData as {
+    total_amount: number
+    paid_amount: number
+    remaining_amount: number
+    is_fully_paid: boolean
+  } | null
+
+  if (balanceRaw && amount > Number(balanceRaw.remaining_amount)) {
     return { success: false, error: 'Le montant dépasse le reste à payer' }
   }
 
