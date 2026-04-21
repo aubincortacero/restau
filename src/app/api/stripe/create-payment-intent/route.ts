@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount: amountCents,
       currency: 'eur',
-      statement_descriptor: 'QOMAND',
+      statement_descriptor_suffix: 'QOMAND',
       metadata: {
         restaurantId,
         tableId: tableId ?? '',
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amountCents,
           currency: 'eur',
-          statement_descriptor: 'QOMAND',
+          statement_descriptor_suffix: 'QOMAND',
           metadata: paymentIntentParams.metadata,
         })
         return NextResponse.json({ clientSecret: paymentIntent.client_secret })
