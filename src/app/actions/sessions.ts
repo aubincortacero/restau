@@ -229,17 +229,6 @@ export async function markOrderDelivered(orderId: string): Promise<{ success: bo
   revalidatePath('/dashboard/orders')
   return { success: true }
 }
-    .eq('session_id', sessionId)
-    .is('archived_at', null)
-
-  if (ordersError) {
-    console.error('Error archiving session orders:', ordersError)
-    // On continue quand même, c'est pas bloquant
-  }
-
-  revalidatePath('/dashboard/orders')
-  return { success: true }
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Paiements partiels
