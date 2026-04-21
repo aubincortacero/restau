@@ -89,12 +89,16 @@ export async function getOrCreateTableSession(
 export async function getSessionDetails(sessionId: string): Promise<SessionWithDetails | null> {
   const supabase = await createClient()
 
+  console.log('[getSessionDetails] Fetching session:', sessionId)
+
   // 1. Récupérer la session
-  const { data: session } = await supabase
+  const { data: session, error: sessionError } = await supabase
     .from('table_sessions')
     .select('*, table:tables(number, label)')
     .eq('id', sessionId)
     .single()
+
+  console.log('[getSessionDetails] Session query:', { session, sessionError })
 
   if (!session) return null
 
@@ -317,18 +321,24 @@ export async function recordCashPayment(
 export async function getActiveTableSessions(restaurantId: string): Promise<SessionWithDetails[]> {
   const supabase = await createClient()
 
-  const { data: sessions } = await supabase
+  console.log('[getActiveTableSessions] Fetching sessions for restaurant:', restaurantId)
+
+  const { data: sessions, error } = await supabase
     .from('table_sessions')
     .select('id')
     .eq('restaurant_id', restaurantId)
     .is('closed_at', null)
     .order('started_at', { ascending: false })
 
+  console.log('[getActiveTableSessions] Query result:', { sessions, error })
+
   if (!sessions) return []
 
   const detailedSessions = await Promise.all(
     sessions.map((s) => getSessionDetails(s.id))
   )
+
+  console.log('[getActiveTableSessions] Detailed sessions:', detailedSessions.length)
 
   return detailedSessions.filter((s): s is SessionWithDetails => s !== null)
 }
