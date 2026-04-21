@@ -169,7 +169,7 @@ export function PartialPaymentModal({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         restaurantId,
-        tableId: session.table.id,
+        tableId: session.table_id,
         items: [], // Pour un paiement partiel, on ne passe pas les items du menu
         note: `Paiement partiel - Session ${session.id}`,
         customAmount: amountCents,
