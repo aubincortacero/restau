@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import type { SessionWithDetails, SelectedItemForPayment, OrderItemWithPayment } from '@/types/session'
 import { formatCurrency } from '@/lib/utils'
 import { createPartialPayment } from '@/app/actions/sessions'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 type PartialPaymentModalProps = {
   session: SessionWithDetails
@@ -234,9 +232,27 @@ export function PartialPaymentModal({
   if (!isOpen) return null
 
   if (step === 'payment' && clientSecret) {
+    const stripePromise = useMemo(
+      () => loadStripe(
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+        stripeAccountId ? { stripeAccount: stripeAccountId } : undefined
+      ),
+      [stripeAccountId]
+    )
+
     const options = {
       clientSecret,
-      ...(stripeAccountId ? { stripeAccount: stripeAccountId } : {}),
+      appearance: {
+        theme: 'night' as const,
+        variables: {
+          colorPrimary: '#f97316',
+          colorBackground: '#18181b',
+          colorText: '#fafafa',
+          colorDanger: '#f87171',
+          borderRadius: '12px',
+          fontFamily: 'inherit',
+        },
+      },
     }
 
     return (
