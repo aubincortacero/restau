@@ -94,7 +94,7 @@ export default function MobileSidebarDrawer({
     <>
       {/* Overlay */}
       <div
-        className={`md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -102,7 +102,7 @@ export default function MobileSidebarDrawer({
 
       {/* Drawer */}
       <aside
-        className={`md:hidden fixed top-0 left-0 bottom-0 w-72 bg-zinc-900 border-r border-zinc-800 z-50 transition-transform duration-300 flex flex-col ${
+        className={`md:hidden fixed top-0 left-0 bottom-0 w-72 bg-zinc-900 border-r border-zinc-800 z-[70] transition-transform duration-300 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
