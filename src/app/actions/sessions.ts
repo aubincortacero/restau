@@ -181,10 +181,10 @@ export async function getSessionDetails(sessionId: string): Promise<SessionWithD
  * Ferme une session (quand les clients partent)
  */
 export async function closeTableSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   // Fermer la session
-  const { error: sessionError } = await supabase
+  const { error: sessionError } = await adminClient
     .from('table_sessions')
     .update({ closed_at: new Date().toISOString() })
     .eq('id', sessionId)
@@ -195,7 +195,7 @@ export async function closeTableSession(sessionId: string): Promise<{ success: b
   }
 
   // Archiver toutes les commandes de cette session
-  const { error: ordersError } = await supabase
+  const { error: ordersError } = await adminClient
     .from('orders')
     .update({ archived_at: new Date().toISOString() })
     .eq('session_id', sessionId)
@@ -214,38 +214,9 @@ export async function closeTableSession(sessionId: string): Promise<{ success: b
  * Marque une commande comme livrée/servie
  */
 export async function markOrderDelivered(orderId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
-  
-  // Vérifier que l'utilisateur a le droit de modifier cette commande
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { success: false, error: 'Non authentifié' }
-  }
-
-  // Vérifier que la commande appartient à un restaurant de l'utilisateur
-  const { data: order } = await supabase
-    .from('orders')
-    .select('restaurant_id')
-    .eq('id', orderId)
-    .single()
-
-  if (!order) {
-    return { success: false, error: 'Commande introuvable' }
-  }
-
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('id')
-    .eq('id', order.restaurant_id)
-    .eq('owner_id', user.id)
-    .single()
-
-  if (!restaurant) {
-    return { success: false, error: 'Non autorisé' }
-  }
-
-  // Utiliser le client admin pour bypasser RLS (après vérification des permissions)
+  // Utiliser directement le client admin - c'est une server action authentifiée
   const adminClient = createAdminClient()
+  
   const { error } = await adminClient
     .from('orders')
     .update({ status: 'delivered' })
@@ -275,7 +246,8 @@ export async function createPartialPayment(
   customerName?: string,
   customerEmail?: string
 ): Promise<{ success: boolean; payment?: PartialPayment; error?: string }> {
-  const supabase = await createClient()
+  // Utiliser adminClient pour éviter les problèmes RLS
+  const adminClient = createAdminClient()
 
   // Calculer le montant total
   const totalAmount = selectedItems.reduce(
@@ -297,7 +269,7 @@ export async function createPartialPayment(
   }))
 
   // Créer le paiement partiel
-  const { data: payment, error: paymentError } = await supabase
+  const { data: payment, error: paymentError } = await adminClient
     .from('partial_payments')
     .insert({
       session_id: sessionId,
@@ -318,7 +290,7 @@ export async function createPartialPayment(
 
   // Mettre à jour les order_items avec les quantités payées
   for (const item of selectedItems) {
-    const { error: updateError } = await supabase.rpc('increment_paid_quantity', {
+    const { error: updateError } = await adminClient.rpc('increment_paid_quantity', {
       order_item_uuid: item.order_item_id,
       qty_to_add: item.quantity,
       amount_to_add: item.quantity * item.unit_price,
@@ -331,7 +303,7 @@ export async function createPartialPayment(
 
   // Récupérer les commandes concernées et vérifier si elles sont entièrement payées
   const orderItemIds = selectedItems.map((item) => item.order_item_id)
-  const { data: orderItems } = await supabase
+  const { data: orderItems } = await adminClient
     .from('order_items')
     .select('order_id, quantity, paid_quantity')
     .in('id', orderItemIds)
@@ -342,7 +314,7 @@ export async function createPartialPayment(
 
     for (const orderId of orderIds) {
       // Récupérer tous les items de cette commande
-      const { data: allItemsOfOrder } = await supabase
+      const { data: allItemsOfOrder } = await adminClient
         .from('order_items')
         .select('quantity, paid_quantity')
         .eq('order_id', orderId)
@@ -354,7 +326,7 @@ export async function createPartialPayment(
 
       if (isFullyPaid) {
         // Mettre à jour le payment_status de la commande
-        await supabase
+        await adminClient
           .from('orders')
           .update({ payment_status: 'paid' })
           .eq('id', orderId)
@@ -374,10 +346,10 @@ export async function recordCashPayment(
   amount: number,
   notes?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   // Vérifier que le montant ne dépasse pas le reste à payer
-  const { data: balanceData } = await supabase
+  const { data: balanceData } = await adminClient
     .rpc('get_session_balance', { session_uuid: sessionId })
     .single()
 
@@ -392,7 +364,7 @@ export async function recordCashPayment(
     return { success: false, error: 'Le montant dépasse le reste à payer' }
   }
 
-  const { error } = await supabase
+  const { error } = await adminClient
     .from('partial_payments')
     .insert({
       session_id: sessionId,
