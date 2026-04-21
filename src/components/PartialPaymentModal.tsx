@@ -128,8 +128,6 @@ export function PartialPaymentModal({
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [isLoadingPayment, setIsLoadingPayment] = useState(false)
   const [customerEmail, setCustomerEmail] = useState('')
-  const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [touchOffset, setTouchOffset] = useState(0)
 
   // Créer le stripePromise dynamiquement en fonction du compte Connect
   const stripePromise = useMemo(
@@ -173,30 +171,6 @@ export function PartialPaymentModal({
       newMap.set(item.id, item.remaining_quantity)
     })
     setSelectedItems(newMap)
-  }
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientY)
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null) return
-    const currentTouch = e.touches[0].clientY
-    const diff = currentTouch - touchStart
-    if (diff > 0) {
-      setTouchOffset(diff)
-    }
-  }
-
-  const handleTouchEnd = () => {
-    if (touchOffset > 100) {
-      onClose()
-      setStep('select')
-      setSelectedItems(new Map())
-      setCustomerEmail('')
-    }
-    setTouchStart(null)
-    setTouchOffset(0)
   }
 
   const handleProceedToPayment = async () => {
@@ -290,13 +264,7 @@ export function PartialPaymentModal({
           setSelectedItems(new Map())
           setCustomerEmail('')
         }} />
-        <div 
-          className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-zinc-800/80 transition-transform"
-          style={{ transform: `translateY(${touchOffset}px)` }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
+        <div className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-zinc-800/80">
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-10 h-1 bg-zinc-700 rounded-full" />
           </div>
@@ -339,13 +307,7 @@ export function PartialPaymentModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div 
-        className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-zinc-800/80 transition-transform"
-        style={{ transform: `translateY(${touchOffset}px)` }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="relative bg-[#111110] rounded-t-3xl max-h-[88vh] flex flex-col border-t border-zinc-800/80">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 bg-zinc-700 rounded-full" />
         </div>
