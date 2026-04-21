@@ -215,8 +215,38 @@ export async function closeTableSession(sessionId: string): Promise<{ success: b
  */
 export async function markOrderDelivered(orderId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
+  
+  // Vérifier que l'utilisateur a le droit de modifier cette commande
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, error: 'Non authentifié' }
+  }
 
-  const { error } = await supabase
+  // Vérifier que la commande appartient à un restaurant de l'utilisateur
+  const { data: order } = await supabase
+    .from('orders')
+    .select('restaurant_id')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) {
+    return { success: false, error: 'Commande introuvable' }
+  }
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', order.restaurant_id)
+    .eq('owner_id', user.id)
+    .single()
+
+  if (!restaurant) {
+    return { success: false, error: 'Non autorisé' }
+  }
+
+  // Utiliser le client admin pour bypasser RLS (après vérification des permissions)
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
     .from('orders')
     .update({ status: 'delivered' })
     .eq('id', orderId)
