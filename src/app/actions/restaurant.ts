@@ -1155,11 +1155,49 @@ export async function placeOrder(payload: {
     ? (payload.pickupCode?.trim() || generatePickupCode())
     : null
 
+  // Gestion des sessions de table : si c'est une commande sur table, chercher ou créer une session
+  let sessionId: string | null = null
+  if (fulfillmentType === 'table' && payload.tableId) {
+    // Chercher une session active pour cette table
+    const { data: existingSession } = await supabase
+      .from('table_sessions')
+      .select('id')
+      .eq('restaurant_id', payload.restaurantId)
+      .eq('table_id', payload.tableId)
+      .is('closed_at', null)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (existingSession) {
+      sessionId = existingSession.id
+    } else {
+      // Créer une nouvelle session
+      const { data: newSession } = await supabase
+        .from('table_sessions')
+        .insert({
+          restaurant_id: payload.restaurantId,
+          table_id: payload.tableId,
+          started_at: new Date().toISOString(),
+          total_amount: 0,
+          paid_amount: 0,
+          customer_count: 1,
+        })
+        .select('id')
+        .maybeSingle()
+      
+      if (newSession) {
+        sessionId = newSession.id
+      }
+    }
+  }
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       restaurant_id: payload.restaurantId,
       table_id: payload.tableId ?? null,
+      session_id: sessionId,
       status: 'pending',
       payment_method: payload.paymentMethod ?? 'cash',
       payment_status: 'unpaid',

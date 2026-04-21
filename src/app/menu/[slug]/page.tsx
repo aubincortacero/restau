@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import MenuAccordion from '@/components/MenuAccordion'
 import HappyHourCountdown from '@/components/HappyHourCountdown'
+import { ClientSessionWrapper } from '@/components/ClientSessionWrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -250,6 +251,15 @@ export default async function PublicMenuPage({
             <PublicSectionRenderer key={s.id} section={s} />
           ))}
         </div>
+      )}
+
+      {/* Session active (si table) */}
+      {tableId && (
+        <ClientSessionWrapper
+          restaurantId={restaurant.id}
+          tableId={tableId}
+          slug={slug}
+        />
       )}
 
       {/* Menu */}

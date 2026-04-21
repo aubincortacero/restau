@@ -7,6 +7,8 @@ import { IconCreditCard, IconBanknote } from '@/components/icons'
 import { updateOrderStatus, archiveOrder, markOrderReady, collectCashPayment } from '@/app/actions/restaurant'
 import OrderTimer from '@/components/OrderTimer'
 import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
+import { getActiveTableSessions } from '@/app/actions/sessions'
+import { DashboardSessionCard } from '@/components/DashboardSessionCard'
 
 const ORDERS_TUTORIAL_STEPS: PageTutorialStep[] = [
   {
@@ -105,6 +107,9 @@ export default async function OrdersPage() {
 
   const totalPending = enriched.filter((o) => o.status === 'pending').length
 
+  // Récupérer les sessions actives
+  const activeSessions = await getActiveTableSessions(restaurant.id)
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8" data-page-tutorial="orders-header">
@@ -127,6 +132,21 @@ export default async function OrdersPage() {
           Archives
         </Link>
       </div>
+
+      {/* Sessions actives (paiement partiel) */}
+      {activeSessions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <span className="text-blue-400">📊</span>
+            Sessions en cours ({activeSessions.length})
+          </h2>
+          <div className="flex flex-col gap-4">
+            {activeSessions.map((session) => (
+              <DashboardSessionCard key={session.id} session={session} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {enriched.length === 0 ? (
         <div data-page-tutorial="orders-list" className="text-center py-20 text-zinc-500 text-sm">
