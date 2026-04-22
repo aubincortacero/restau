@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import { IconSettings } from '@/components/icons'
@@ -92,7 +93,7 @@ export default async function DashboardPage() {
   const [restaurantRes, tablesCountRes, recentOrdersRes] = await Promise.all([
     supabase
       .from('restaurants')
-      .select('id, name, slug, opening_hours, happy_hour')
+      .select('id, name, slug, opening_hours, happy_hour, logo_url')
       .eq('id', restaurantId)
       .maybeSingle(),
     supabase
@@ -214,7 +215,18 @@ export default async function DashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center flex-wrap gap-2 mb-1">
-            <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
+            {restaurant.logo_url && (
+              <Image
+                src={restaurant.logo_url}
+                alt="Logo restaurant"
+                height={40}
+                width={0}
+                style={{ height: '40px', width: 'auto' }}
+                className="object-contain"
+                unoptimized
+              />
+            )}
+            <h1 className="text-2xl font-semibold font-display">{restaurant.name}</h1>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${open ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}`}>
               {open ? 'Ouvert' : 'Fermé'}
             </span>
