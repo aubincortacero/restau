@@ -67,7 +67,7 @@ export default async function OrdersPage() {
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name, accepted_payment_methods, fulfillment_modes').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, accepted_payment_methods, fulfillment_modes, ardoise_enabled').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
@@ -134,7 +134,7 @@ export default async function OrdersPage() {
       </div>
 
       {/* Ardoises actives */}
-      {activeSessions.length > 0 && (
+      {restaurant.ardoise_enabled !== false && activeSessions.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span className="text-2xl">📋</span>

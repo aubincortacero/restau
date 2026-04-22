@@ -232,6 +232,25 @@ export async function updateFulfillmentModes(formData: FormData) {
   revalidatePath('/dashboard/orders')
 }
 
+export async function updateArdoiseEnabled(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  const enabled = formData.get('enabled') === '1'
+
+  await supabase
+    .from('restaurants')
+    .update({ ardoise_enabled: enabled })
+    .eq('id', id)
+    .eq('owner_id', user.id)
+
+  revalidatePath('/dashboard/settings/restaurant')
+  revalidatePath('/dashboard/orders')
+  revalidatePath('/menu/[slug]', 'page')
+}
+
 export async function updateAppearance(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

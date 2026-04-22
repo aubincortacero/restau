@@ -85,7 +85,7 @@ export default async function PublicMenuPage({
 
   const { data: restaurant } = await supabase
     .from('restaurants')
-    .select('id, name, logo_url, cover_image_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled, brand_color, menu_button_radius, menu_header_style')
+    .select('id, name, logo_url, cover_image_url, address, happy_hour, accepted_payment_methods, fulfillment_modes, stripe_charges_enabled, brand_color, menu_button_radius, menu_header_style, ardoise_enabled')
     .eq('slug', slug)
     .single()
 
@@ -303,6 +303,7 @@ export default async function PublicMenuPage({
             }
             fulfillmentModes={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
             brandColor={brandColor}
+            ardoiseEnabled={restaurant.ardoise_enabled ?? true}
           />
         )}
       </main>

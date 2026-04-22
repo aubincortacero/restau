@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
-import { PaymentMethodsForm, FulfillmentModesForm } from './PaymentSettingsForm'
+import { PaymentMethodsForm, FulfillmentModesForm, ArdoiseToggleForm } from './PaymentSettingsForm'
 import RestaurantInfoForm from './RestaurantInfoForm'
 
 export default async function SettingsRestaurantPage() {
@@ -12,7 +12,7 @@ export default async function SettingsRestaurantPage() {
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, slug, address, phone, accepted_payment_methods, fulfillment_modes, ardoise_enabled').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
@@ -37,6 +37,11 @@ export default async function SettingsRestaurantPage() {
       <FulfillmentModesForm
         restaurantId={restaurant.id}
         initial={(restaurant.fulfillment_modes as string[] | null) ?? ['table']}
+      />
+
+      <ArdoiseToggleForm
+        restaurantId={restaurant.id}
+        initial={restaurant.ardoise_enabled ?? true}
       />
 
     </div>

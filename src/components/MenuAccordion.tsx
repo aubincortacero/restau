@@ -45,6 +45,7 @@ export default function MenuAccordion({
   onlineBlocked,
   fulfillmentModes,
   brandColor = '#F07A4F',
+  ardoiseEnabled = true,
 }: {
   categories: PublicCategory[]
   hhActive: boolean
@@ -56,6 +57,7 @@ export default function MenuAccordion({
   onlineBlocked: boolean
   fulfillmentModes: string[]
   brandColor?: string
+  ardoiseEnabled?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<string>(
     categories.length > 0 ? categories[0].id : ''
@@ -705,7 +707,7 @@ export default function MenuAccordion({
                     </button>
                   )}
 
-                  {tableId && (
+                  {tableId && ardoiseEnabled && (
                     <button
                       onClick={() => {
                         setFulfillmentType('table')
