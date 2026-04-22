@@ -276,7 +276,13 @@ export function PartialPaymentModal({
             fontSize: '14px',
             fontWeight: '600',
             marginBottom: '8px',
-            color: '#a1a1aa',
+            color: '#fafafa',
+          },
+          '.TabLabel': {
+            color: '#fafafa',
+          },
+          '.Text': {
+            color: '#e4e4e7',
           },
           '.Input': {
             fontSize: '16px',
@@ -296,6 +302,10 @@ export function PartialPaymentModal({
           '.Tab--selected': {
             border: '1px solid #F07A4F',
             backgroundColor: '#18181b',
+            color: '#fafafa',
+          },
+          '.Tab--selected .TabLabel': {
+            color: '#fafafa',
           },
         },
       },
