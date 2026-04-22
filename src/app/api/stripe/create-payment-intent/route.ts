@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
       amount: amountCents,
       currency: 'eur',
       statement_descriptor_suffix: 'QOMAND',
+      payment_method_types: ['card'],
       metadata: {
         restaurantId,
         tableId: tableId ?? '',
@@ -154,6 +155,7 @@ export async function POST(req: NextRequest) {
           amount: amountCents,
           currency: 'eur',
           statement_descriptor_suffix: 'QOMAND',
+          payment_method_types: ['card'],
           metadata: paymentIntentParams.metadata,
         })
         return NextResponse.json({ clientSecret: paymentIntent.client_secret })
