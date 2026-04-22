@@ -92,7 +92,7 @@ export default function DashboardSidebar({
       <div className={`flex items-center border-b border-zinc-800 shrink-0 ${collapsed ? 'h-14 justify-center' : 'px-4 justify-between'}`}>
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center py-2">
-            <Logo className="h-10" />
+            <Logo className="h-5" />
           </Link>
         )}
         <button
