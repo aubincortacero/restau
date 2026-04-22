@@ -4,7 +4,7 @@ import { useState, useTransition, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { createRestaurantFull } from '@/app/actions/restaurant'
 import { createConnectOnboardingLink } from '@/app/actions/stripe-connect'
-import { IconLogo } from '@/components/icons'
+import { Logo } from '@/components/icons'
 
 const DAYS = [
   { key: 'mon', label: 'Lun' },
