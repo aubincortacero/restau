@@ -8,7 +8,7 @@ import UserMenu from './UserMenu'
 import OrderNotificationBell from './OrderNotificationBell'
 import {
   IconHome, IconMenu, IconTable, IconOrders,
-  IconGlobe, IconSettings,
+  IconGlobe, IconSettings, Logo,
 } from './icons'
 
 type RestaurantSummary = { id: string; name: string; slug: string }
@@ -103,7 +103,7 @@ export default function DashboardSidebar({
                 unoptimized
               />
             ) : (
-              <span className="font-semibold text-sm">Qomand</span>
+              <Logo className="h-10" />
             )}
           </Link>
         )}

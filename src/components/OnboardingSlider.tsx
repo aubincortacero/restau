@@ -9,10 +9,10 @@ const SLIDES = [
         <circle cx="60" cy="60" r="56" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5"/>
         <circle cx="60" cy="60" r="36" fill="#27272a"/>
         {/* Fourchette */}
-        <line x1="52" y1="38" x2="52" y2="82" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
-        <line x1="48" y1="38" x2="48" y2="52" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
-        <line x1="56" y1="38" x2="56" y2="52" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
-        <path d="M48 52 Q52 58 56 52" stroke="#f97316" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+        <line x1="52" y1="38" x2="52" y2="82" stroke="#F07A4F" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="48" y1="38" x2="48" y2="52" stroke="#F07A4F" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="56" y1="38" x2="56" y2="52" stroke="#F07A4F" strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M48 52 Q52 58 56 52" stroke="#F07A4F" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
         {/* Couteau */}
         <path d="M68 38 L68 55 Q72 60 72 65 L72 82" stroke="#a1a1aa" strokeWidth="2.5" strokeLinecap="round"/>
         <path d="M68 38 Q74 44 72 55" stroke="#a1a1aa" strokeWidth="2" fill="none"/>
@@ -20,7 +20,7 @@ const SLIDES = [
         <ellipse cx="60" cy="76" rx="18" ry="5" fill="none" stroke="#52525b" strokeWidth="1.5"/>
       </svg>
     ),
-    title: 'Bienvenue sur Qomand',
+    title: 'Bienvenue',
     subtitle: 'Votre restaurant passe au digital. Menus, tables, commandes et paiements — tout depuis un simple QR code posé sur vos tables.',
   },
   {
@@ -29,14 +29,14 @@ const SLIDES = [
         <circle cx="60" cy="60" r="56" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5"/>
         {/* Carte bancaire */}
         <rect x="22" y="38" width="76" height="48" rx="8" fill="#27272a" stroke="#3f3f46" strokeWidth="1.5"/>
-        <rect x="22" y="50" width="76" height="12" fill="#f97316" opacity="0.3"/>
-        <rect x="32" y="68" width="24" height="8" rx="3" fill="#f97316" opacity="0.7"/>
+        <rect x="22" y="50" width="76" height="12" fill="#F07A4F" opacity="0.3"/>
+        <rect x="32" y="68" width="24" height="8" rx="3" fill="#F07A4F" opacity="0.7"/>
         <circle cx="82" cy="72" r="8" fill="#52525b"/>
-        <circle cx="90" cy="72" r="8" fill="#f97316" opacity="0.6"/>
+        <circle cx="90" cy="72" r="8" fill="#F07A4F" opacity="0.6"/>
         {/* Signal wifi/sans contact */}
-        <path d="M60 28 Q70 21 80 28" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.4"/>
-        <path d="M63 32 Q70 27 77 32" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6"/>
-        <circle cx="70" cy="36" r="2" fill="#f97316"/>
+        <path d="M60 28 Q70 21 80 28" stroke="#F07A4F" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.4"/>
+        <path d="M63 32 Q70 27 77 32" stroke="#F07A4F" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6"/>
+        <circle cx="70" cy="36" r="2" fill="#F07A4F"/>
       </svg>
     ),
     title: 'Connectez vos paiements',
@@ -47,17 +47,17 @@ const SLIDES = [
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
         <circle cx="60" cy="60" r="56" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5"/>
         {/* Tables */}
-        <rect x="28" y="44" width="26" height="18" rx="4" fill="#27272a" stroke="#f97316" strokeWidth="1.5"/>
+        <rect x="28" y="44" width="26" height="18" rx="4" fill="#27272a" stroke="#F07A4F" strokeWidth="1.5"/>
         <rect x="66" y="44" width="26" height="18" rx="4" fill="#27272a" stroke="#52525b" strokeWidth="1.5"/>
         <rect x="28" y="72" width="26" height="18" rx="4" fill="#27272a" stroke="#52525b" strokeWidth="1.5"/>
         <rect x="66" y="72" width="26" height="18" rx="4" fill="#27272a" stroke="#52525b" strokeWidth="1.5"/>
         {/* Labels */}
-        <text x="41" y="57" textAnchor="middle" fill="#f97316" fontSize="8" fontWeight="bold">T1</text>
+        <text x="41" y="57" textAnchor="middle" fill="#F07A4F" fontSize="8" fontWeight="bold">T1</text>
         <text x="79" y="57" textAnchor="middle" fill="#71717a" fontSize="8">T2</text>
         <text x="41" y="85" textAnchor="middle" fill="#71717a" fontSize="8">T3</text>
         <text x="79" y="85" textAnchor="middle" fill="#71717a" fontSize="8">T4</text>
         {/* QR mini sur T1 */}
-        <rect x="33" y="46" width="6" height="6" rx="1" fill="#f97316" opacity="0.4"/>
+        <rect x="33" y="46" width="6" height="6" rx="1" fill="#F07A4F" opacity="0.4"/>
       </svg>
     ),
     title: 'Dessinez votre salle',
@@ -69,7 +69,7 @@ const SLIDES = [
         <circle cx="60" cy="60" r="56" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5"/>
         {/* Livre menu */}
         <rect x="34" y="28" width="52" height="64" rx="5" fill="#27272a" stroke="#3f3f46" strokeWidth="1.5"/>
-        <rect x="34" y="28" width="6" height="64" rx="3" fill="#f97316" opacity="0.6"/>
+        <rect x="34" y="28" width="6" height="64" rx="3" fill="#F07A4F" opacity="0.6"/>
         {/* Lignes contenu */}
         <rect x="46" y="40" width="30" height="3" rx="1.5" fill="#52525b"/>
         <rect x="46" y="48" width="22" height="2" rx="1" fill="#3f3f46"/>
@@ -78,7 +78,7 @@ const SLIDES = [
         <rect x="46" y="72" width="30" height="3" rx="1.5" fill="#52525b"/>
         <rect x="46" y="80" width="24" height="2" rx="1" fill="#3f3f46"/>
         {/* Badge prix */}
-        <rect x="64" y="45" width="16" height="8" rx="3" fill="#f97316" opacity="0.8"/>
+        <rect x="64" y="45" width="16" height="8" rx="3" fill="#F07A4F" opacity="0.8"/>
         <text x="72" y="51" textAnchor="middle" fill="white" fontSize="5" fontWeight="bold">12€</text>
       </svg>
     ),
@@ -90,15 +90,15 @@ const SLIDES = [
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
         <circle cx="60" cy="60" r="56" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5"/>
         {/* QR code stylisé */}
-        <rect x="30" y="30" width="24" height="24" rx="3" fill="#27272a" stroke="#f97316" strokeWidth="1.5"/>
-        <rect x="35" y="35" width="14" height="14" rx="1.5" fill="#f97316" opacity="0.3"/>
-        <rect x="38" y="38" width="8" height="8" rx="1" fill="#f97316"/>
-        <rect x="66" y="30" width="24" height="24" rx="3" fill="#27272a" stroke="#f97316" strokeWidth="1.5"/>
-        <rect x="71" y="35" width="14" height="14" rx="1.5" fill="#f97316" opacity="0.3"/>
-        <rect x="74" y="38" width="8" height="8" rx="1" fill="#f97316"/>
-        <rect x="30" y="66" width="24" height="24" rx="3" fill="#27272a" stroke="#f97316" strokeWidth="1.5"/>
-        <rect x="35" y="71" width="14" height="14" rx="1.5" fill="#f97316" opacity="0.3"/>
-        <rect x="38" y="74" width="8" height="8" rx="1" fill="#f97316"/>
+        <rect x="30" y="30" width="24" height="24" rx="3" fill="#27272a" stroke="#F07A4F" strokeWidth="1.5"/>
+        <rect x="35" y="35" width="14" height="14" rx="1.5" fill="#F07A4F" opacity="0.3"/>
+        <rect x="38" y="38" width="8" height="8" rx="1" fill="#F07A4F"/>
+        <rect x="66" y="30" width="24" height="24" rx="3" fill="#27272a" stroke="#F07A4F" strokeWidth="1.5"/>
+        <rect x="71" y="35" width="14" height="14" rx="1.5" fill="#F07A4F" opacity="0.3"/>
+        <rect x="74" y="38" width="8" height="8" rx="1" fill="#F07A4F"/>
+        <rect x="30" y="66" width="24" height="24" rx="3" fill="#27272a" stroke="#F07A4F" strokeWidth="1.5"/>
+        <rect x="35" y="71" width="14" height="14" rx="1.5" fill="#F07A4F" opacity="0.3"/>
+        <rect x="38" y="74" width="8" height="8" rx="1" fill="#F07A4F"/>
         {/* Checkmark bottom-right */}
         <circle cx="79" cy="79" r="16" fill="#22c55e" opacity="0.15"/>
         <circle cx="79" cy="79" r="12" fill="#16a34a" opacity="0.3"/>

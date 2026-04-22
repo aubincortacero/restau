@@ -4,7 +4,7 @@ import { useState, useRef, useTransition } from 'react'
 import { updateAppearance } from '@/app/actions/restaurant'
 
 const PRESET_COLORS = [
-  { hex: '#f97316', label: 'Orange' },
+  { hex: '#F07A4F', label: 'Orange' },
   { hex: '#ef4444', label: 'Rouge' },
   { hex: '#ec4899', label: 'Rose' },
   { hex: '#a855f7', label: 'Violet' },
@@ -31,7 +31,7 @@ interface Props {
 }
 
 export default function AppearanceForm({ restaurantId, initial }: Props) {
-  const [color, setColor] = useState(initial.brand_color || '#f97316')
+  const [color, setColor] = useState(initial.brand_color || '#F07A4F')
   const [radius, setRadius] = useState(initial.menu_button_radius || 'rounded')
   const [headerStyle, setHeaderStyle] = useState(initial.menu_header_style || 'dark')
   const [customHex, setCustomHex] = useState(

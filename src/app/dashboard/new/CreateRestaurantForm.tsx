@@ -240,10 +240,10 @@ export default function CreateRestaurantForm() {
     <div className="w-full max-w-md mx-auto">
       {/* Header dynamique */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-500 mb-4">
-          <IconLogo className="w-7 h-7 text-white" />
+        <div className="flex justify-center mb-4">
+          <Logo />
         </div>
-        <h1 className="text-2xl font-bold text-white">Créer votre restaurant</h1>
+        <h1 className="text-2xl font-bold text-white font-display">Créer votre restaurant</h1>
         <p className="text-sm text-zinc-400 mt-1">{STEP_DESCRIPTIONS[visibleIdx]}</p>
       </div>
 

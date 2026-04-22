@@ -166,7 +166,7 @@ export default async function PublicMenuPage({
 
   const totalItems = categories.reduce((acc, c) => acc + c.items.length, 0)
 
-  const brandColor = (restaurant.brand_color as string | null) ?? '#f97316'
+  const brandColor = (restaurant.brand_color as string | null) ?? '#F07A4F'
   const buttonRadius = (restaurant.menu_button_radius as string | null) ?? 'rounded'
   const headerStyle = (restaurant.menu_header_style as string | null) ?? 'dark'
 

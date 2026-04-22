@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { IconLogo } from './icons'
+import { Logo } from './icons'
 import UserMenu from './UserMenu'
 import OrderNotificationBell from './OrderNotificationBell'
 import MobileSidebarDrawer from './MobileSidebarDrawer'
@@ -60,10 +60,7 @@ export default function DashboardMobileHeader({
 
           {/* Logo central */}
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center">
-              <IconLogo className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-sm">Qomand</span>
+            <Logo className="h-8" />
           </Link>
 
           {/* Actions à droite */}

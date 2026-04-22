@@ -1,5 +1,5 @@
 import { signInWithGoogle } from '@/app/actions/auth'
-import { IconLogo } from '@/components/icons'
+import { Logo } from '@/components/icons'
 import EmailLoginForm from '@/components/EmailLoginForm'
 
 export default function LoginPage({
@@ -12,10 +12,9 @@ export default function LoginPage({
       <div className="w-full max-w-sm">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-orange-500 mb-4">
-            <IconLogo className="w-6 h-6 text-white" />
+          <div className="flex justify-center mb-4">
+            <Logo />
           </div>
-          <h1 className="text-2xl font-semibold text-white tracking-tight">Qomand</h1>
           <p className="text-sm text-zinc-400 mt-1">Gérez votre restaurant, encaissez en ligne.</p>
         </div>
 

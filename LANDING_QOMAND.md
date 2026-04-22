@@ -89,7 +89,7 @@ Crée une landing page moderne, épurée et très attractive pour **Qomand**, un
 
 ### Contraintes design
 - Dark mode obligatoire (fond #0a0908 ou similaire)
-- Couleur d'accent : orange (#f97316) ou or chaud
+- Couleur d'accent : orange (#F07A4F) de la charte graphique
 - Typographie : Inter ou Geist, titres très bold (800-900)
 - Coins arrondis généreux (radius 16-20px)
 - Animations d'entrée subtiles au scroll (pas d'excès)

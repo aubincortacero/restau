@@ -29,7 +29,7 @@ export default async function WebsiteAppearancePage() {
         <AppearanceForm
           restaurantId={restaurant.id}
           initial={{
-            brand_color: (restaurant.brand_color as string | null) ?? '#f97316',
+            brand_color: (restaurant.brand_color as string | null) ?? '#F07A4F',
             menu_button_radius: (restaurant.menu_button_radius as string | null) ?? 'rounded',
             menu_header_style: (restaurant.menu_header_style as string | null) ?? 'dark',
             logo_url: restaurant.logo_url as string | null,

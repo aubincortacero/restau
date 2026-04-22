@@ -40,8 +40,8 @@ export function renderOrderEmail(data: OrderEmailData): string {
             <td style="padding-bottom:32px;text-align:center;">
               <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
                 <tr>
-                  <td style="background-color:#f97316;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
-                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgOGMtMS41IDAtMi43NS43NS0zLjUgMS45TTEyIDhjMS41IDAgMi43NS43NSAzLjUgMS45TTEyIDhWNW0wIDEzdi0ybS02LjUtM0gzbTE4IDBoLTIuNU02LjM0IDE3LjY2bC0xLjQyIDEuNDJNMTkuMDggNS45MmwtMS40MiAxLjQyTTE3LjY2IDE3LjY2bDEuNDIgMS40Mk00LjkyIDUuOTJsMS40MiAxLjQyIi8+PC9zdmc+" alt="Qomand" width="28" height="28" style="display:block;margin:8px auto;" />
+                  <td style="background-color:#F07A4F;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgOGMtMS41IDAtMi43NS43NS0zLjUgMS45TTEyIDhjMS41IDAgMi43NS43NSAzLjUgMS45TTEyIDhWNW0wIDEzdi0ybS02LjUtM0gzbTE4IDBoLTIuNU02LjM0IDE3LjY2bC0xLjQyIDEuNDJNMTkuMDggNS45MmwtMS40MiAxLjQyTTE3LjY2IDE3LjY2bDEuNDIgMS40Mk00LjkyIDUuOTJsMS40MiAxLjQyIi8+PC9zdmc+" alt="Logo" width="28" height="28" style="display:block;margin:8px auto;" />
                   </td>
                 </tr>
               </table>
@@ -87,9 +87,9 @@ export function renderOrderEmail(data: OrderEmailData): string {
               <hr style="border:none;border-top:1px solid #27272a;margin:20px 0;" />
 
               ${pickupCode ? `<!-- Code retrait -->
-              <div style="background-color:#1c1917;border:2px solid #f97316;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
+              <div style="background-color:#1c1917;border:2px solid #F07A4F;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
                 <p style="margin:0 0 6px;font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Votre code de retrait</p>
-                <p style="margin:0;font-size:34px;font-weight:900;color:#f97316;letter-spacing:0.2em;font-family:monospace;">${pickupCode}</p>
+                <p style="margin:0;font-size:34px;font-weight:900;color:#F07A4F;letter-spacing:0.2em;font-family:monospace;">${pickupCode}</p>
                 <p style="margin:8px 0 0;font-size:12px;color:#71717a;">Présentez ce code au comptoir pour récupérer votre commande</p>
               </div>
               <hr style="border:none;border-top:1px solid #27272a;margin:20px 0;" />
@@ -153,8 +153,8 @@ export function renderPickupReadyEmail(data: PickupReadyEmailData): string {
             <td style="padding-bottom:32px;text-align:center;">
               <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
                 <tr>
-                  <td style="background-color:#f97316;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
-                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgOGMtMS41IDAtMi43NS43NS0zLjUgMS45TTEyIDhjMS41IDAgMi43NS43NSAzLjUgMS45TTEyIDhWNW0wIDEzdi0ybS02LjUtM0gzbTE4IDBoLTIuNU02LjM0IDE3LjY2bC0xLjQyIDEuNDJNMTkuMDggNS45MmwtMS40MiAxLjQyTTE3LjY2IDE3LjY2bDEuNDIgMS40Mk00LjkyIDUuOTJsMS40MiAxLjQyIi8+PC9zdmc+" alt="Qomand" width="28" height="28" style="display:block;margin:8px auto;" />
+                  <td style="background-color:#F07A4F;border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgOGMtMS41IDAtMi43NS43NS0zLjUgMS5NMTIgOGMxLjUgMCAyLjc1Ljc1IDMuNSAxLjlNMTIgOFY1bTAgMTN2LTJtLTYuNS0zSDNtMTggMGgtMi41TTYuMzQgMTcuNjZsLTEuNDIgMS40Mk0xOS4wOCA1LjkybC0xLjQyIDEuNDJNMTcuNjYgMTcuNjZsMS40MiAxLjQyTTQuOTIgNS45MmwxLjQyIDEuNDIiLz48L3N2Zz4=" alt="Logo" width="28" height="28" style="display:block;margin:8px auto;" />
                   </td>
                 </tr>
               </table>
@@ -175,10 +175,10 @@ export function renderPickupReadyEmail(data: PickupReadyEmailData): string {
               </p>
 
               <!-- Code retrait -->
-              <div style="background-color:#1c1917;border:2px solid #f97316;border-radius:12px;padding:24px;text-align:center;margin-bottom:20px;">
+              <div style="background-color:#1c1917;border:2px solid #F07A4F;border-radius:12px;padding:24px;text-align:center;margin-bottom:20px;">
                 <p style="margin:0 0 6px;font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Votre code de retrait</p>
-                <p style="margin:0;font-size:38px;font-weight:900;color:#f97316;letter-spacing:0.2em;font-family:monospace;">${pickupCode}</p>
-                <p style="margin:8px 0 0;font-size:12px;color:#71717a;">Présentez ce code au comptoir</p>
+                <p style="margin:0;font-size:38px;font-weight:900;color:#F07A4F;letter-spacing:0.2em;font-family:monospace;">${pickupCode}</p>
+                <p style="margin:8px 0 0;font-size:12px;color:#71717a;">ésentez ce code au comptoir</p>
               </div>
 
               <!-- Meta -->

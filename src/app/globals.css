@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
+/* Police Mustica pour les titres */
+@font-face {
+  font-family: 'Mustica';
+  src: url('/assets/mustica.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Charte graphique */
+  --brand-orange: #F07A4F;
+  --brand-white: #F9F9F9;
+  --brand-orange-light: #f4a07f;
+  --brand-orange-dark: #d96b40;
 }
 
 @theme inline {
@@ -10,6 +25,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: Mustica, var(--font-geist-sans);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,13 +41,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--font-display);
+}
+
 /* ── Light mode dashboard ───────────────────────────────── */
 html.theme-light {
   color-scheme: light;
 }
 
 /* Fonds */
-html.theme-light .bg-zinc-950 { background-color: #f4f4f5 !important; }
+html.theme-light .bg-zinc-950 { background-color: var(--brand-white) !important; }
 html.theme-light .bg-zinc-900 { background-color: #ffffff !important; }
 html.theme-light .bg-zinc-800 { background-color: #e4e4e7 !important; }
 html.theme-light .bg-zinc-700 { background-color: #d4d4d8 !important; }
@@ -43,7 +64,7 @@ html.theme-light .bg-stone-900 { background-color: #ffffff !important; }
 html.theme-light .bg-stone-900\/95 { background-color: #fffffff2 !important; }
 html.theme-light .bg-stone-800 { background-color: #e4e4e7 !important; }
 html.theme-light .bg-stone-800\/60 { background-color: #e4e4e799 !important; }
-html.theme-light .bg-stone-950 { background-color: #f4f4f5 !important; }
+html.theme-light .bg-stone-950 { background-color: var(--brand-white) !important; }
 
 /* Textes principaux */
 html.theme-light .text-white { color: #18181b !important; }
@@ -82,27 +103,27 @@ html.theme-light .hover\:bg-stone-800\/60:hover { background-color: #e4e4e799 !i
 /* Sticky header */
 html.theme-light header.border-b { border-color: #d4d4d8 !important; }
 
-/* ── Accent light mode : #F1895C ───────────────────────────── */
-html.theme-light .bg-orange-500 { background-color: #F1895C !important; }
-html.theme-light .bg-orange-400 { background-color: #f4a07f !important; }
-html.theme-light .hover\:bg-orange-500:hover { background-color: #F1895C !important; }
-html.theme-light .hover\:bg-orange-400:hover { background-color: #f4a07f !important; }
-html.theme-light .active\:bg-orange-600:active { background-color: #d96b40 !important; }
+/* ── Accent light mode : Charte graphique Orange ───────────────────────────── */
+html.theme-light .bg-orange-500 { background-color: var(--brand-orange) !important; }
+html.theme-light .bg-orange-400 { background-color: var(--brand-orange-light) !important; }
+html.theme-light .hover\:bg-orange-500:hover { background-color: var(--brand-orange) !important; }
+html.theme-light .hover\:bg-orange-400:hover { background-color: var(--brand-orange-light) !important; }
+html.theme-light .active\:bg-orange-600:active { background-color: var(--brand-orange-dark) !important; }
 html.theme-light .bg-orange-500\/10,
 html.theme-light .bg-orange-500\/8,
 html.theme-light .bg-orange-500\/15,
-html.theme-light .bg-orange-500\/20 { background-color: #F1895C22 !important; }
-html.theme-light .text-orange-500 { color: #F1895C !important; }
-html.theme-light .text-orange-400 { color: #e07040 !important; }
-html.theme-light .hover\:text-orange-400:hover { color: #e07040 !important; }
-html.theme-light .hover\:text-orange-300:hover { color: #c85c28 !important; }
-html.theme-light .border-orange-500 { border-color: #F1895C !important; }
-html.theme-light .border-orange-500\/30 { border-color: #F1895C4d !important; }
-html.theme-light .border-orange-500\/20 { border-color: #F1895C33 !important; }
-html.theme-light .hover\:border-orange-500\/50:hover { border-color: #F1895C80 !important; }
-html.theme-light .ring-orange-500\/50 { --tw-ring-color: #F1895C80 !important; }
-html.theme-light .focus\:ring-orange-500\/50:focus { --tw-ring-color: #F1895C80 !important; }
-html.theme-light .focus\:border-orange-500:focus { border-color: #F1895C !important; }
+html.theme-light .bg-orange-500\/20 { background-color: #F07A4F22 !important; }
+html.theme-light .text-orange-500 { color: var(--brand-orange) !important; }
+html.theme-light .text-orange-400 { color: var(--brand-orange-light) !important; }
+html.theme-light .hover\:text-orange-400:hover { color: var(--brand-orange-light) !important; }
+html.theme-light .hover\:text-orange-300:hover { color: var(--brand-orange-dark) !important; }
+html.theme-light .border-orange-500 { border-color: var(--brand-orange) !important; }
+html.theme-light .border-orange-500\/30 { border-color: #F07A4F4d !important; }
+html.theme-light .border-orange-500\/20 { border-color: #F07A4F33 !important; }
+html.theme-light .hover\:border-orange-500\/50:hover { border-color: #F07A4F80 !important; }
+html.theme-light .ring-orange-500\/50 { --tw-ring-color: #F07A4F80 !important; }
+html.theme-light .focus\:ring-orange-500\/50:focus { --tw-ring-color: #F07A4F80 !important; }
+html.theme-light .focus\:border-orange-500:focus { border-color: var(--brand-orange) !important; }
 
 /* ── Popups / overlays en light mode ───────────────────────── */
 html.theme-light .popup-panel {
@@ -111,7 +132,7 @@ html.theme-light .popup-panel {
 }
 html.theme-light .popup-panel .border-b,
 html.theme-light .popup-panel .border-zinc-800 { border-color: #e4e4e7 !important; }
-html.theme-light .popup-panel .bg-zinc-800 { background-color: #f4f4f5 !important; }
+html.theme-light .popup-panel .bg-zinc-800 { background-color: var(--brand-white) !important; }
 html.theme-light .popup-panel .bg-zinc-800\/40,
 html.theme-light .popup-panel .bg-zinc-800\/60 { background-color: #f4f4f566 !important; }
 html.theme-light .bg-zinc-800.rounded-full { background-color: #e4e4e7 !important; }

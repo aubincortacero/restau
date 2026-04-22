@@ -51,7 +51,7 @@ export type Floor = {
 }
 
 const ZONE_COLORS = [
-  { label: 'Orange',    color: '#f97316' },
+  { label: 'Orange',    color: '#F07A4F' },
   { label: 'Bleu',      color: '#3b82f6' },
   { label: 'Vert',      color: '#22c55e' },
   { label: 'Violet',    color: '#a855f7' },

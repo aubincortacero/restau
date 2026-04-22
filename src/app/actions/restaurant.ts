@@ -238,7 +238,7 @@ export async function updateAppearance(formData: FormData) {
   if (!user) redirect('/login')
 
   const id = formData.get('id') as string
-  const brand_color = (formData.get('brand_color') as string) || '#f97316'
+  const brand_color = (formData.get('brand_color') as string) || '#F07A4F'
   const menu_button_radius = (formData.get('menu_button_radius') as string) || 'rounded'
   const menu_header_style = (formData.get('menu_header_style') as string) || 'dark'
   const menu_max_width_raw = formData.get('menu_max_width') as string | null

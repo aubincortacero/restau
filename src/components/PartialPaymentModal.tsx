@@ -261,7 +261,7 @@ export function PartialPaymentModal({
       appearance: {
         theme: 'night' as const,
         variables: {
-          colorPrimary: '#f97316',
+          colorPrimary: '#F07A4F',
           colorBackground: '#18181b',
           colorText: '#fafafa',
           colorDanger: '#ef4444',
@@ -285,8 +285,8 @@ export function PartialPaymentModal({
             border: '1px solid #3f3f46',
           },
           '.Input:focus': {
-            border: '1px solid #f97316',
-            boxShadow: '0 0 0 1px #f97316',
+            border: '1px solid #F07A4F',
+            boxShadow: '0 0 0 1px #F07A4F',
             outline: 'none',
           },
           '.Tab': {
@@ -294,7 +294,7 @@ export function PartialPaymentModal({
             backgroundColor: '#18181b',
           },
           '.Tab--selected': {
-            border: '1px solid #f97316',
+            border: '1px solid #F07A4F',
             backgroundColor: '#18181b',
           },
         },

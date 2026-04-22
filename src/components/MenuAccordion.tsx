@@ -44,7 +44,7 @@ export default function MenuAccordion({
   acceptedPaymentMethods,
   onlineBlocked,
   fulfillmentModes,
-  brandColor = '#f97316',
+  brandColor = '#F07A4F',
 }: {
   categories: PublicCategory[]
   hhActive: boolean

@@ -130,7 +130,7 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentT
   )
 }
 
-export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, fulfillmentType, pickupCode, brandColor = '#f97316', onSuccess, onBack }: Props) {
+export default function StripeCheckoutForm({ restaurantId, tableId, items, note, totalPrice, customerEmail, fulfillmentType, pickupCode, brandColor = '#F07A4F', onSuccess, onBack }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
