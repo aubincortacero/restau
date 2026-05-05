@@ -62,7 +62,7 @@ function computePills(
     mins < parseTime(happy_hour!.end)
 
   return { open: openNow, happyHour: happyHourNow }
-}
+} 
 
 export default async function DashboardLayout({
   children,

@@ -45,7 +45,7 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
   }
 
   return (
-    <div className="relative min-h-screen bg-zinc-950 text-white flex flex-col overflow-hidden">
+    <div className="relative min-h-screen bg-zinc-950 text-white flex items-center justify-center overflow-hidden">
 
       {/* ── Photo hero ────────────────────────────────────────────────────
           Remplacez /restaurant-hero.jpg dans /public par votre propre photo.
@@ -73,7 +73,7 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
       </div>
 
       {/* ── Bouton fermer (comme HingeX) ── */}
-      <div className="relative z-10 flex justify-between items-center px-5 pt-5">
+      <div className="absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-5 pt-5">
         <form action={signOut}>
           <button type="submit" className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer">
             Se déconnecter
@@ -82,8 +82,8 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
         <span className="text-xs text-white/40">{email}</span>
       </div>
 
-      {/* ── Contenu bas de page ── */}
-      <div className="relative z-10 mt-auto px-6 pb-10 flex flex-col items-center">
+      {/* ── Contenu centré ── */}
+      <div className="relative z-10 px-6 flex flex-col items-center w-full">
 
         {/* Headline */}
         <h1 className="text-[2.6rem] leading-[1.1] font-extrabold text-center text-white mb-3 max-w-xs">
