@@ -36,7 +36,7 @@ async function getOrCreateCustomer(userId: string, email: string | undefined): P
   return customer.id
 }
 
-// ─── Essai gratuit 7 jours (sans carte) ───────────────────────
+// ─── Essai gratuit 14 jours (sans carte) ───────────────────────
 export async function startTrial() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -57,7 +57,7 @@ export async function startTrial() {
   if (existing) redirect('/subscribe?trial_error=already_used')
 
   const trialEndsAt = new Date()
-  trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+  trialEndsAt.setDate(trialEndsAt.getDate() + 14)
 
   // Enregistrer l'email avant d'activer le trial
   await admin.from('trial_emails').insert({ email })

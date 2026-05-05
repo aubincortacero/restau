@@ -97,7 +97,7 @@ export default function SubscribeWrapper({ expired, isAdmin, email, trialAlready
         <p className="text-white/60 text-center text-sm max-w-xs mb-6 leading-relaxed">
           {expired
             ? 'Abonnez-vous pour continuer à recevoir vos commandes.'
-            : '7 jours offerts, puis sans engagement. Menus, tables, paiements et commandes depuis un QR code.'
+            : '14 jours offerts, puis sans engagement. Menus, tables, paiements et commandes depuis un QR code.'
           }
         </p>
 
