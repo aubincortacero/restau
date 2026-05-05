@@ -122,7 +122,9 @@ export async function POST(req: NextRequest) {
       amount: amountCents,
       currency: 'eur',
       statement_descriptor_suffix: 'QOMAND',
-      payment_method_types: ['card', 'link'],
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: {
         restaurantId,
         tableId: tableId ?? '',
@@ -134,18 +136,20 @@ export async function POST(req: NextRequest) {
       },
     }
 
-    // Direct charge sur le compte Connect : les frais Stripe sont supportés par le restaurant
+    // Utiliser on_behalf_of pour permettre Apple Pay tout en versant les fonds au restaurant
     if (restaurant.stripe_account_id) {
-      console.log('[create-payment-intent] Using Stripe Connect account:', restaurant.stripe_account_id)
+      console.log('[create-payment-intent] Using on_behalf_of for Stripe Connect:', restaurant.stripe_account_id)
       paymentIntentParams.application_fee_amount = Math.round(amountCents * 0.01)
+      paymentIntentParams.on_behalf_of = restaurant.stripe_account_id
+      paymentIntentParams.transfer_data = {
+        destination: restaurant.stripe_account_id,
+      }
       
       try {
-        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams, {
-          stripeAccount: restaurant.stripe_account_id,
-        })
+        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
         return NextResponse.json({
           clientSecret: paymentIntent.client_secret,
-          stripeAccountId: restaurant.stripe_account_id,
+          stripeAccountId: null, // Ne pas utiliser stripeAccount côté client
         })
       } catch (stripeError: any) {
         console.error('[create-payment-intent] Stripe Connect error:', stripeError.message)
@@ -155,7 +159,9 @@ export async function POST(req: NextRequest) {
           amount: amountCents,
           currency: 'eur',
           statement_descriptor_suffix: 'QOMAND',
-          payment_method_types: ['card', 'link'],
+          automatic_payment_methods: {
+            enabled: true,
+          },
           metadata: paymentIntentParams.metadata,
         })
         return NextResponse.json({ clientSecret: paymentIntent.client_secret })
