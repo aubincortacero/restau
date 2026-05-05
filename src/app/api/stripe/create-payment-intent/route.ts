@@ -122,10 +122,7 @@ export async function POST(req: NextRequest) {
       amount: amountCents,
       currency: 'eur',
       statement_descriptor_suffix: 'QOMAND',
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'never',
-      },
+      payment_method_types: ['card', 'link'],
       metadata: {
         restaurantId,
         tableId: tableId ?? '',
@@ -158,10 +155,7 @@ export async function POST(req: NextRequest) {
           amount: amountCents,
           currency: 'eur',
           statement_descriptor_suffix: 'QOMAND',
-          automatic_payment_methods: {
-            enabled: true,
-            allow_redirects: 'never',
-          },
+          payment_method_types: ['card', 'link'],
           metadata: paymentIntentParams.metadata,
         })
         return NextResponse.json({ clientSecret: paymentIntent.client_secret })

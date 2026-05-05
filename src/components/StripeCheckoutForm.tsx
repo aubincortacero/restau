@@ -98,12 +98,9 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentT
               spacedAccordionItems: true
             },
             wallets: {
-              applePay: 'always',
-              googlePay: 'always',
+              applePay: 'auto',
+              googlePay: 'auto',
             },
-            fields: {
-              billingDetails: 'never'
-            }
           }} 
         />
         {error && <p className="text-sm text-red-400 mt-4 text-center bg-red-950/30 border border-red-500/30 rounded-lg px-4 py-3">{error}</p>}
