@@ -4,11 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveRestaurantId } from '@/lib/active-restaurant'
 import TicketActions from './TicketActions'
 import { IconCreditCard, IconBanknote } from '@/components/icons'
-import { updateOrderStatus, archiveOrder, markOrderReady, collectCashPayment } from '@/app/actions/restaurant'
+import { updateOrderStatus, archiveOrder, markOrderReady, collectCashPayment, cancelAndArchiveOrder } from '@/app/actions/restaurant'
 import OrderTimer from '@/components/OrderTimer'
 import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
 import { getActiveTableSessions } from '@/app/actions/sessions'
 import { ActiveTabCard } from '@/components/ActiveTabCard'
+import { CancelOrderButton } from '@/components/CancelOrderButton'
 
 const ORDERS_TUTORIAL_STEPS: PageTutorialStep[] = [
   {
@@ -107,6 +108,16 @@ export default async function OrdersPage() {
 
   const totalPending = enriched.filter((o) => o.status === 'pending' && !o.session_id).length
 
+  // Calculer le CA du jour et le nombre de commandes
+  const parisNow = new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' })
+  const todayStart = new Date(new Date(parisNow).setHours(0, 0, 0, 0)).toISOString()
+  
+  const ordersToday = enriched.filter(o => o.created_at >= todayStart)
+  const caToday = ordersToday
+    .filter(o => o.payment_status === 'paid')
+    .reduce((sum, o) => sum + o.ttc, 0)
+  const ordersTodayCount = ordersToday.length
+
   // Récupérer les sessions actives
   const activeSessions = await getActiveTableSessions(restaurant.id)
 
@@ -121,16 +132,30 @@ export default async function OrdersPage() {
               : 'Toutes les commandes'}
           </p>
         </div>
-        <Link
-          href="/dashboard/orders/archives"
-          data-page-tutorial="orders-archives"
-          className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-xl transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
-          </svg>
-          Archives
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Stats du jour */}
+          <div className="flex items-center gap-3 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl">
+            <div className="text-right">
+              <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">CA jour</p>
+              <p className="text-sm font-bold text-emerald-400 tabular-nums">{caToday.toFixed(2)} €</p>
+            </div>
+            <div className="w-px h-8 bg-zinc-800"></div>
+            <div className="text-right">
+              <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Commandes</p>
+              <p className="text-sm font-bold text-zinc-300 tabular-nums">{ordersTodayCount}</p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/orders/archives"
+            data-page-tutorial="orders-archives"
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-xl transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+            </svg>
+            Archives
+          </Link>
+        </div>
       </div>
 
       {/* Ardoises actives */}
@@ -335,13 +360,7 @@ export default async function OrdersPage() {
                   )}
                   <div className="flex items-center justify-between gap-2">
                     {isActive ? (
-                      <form action={updateOrderStatus}>
-                        <input type="hidden" name="id" value={order.id} />
-                        <input type="hidden" name="status" value="cancelled" />
-                        <button type="submit" className="text-xs text-zinc-600 hover:text-red-400 transition-colors cursor-pointer">
-                          Annuler
-                        </button>
-                      </form>
+                      <CancelOrderButton orderId={order.id} onCancel={cancelAndArchiveOrder} />
                     ) : (
                       <form action={archiveOrder}>
                         <input type="hidden" name="id" value={order.id} />

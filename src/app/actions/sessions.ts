@@ -216,6 +216,42 @@ export async function closeTableSession(sessionId: string): Promise<{ success: b
 }
 
 /**
+ * Annule et archive une session (pour annuler une ardoise en cours)
+ */
+export async function cancelAndArchiveSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
+  const adminClient = createAdminClient()
+
+  // Annuler toutes les commandes de cette session et les archiver
+  const { error: ordersError } = await adminClient
+    .from('orders')
+    .update({ 
+      status: 'cancelled',
+      archived_at: new Date().toISOString() 
+    })
+    .eq('session_id', sessionId)
+    .is('archived_at', null)
+
+  if (ordersError) {
+    console.error('Error canceling session orders:', ordersError)
+    return { success: false, error: ordersError.message }
+  }
+
+  // Fermer la session
+  const { error: sessionError } = await adminClient
+    .from('table_sessions')
+    .update({ closed_at: new Date().toISOString() })
+    .eq('id', sessionId)
+
+  if (sessionError) {
+    console.error('Error closing session:', sessionError)
+    return { success: false, error: sessionError.message }
+  }
+
+  revalidatePath('/dashboard/orders')
+  return { success: true }
+}
+
+/**
  * Marque une commande comme livrée/servie
  */
 export async function markOrderDelivered(orderId: string): Promise<{ success: boolean; error?: string }> {

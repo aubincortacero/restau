@@ -986,7 +986,7 @@ export async function updateOrderStatus(formData: FormData) {
     .single()
   if (!restaurant) return
 
-  const updateData: Record<string, string> = { status }
+  const updateData: Record<string, string | null> = { status }
 
   if (status === 'cancelled' && order.payment_method === 'online' && order.payment_status === 'paid' && order.stripe_payment_intent_id) {
     // Rembourser automatiquement via Stripe
@@ -997,6 +997,11 @@ export async function updateOrderStatus(formData: FormData) {
     } catch {
       // Le remboursement a échoué mais on annule quand même la commande
     }
+  }
+
+  // Archiver automatiquement si la commande est terminée ET payée
+  if (status === 'done' && order.payment_status === 'paid') {
+    updateData.archived_at = new Date().toISOString()
   }
 
   await supabase.from('orders').update(updateData).eq('id', id)
@@ -1026,7 +1031,21 @@ export async function collectCashPayment(formData: FormData) {
     .single()
   if (!restaurant) return
 
-  await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', id)
+  // Récupérer le statut de la commande pour vérifier si elle est terminée
+  const { data: fullOrder } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', id)
+    .single()
+
+  const updateData: Record<string, string | null> = { payment_status: 'paid' }
+  
+  // Si la commande est déjà terminée, l'archiver automatiquement
+  if (fullOrder?.status === 'done') {
+    updateData.archived_at = new Date().toISOString()
+  }
+
+  await supabase.from('orders').update(updateData).eq('id', id)
   revalidatePath('/dashboard/orders')
 }
 
@@ -1054,6 +1073,40 @@ export async function archiveOrder(formData: FormData) {
   if (!restaurant) return
 
   await supabase.from('orders').update({ archived_at: new Date().toISOString() }).eq('id', id)
+  revalidatePath('/dashboard/orders')
+}
+
+export async function cancelAndArchiveOrder(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const id = formData.get('id') as string
+  if (!id) return
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, restaurant_id')
+    .eq('id', id)
+    .single()
+  if (!order) return
+
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', order.restaurant_id)
+    .eq('owner_id', user.id)
+    .single()
+  if (!restaurant) return
+
+  await supabase
+    .from('orders')
+    .update({ 
+      status: 'cancelled',
+      archived_at: new Date().toISOString() 
+    })
+    .eq('id', id)
+  
   revalidatePath('/dashboard/orders')
 }
 

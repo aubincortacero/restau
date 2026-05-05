@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { closeTableSession, markOrderDelivered } from '@/app/actions/sessions'
+import { closeTableSession, markOrderDelivered, cancelAndArchiveSession } from '@/app/actions/sessions'
 import type { SessionWithDetails } from '@/types/session'
 import { ArdoiseTicketModal } from './ArdoiseTicketModal'
 
@@ -23,6 +23,7 @@ function timeAgo(iso: string): string {
 export function ActiveTabCard({ session, restaurantName }: { session: SessionWithDetails; restaurantName: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const [isCanceling, setIsCanceling] = useState(false)
   const [deliveredOrders, setDeliveredOrders] = useState<Set<string>>(
     new Set(session.orders.filter(o => o.status === 'ready').map(o => o.id))
   )
@@ -36,6 +37,16 @@ export function ActiveTabCard({ session, restaurantName }: { session: SessionWit
     setIsClosing(true)
     await closeTableSession(session.id)
     setIsClosing(false)
+  }
+
+  async function handleCancel() {
+    if (!confirm('⚠️ Voulez-vous vraiment annuler et archiver cette ardoise ?\n\nToutes les commandes de cette ardoise seront annulées. Cette action est définitive.')) return
+    setIsCanceling(true)
+    const result = await cancelAndArchiveSession(session.id)
+    if (!result.success) {
+      alert(`Erreur: ${result.error || 'erreur inconnue'}`)
+    }
+    setIsCanceling(false)
   }
 
   async function handleMarkDelivered(orderId: string) {
@@ -210,6 +221,16 @@ export function ActiveTabCard({ session, restaurantName }: { session: SessionWit
                 className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isClosing ? 'Fermeture...' : balance.remaining_amount > 0 ? 'Encaisser d\'abord' : 'Fermer l\'ardoise'}
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isCanceling}
+                className="w-full py-2 px-4 rounded-xl border border-red-600/40 text-red-400 hover:bg-red-900/20 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+                {isCanceling ? 'Annulation...' : 'Annuler et archiver'}
               </button>
             </div>
           </div>
