@@ -99,8 +99,8 @@ function StripePaymentForm({
               spacedAccordionItems: true
             },
             wallets: {
-              applePay: 'auto',
-              googlePay: 'auto',
+              applePay: 'always',
+              googlePay: 'always',
             },
             fields: {
               billingDetails: 'never'

@@ -98,8 +98,8 @@ function CheckoutForm({ totalPrice, stripeAccountId, customerEmail, fulfillmentT
               spacedAccordionItems: true
             },
             wallets: {
-              applePay: 'auto',
-              googlePay: 'auto',
+              applePay: 'always',
+              googlePay: 'always',
             },
             fields: {
               billingDetails: 'never'
