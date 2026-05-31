@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { IconMenu, IconTable, IconOrders, IconGlobe } from './icons'
+import { IconMenu, IconTable, IconOrders, IconGlobe, IconEye } from './icons'
 
 export const navItems = [
   { href: '/dashboard/orders', label: 'Commandes', icon: IconOrders },
