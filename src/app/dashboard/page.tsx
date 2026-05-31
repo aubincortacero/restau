@@ -119,18 +119,6 @@ export default async function DashboardPage() {
   const pendingCount = activeOrders.filter(o => o.status === 'pending').length
   const activeTableIds = new Set(activeOrders.filter(o => o.table_id).map(o => o.table_id))
 
-  // CA aujourd'hui (depuis minuit Paris)
-  const paidToday = allOrders.filter(o =>
-    o.payment_status === 'paid' && new Date(o.created_at) >= new Date(todayStart))
-  const caToday = sumOrders(paidToday)
-
-  // CA hier même heure (fenêtre équivalente hier)
-  const paidHierMemeHeure = allOrders.filter(o =>
-    o.payment_status === 'paid' &&
-    new Date(o.created_at) >= new Date(yesterdayStart) &&
-    new Date(o.created_at) < sameTimeYesterday)
-  const caHierMemeHeure = sumOrders(paidHierMemeHeure)
-
   // CA hier (journée complète)
   const paidYesterdayFull = allOrders.filter(o =>
     o.payment_status === 'paid' &&
@@ -145,19 +133,7 @@ export default async function DashboardPage() {
     new Date(o.created_at) < new Date(yesterdayStart))
   const caDayBefore = sumOrders(paidDayBefore)
 
-  // Comptage commandes aujourd'hui (non annulées)
-  const ordersTodayCount = allOrders.filter(o =>
-    new Date(o.created_at) >= new Date(todayStart) && o.status !== 'cancelled').length
-
-  // Comptage commandes hier même fenêtre
-  const ordersHierMemeHeureCount = allOrders.filter(o =>
-    new Date(o.created_at) >= new Date(yesterdayStart) &&
-    new Date(o.created_at) < sameTimeYesterday &&
-    o.status !== 'cancelled').length
-
-  const deltaCA       = formatDelta(caToday,           caHierMemeHeure,          'vs hier même heure')
-  const deltaCaHier   = formatDelta(caYesterday,        caDayBefore,              'vs avant-hier')
-  const deltaCommandes = formatDelta(ordersTodayCount,  ordersHierMemeHeureCount, 'vs hier même heure')
+  const deltaCaHier = formatDelta(caYesterday, caDayBefore, 'vs avant-hier')
 
   const { open, happyHour } = getStatusNow(
     restaurant.opening_hours as OpeningHours | null,
@@ -178,8 +154,8 @@ export default async function DashboardPage() {
       href: '/dashboard/orders',
       label: 'Commandes live',
       value: String(pendingCount),
-      sub: `${ordersTodayCount} commande${ordersTodayCount !== 1 ? 's' : ''} aujourd'hui`,
-      delta: deltaCommandes,
+      sub: `En attente de préparation`,
+      delta: null,
       bg: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80',
     },
     {
@@ -189,14 +165,6 @@ export default async function DashboardPage() {
       sub: `${activeTableIds.size} active${activeTableIds.size !== 1 ? 's' : ''} en ce moment`,
       delta: null,
       bg: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      href: '/dashboard/orders/archives',
-      label: "CA aujourd'hui",
-      value: formatCurrency(caToday),
-      sub: "Depuis l'ouverture",
-      delta: deltaCA,
-      bg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
     },
     {
       href: '/dashboard/orders/archives',

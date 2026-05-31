@@ -164,12 +164,6 @@ export default function OrderNotificationBell({ restaurantId }: { restaurantId: 
               >
                 {soundEnabled ? '🔔' : '🔕'}
               </button>
-              <button
-                onClick={() => { router.push('/dashboard/orders'); setOpen(false) }}
-                className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
-              >
-                Tout voir →
-              </button>
             </div>
           </div>
           <div className="max-h-96 overflow-y-auto divide-y divide-zinc-700 bg-zinc-900">

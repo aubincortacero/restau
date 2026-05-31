@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
     .from('orders')
     .select('table_id')
     .eq('restaurant_id', restaurantId)
-    .eq('status', 'pending')
+    .in('status', ['pending', 'ready'])
+    .is('archived_at', null)
     .not('table_id', 'is', null)
 
   const tableIds = [...new Set((data ?? []).map((o) => o.table_id as string))]
