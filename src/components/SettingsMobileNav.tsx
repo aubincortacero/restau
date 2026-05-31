@@ -8,7 +8,7 @@ const SETTINGS_NAV = [
   { href: '/dashboard/settings', label: 'Profil', exact: true },
   { href: '/dashboard/settings/restaurant', label: 'Restaurant' },
   { href: '/dashboard/settings/schedules', label: 'Horaires & Happy Hour' },
-  { href: '/dashboard/settings/stripe', label: 'Stripe Connect' },
+  { href: '/dashboard/settings/stripe', label: 'Stripe Connect', disabled: true, comingSoon: true },
   { href: '/dashboard/settings/danger', label: 'Zone dangereuse', danger: true },
 ]
 
@@ -34,9 +34,16 @@ export default function SettingsMobileNav() {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-left relative z-50"
       >
-        <span className={`text-sm font-medium ${currentItem.danger ? 'text-red-400' : 'text-white'}`}>
-          {currentItem.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium ${currentItem.danger ? 'text-red-400' : currentItem.disabled ? 'text-zinc-500' : 'text-white'}`}>
+            {currentItem.label}
+          </span>
+          {currentItem.comingSoon && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-semibold">
+              Bientôt
+            </span>
+          )}
+        </div>
         <svg
           className={`w-5 h-5 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -52,6 +59,23 @@ export default function SettingsMobileNav() {
         <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-2 z-50 shadow-2xl">
           {SETTINGS_NAV.map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
+            
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.href}
+                  className="px-3 py-2.5 rounded-lg text-sm text-zinc-600 cursor-not-allowed opacity-50 flex items-center justify-between"
+                >
+                  {item.label}
+                  {item.comingSoon && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-semibold">
+                      Bientôt
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            
             return (
               <Link
                 key={item.href}

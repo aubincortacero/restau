@@ -82,32 +82,44 @@ function ToggleCard({
   icon,
   title,
   sub,
+  disabled,
+  comingSoon,
 }: {
   selected: boolean
   onClick: () => void
   icon: React.ReactNode
   title: string
   sub: string
+  disabled?: boolean
+  comingSoon?: boolean
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${
-        selected
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left relative ${
+        disabled
+          ? 'border-zinc-800 bg-zinc-900/40 opacity-50 cursor-not-allowed'
+          : selected
           ? 'border-orange-500 bg-orange-500/8'
           : 'border-zinc-700 bg-zinc-800/40 hover:border-zinc-600'
       }`}
     >
-      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-orange-500/20' : 'bg-zinc-700'}`}>
+      {comingSoon && (
+        <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+          À venir
+        </span>
+      )}
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${disabled ? 'bg-zinc-800' : selected ? 'bg-orange-500/20' : 'bg-zinc-700'}`}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`font-semibold text-sm ${selected ? 'text-white' : 'text-zinc-300'}`}>{title}</p>
-        <p className="text-xs text-zinc-500 mt-0.5">{sub}</p>
+        <p className={`font-semibold text-sm ${disabled ? 'text-zinc-600' : selected ? 'text-white' : 'text-zinc-300'}`}>{title}</p>
+        <p className={`text-xs mt-0.5 ${disabled ? 'text-zinc-700' : 'text-zinc-500'}`}>{sub}</p>
       </div>
-      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? 'border-orange-500 bg-orange-500' : 'border-zinc-600'}`}>
-        {selected && (
+      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${disabled ? 'border-zinc-700' : selected ? 'border-orange-500 bg-orange-500' : 'border-zinc-600'}`}>
+        {selected && !disabled && (
           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
@@ -128,7 +140,7 @@ export default function CreateRestaurantForm() {
     name: '',
     address: '',
     phone: '',
-    paymentMethods: ['online', 'cash'],
+    paymentMethods: ['cash'],
     fulfillmentModes: ['table'],
     openingHours: DEFAULT_HOURS,
     happyHour: { enabled: false, start: '18:00', end: '20:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },
@@ -155,8 +167,8 @@ export default function CreateRestaurantForm() {
       if (result.error) {
         setError(result.error)
       } else {
-        if (result.restaurantId) setCreatedRestaurantId(result.restaurantId)
-        setStep('stripe')
+        // Redirection directe vers le dashboard (Stripe désactivé pour le moment)
+        router.push('/dashboard')
       }
     })
   }
@@ -300,7 +312,9 @@ export default function CreateRestaurantForm() {
             onClick={() => setData(p => ({ ...p, paymentMethods: toggle(p.paymentMethods, 'online') }))}
             title="Paiement en ligne"
             sub="Le client paie par carte depuis son téléphone"
-            icon={<svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>}
+            icon={<svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>}
+            disabled={true}
+            comingSoon={true}
           />
           <ToggleCard
             selected={data.paymentMethods.includes('cash')}
@@ -328,7 +342,9 @@ export default function CreateRestaurantForm() {
             onClick={() => setData(p => ({ ...p, fulfillmentModes: toggle(p.fulfillmentModes, 'pickup') }))}
             title="Retrait au comptoir"
             sub="Le client récupère sa commande avec un code"
-            icon={<span className="text-2xl">🛍️</span>}
+            icon={<span className="text-xl opacity-50">🛍️</span>}
+            disabled={true}
+            comingSoon={true}
           />
         </div>
       )}

@@ -8,11 +8,26 @@ interface Props {
   label: string
   exact?: boolean
   danger?: boolean
+  disabled?: boolean
+  comingSoon?: boolean
 }
 
-export default function SettingsNavLink({ href, label, exact, danger }: Props) {
+export default function SettingsNavLink({ href, label, exact, danger, disabled, comingSoon }: Props) {
   const pathname = usePathname()
   const isActive = exact ? pathname === href : pathname.startsWith(href)
+
+  if (disabled) {
+    return (
+      <div className="px-3 py-2 rounded-lg text-sm text-zinc-600 cursor-not-allowed opacity-50 flex items-center justify-between">
+        {label}
+        {comingSoon && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-semibold">
+            Bientôt
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <Link

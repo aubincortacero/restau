@@ -3,14 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { IconHome, IconMenu, IconTable, IconOrders, IconEye, IconGlobe } from './icons'
+import { IconMenu, IconTable, IconOrders, IconGlobe } from './icons'
 
 export const navItems = [
-  { href: '/dashboard', label: 'Accueil', icon: IconHome },
+  { href: '/dashboard/orders', label: 'Commandes', icon: IconOrders },
   { href: '/dashboard/menu', label: 'Menu', icon: IconMenu },
   { href: '/dashboard/tables', label: 'Tables', icon: IconTable },
   { href: '/dashboard/website', label: 'Website', icon: IconGlobe },
-  { href: '/dashboard/orders', label: 'Commandes', icon: IconOrders },
 ]
 
 /** Barre de navigation desktop (hidden md:flex) */
@@ -22,9 +21,7 @@ export function NavDesktop() {
   return (
     <nav className="hidden md:flex items-center gap-1">
       {navItems.map(({ href, label, icon: Icon }) => {
-        const isActive = activePath !== null && (
-          href === '/dashboard' ? activePath === '/dashboard' : activePath.startsWith(href)
-        )
+        const isActive = activePath !== null && activePath.startsWith(href)
         return (
           <Link
             key={href}
@@ -53,9 +50,7 @@ export function MobileNav({ restaurantSlug }: { restaurantSlug?: string }) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950 border-t border-zinc-800 flex safe-area-pb">
       {navItems.map(({ href, label, icon: Icon }) => {
-        const isActive = activePath !== null && (
-          href === '/dashboard' ? activePath === '/dashboard' : activePath.startsWith(href)
-        )
+        const isActive = activePath !== null && activePath.startsWith(href)
         return (
           <Link
             key={href}
