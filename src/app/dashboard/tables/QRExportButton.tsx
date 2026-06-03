@@ -404,13 +404,13 @@ export default function QRExportButton({
                       onChange={(e) => setBgColor(e.target.value)}
                       className="w-10 h-10 rounded-lg cursor-pointer border-2 border-zinc-700 bg-transparent"
                     />
-                    <input
+                    {/* <input
                       type="text"
                       value={bgColor.toUpperCase()}
                       onChange={(e) => setBgColor(e.target.value)}
                       className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                       placeholder="#FFFFFF"
-                    />
+                    /> */}
                   </div>
                 </div>
                 <div>
@@ -422,13 +422,13 @@ export default function QRExportButton({
                       onChange={(e) => setFgColor(e.target.value)}
                       className="w-10 h-10 rounded-lg cursor-pointer border-2 border-zinc-700 bg-transparent"
                     />
-                    <input
+                    {/* <input
                       type="text"
                       value={fgColor.toUpperCase()}
                       onChange={(e) => setFgColor(e.target.value)}
                       className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                       placeholder="#000000"
-                    />
+                    /> */}
                   </div>
                 </div>
               </div>
