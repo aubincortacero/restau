@@ -260,15 +260,11 @@ export async function updateAppearance(formData: FormData) {
   const brand_color = (formData.get('brand_color') as string) || '#F07A4F'
   const menu_button_radius = (formData.get('menu_button_radius') as string) || 'rounded'
   const menu_header_style = (formData.get('menu_header_style') as string) || 'dark'
-  const menu_max_width_raw = formData.get('menu_max_width') as string | null
-  const menu_max_width = menu_max_width_raw && menu_max_width_raw !== ''
-    ? Math.min(1600, Math.max(320, parseInt(menu_max_width_raw, 10)))
-    : null
 
   // Validation hex color
   if (!/^#[0-9a-fA-F]{6}$/.test(brand_color)) return
 
-  const updates: Record<string, unknown> = { brand_color, menu_button_radius, menu_header_style, menu_max_width }
+  const updates: Record<string, unknown> = { brand_color, menu_button_radius, menu_header_style }
 
   // Logo upload (optionnel)
   const logoFile = formData.get('logo') as File | null

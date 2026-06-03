@@ -25,7 +25,6 @@ interface Props {
     menu_button_radius: string
     menu_header_style: string
     logo_url?: string | null
-    menu_max_width?: number | null
   }
   saved?: boolean
 }
@@ -39,7 +38,6 @@ export default function AppearanceForm({ restaurantId, initial }: Props) {
   )
   const [logoPreview, setLogoPreview] = useState<string | null>(initial.logo_url ?? null)
   const [removeLogo, setRemoveLogo] = useState(false)
-  const [maxWidth, setMaxWidth] = useState<string>(initial.menu_max_width ? String(initial.menu_max_width) : '')
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [, startTransition] = useTransition()
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -183,24 +181,6 @@ export default function AppearanceForm({ restaurantId, initial }: Props) {
             )}
             <p className="text-[10px] text-zinc-600">JPG, PNG, WebP, SVG — max 500 Ko</p>
           </div>
-        </div>
-      </div>
-
-      {/* Largeur max */}
-      <div>
-        <p className="text-xs font-medium text-zinc-400 mb-3">Largeur du menu <span className="text-zinc-600">(px)</span></p>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            name="menu_max_width"
-            value={maxWidth}
-            onChange={e => { setMaxWidth(e.target.value); saveDebounced() }}
-            placeholder="Illimitée"
-            min={320}
-            max={1600}
-            className="w-36 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
-          />
-          <span className="text-xs text-zinc-500">Laisser vide pour illimitée (320–1600 px)</span>
         </div>
       </div>
 

@@ -108,16 +108,6 @@ export default async function OrdersPage() {
 
   const totalPending = enriched.filter((o) => o.status === 'pending' && !o.session_id).length
 
-  // Calculer le CA du jour et le nombre de commandes
-  const parisNow = new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' })
-  const todayStart = new Date(new Date(parisNow).setHours(0, 0, 0, 0)).toISOString()
-  
-  const ordersToday = enriched.filter(o => o.created_at >= todayStart)
-  const caToday = ordersToday
-    .filter(o => o.payment_status === 'paid')
-    .reduce((sum, o) => sum + o.ttc, 0)
-  const ordersTodayCount = ordersToday.length
-
   // Récupérer les sessions actives
   const activeSessions = await getActiveTableSessions(restaurant.id)
 
@@ -133,18 +123,6 @@ export default async function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Stats du jour */}
-          <div className="flex items-center gap-3 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl">
-            <div className="text-right">
-              <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">CA jour</p>
-              <p className="text-sm font-bold text-emerald-400 tabular-nums">{caToday.toFixed(2)} €</p>
-            </div>
-            <div className="w-px h-8 bg-zinc-800"></div>
-            <div className="text-right">
-              <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Commandes</p>
-              <p className="text-sm font-bold text-zinc-300 tabular-nums">{ordersTodayCount}</p>
-            </div>
-          </div>
           <Link
             href="/dashboard/orders/archives"
             data-page-tutorial="orders-archives"
