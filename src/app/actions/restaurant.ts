@@ -912,6 +912,30 @@ export async function deleteTableById(id: string, restaurantId: string) {
   revalidatePath('/dashboard/tables')
 }
 
+export async function deleteMultipleTables(tableIds: string[], restaurantId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  // Vérifie que le restaurant appartient bien à l'utilisateur
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', restaurantId)
+    .eq('owner_id', user.id)
+    .maybeSingle()
+  if (!restaurant) return
+
+  // Supprime toutes les tables d'un coup
+  await supabase
+    .from('tables')
+    .delete()
+    .in('id', tableIds)
+    .eq('restaurant_id', restaurantId)
+  
+  revalidatePath('/dashboard/tables')
+}
+
 export async function saveFloorPlan(
   restaurantId: string,
   tables: { id: string; pos_x: number; pos_y: number }[],

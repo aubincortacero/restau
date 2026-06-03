@@ -4,7 +4,8 @@ import { useState, useTransition, useEffect, useRef } from 'react'
 import FloorPlan, { type Floor } from './FloorPlan'
 import TableAddForm from './TableAddForm'
 import QRExportButton from './QRExportButton'
-import { deleteTableById } from '@/app/actions/restaurant'
+import ZonesManager from './ZonesManager'
+import { deleteTableById, deleteMultipleTables, saveFloorPlan } from '@/app/actions/restaurant'
 import PageTutorial, { type PageTutorialStep } from '@/components/PageTutorial'
 
 const TABLES_TUTORIAL_STEPS: PageTutorialStep[] = [
@@ -60,6 +61,8 @@ export default function TablesClientLayout({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [currentFloors, setCurrentFloors] = useState<Floor[]>(floors)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set())
+  const [deletingMultiple, setDeletingMultiple] = useState(false)
   const [, startTransition] = useTransition()
   const [activeTableIds, setActiveTableIds] = useState<Set<string>>(new Set())
   const [mobileTablesOpen, setMobileTablesOpen] = useState(false)
@@ -86,7 +89,42 @@ export default function TablesClientLayout({
       await deleteTableById(tableId, restaurantId)
       setDeletingId(null)
       if (selectedId === tableId) setSelectedId(null)
+      // Retirer de la sélection si elle était cochée
+      if (selectedTables.has(tableId)) {
+        const newSet = new Set(selectedTables)
+        newSet.delete(tableId)
+        setSelectedTables(newSet)
+      }
     })
+  }
+
+  function toggleTableSelection(tableId: string) {
+    const newSet = new Set(selectedTables)
+    if (newSet.has(tableId)) {
+      newSet.delete(tableId)
+    } else {
+      newSet.add(tableId)
+    }
+    setSelectedTables(newSet)
+  }
+
+  function handleDeleteMultiple() {
+    const count = selectedTables.size
+    if (count === 0) return
+    if (!confirm(`Supprimer ${count} table${count > 1 ? 's' : ''} ? Cette action est irréversible.`)) return
+    
+    setDeletingMultiple(true)
+    startTransition(async () => {
+      await deleteMultipleTables(Array.from(selectedTables), restaurantId)
+      setDeletingMultiple(false)
+      setSelectedTables(new Set())
+      if (selectedId && selectedTables.has(selectedId)) setSelectedId(null)
+    })
+  }
+
+  async function handleSaveZones(updatedFloors: Floor[]) {
+    const tablePositions = tables.map(t => ({ id: t.id, pos_x: t.pos_x, pos_y: t.pos_y }))
+    await saveFloorPlan(restaurantId, tablePositions, updatedFloors)
   }
 
   const hasTables = tables.length > 0
@@ -248,40 +286,54 @@ export default function TablesClientLayout({
                       const isActive = table.id === selectedId
                       const isDeleting = deletingId === table.id
                       const hasOrder = activeTableIds.has(table.id)
+                      const isChecked = selectedTables.has(table.id)
                       return (
                         <li key={table.id} className="group">
-                          <button
-                            onClick={() => setSelectedId(isActive ? null : table.id)}
-                            disabled={isDeleting}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
-                              isActive
-                                ? 'bg-white/8 text-white font-medium'
-                                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                            } ${isDeleting ? 'opacity-40' : ''}`}
-                          >
-                            <span className={`text-base font-black tabular-nums leading-none w-6 text-center shrink-0 ${isActive ? 'text-orange-400' : ''}`}>
-                              {table.number}
-                            </span>
-                            <span className="truncate flex-1 text-xs">
-                              {isDeleting ? <span className="text-red-400 italic">Suppression…</span> : (table.label ?? `Table ${table.number}`)}
-                            </span>
-                            {hasOrder && (
-                              <span className="shrink-0 relative flex h-2 w-2 mr-1">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+                          <div className="flex items-center gap-1">
+                            {/* Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                e.stopPropagation()
+                                toggleTableSelection(table.id)
+                              }}
+                              disabled={isDeleting || deletingMultiple}
+                              className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-orange-500 focus:ring-2 focus:ring-orange-500/50 focus:ring-offset-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ml-1"
+                            />
+                            {/* Bouton table */}
+                            <button
+                              onClick={() => setSelectedId(isActive ? null : table.id)}
+                              disabled={isDeleting}
+                              className={`flex-1 flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors text-left ${
+                                isActive
+                                  ? 'bg-white/8 text-white font-medium'
+                                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                              } ${isDeleting ? 'opacity-40' : ''}`}
+                            >
+                              <span className={`text-base font-black tabular-nums leading-none w-6 text-center shrink-0 ${isActive ? 'text-orange-400' : ''}`}>
+                                {table.number}
                               </span>
-                            )}
-                            <span
-                              role="button"
-                              onClick={(e) => handleDelete(e, table.id)}
-                              className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-zinc-700 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                              title="Supprimer"
+                              <span className="truncate flex-1 text-xs">
+                                {isDeleting ? <span className="text-red-400 italic">Suppression…</span> : (table.label ?? `Table ${table.number}`)}
+                              </span>
+                              {hasOrder && (
+                                <span className="shrink-0 relative flex h-2 w-2 mr-1">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+                                </span>
+                              )}
+                              <span
+                                role="button"
+                                onClick={(e) => handleDelete(e, table.id)}
+                                className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-zinc-700 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                title="Supprimer"
                             >
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                              </svg>
                             </span>
                           </button>
+                          </div>
                         </li>
                       )
                     })}
@@ -290,6 +342,33 @@ export default function TablesClientLayout({
               ))}
             </ul>
           )}
+
+          {/* Bouton suppression en masse */}
+          {selectedTables.size > 0 && (
+            <div className="px-3 mb-2">
+              <button
+                onClick={handleDeleteMultiple}
+                disabled={deletingMultiple}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                {deletingMultiple 
+                  ? 'Suppression…' 
+                  : `Supprimer ${selectedTables.size} table${selectedTables.size > 1 ? 's' : ''}`
+                }
+              </button>
+            </div>
+          )}
+
+          {/* Gestion des zones */}
+          <ZonesManager
+            floors={currentFloors}
+            restaurantId={restaurantId}
+            onFloorsChange={setCurrentFloors}
+            onSave={handleSaveZones}
+          />
 
           {/* Ajouter une table */}
           <TableAddForm
