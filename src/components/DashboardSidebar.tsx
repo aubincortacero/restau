@@ -152,8 +152,8 @@ export default function DashboardSidebar({
 
       {/* Nav principale */}
       <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2">
-        {NAV_ITEMS.map(({ href, label, icon: Icon, exact, tutorialId }) => {
-          const active = isActive(href, exact)
+        {NAV_ITEMS.map(({ href, label, icon: Icon, tutorialId }) => {
+          const active = isActive(href, false)
           return (
             <Link
               key={href}

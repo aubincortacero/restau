@@ -159,8 +159,8 @@ export default function MobileSidebarDrawer({
 
         {/* Nav principale */}
         <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2 overflow-y-auto">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
-            const active = isActive(href, exact)
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href, false)
             return (
               <Link
                 key={href}
