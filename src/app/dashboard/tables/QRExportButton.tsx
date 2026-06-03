@@ -41,6 +41,8 @@ export default function QRExportButton({
   const [selectedZone, setSelectedZone] = useState('')
   const [selectedTableId, setSelectedTableId] = useState('')
   const [generating, setGenerating] = useState(false)
+  const [bgColor, setBgColor] = useState('#FFFFFF') // Blanc par défaut
+  const [fgColor, setFgColor] = useState('#000000') // Noir par défaut
 
   if (tables.length === 0) return null
 
@@ -84,7 +86,11 @@ export default function QRExportButton({
     return str.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   }
 
-  async function loadImageAsDataUrl(url: string): Promise<string> {
+  /**
+   * Charge une image et la recolore avec la couleur spécifiée
+   * Garde la transparence intacte
+   */
+  async function loadAndRecolorImage(url: string, targetColor: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
@@ -94,7 +100,36 @@ export default function QRExportButton({
         canvas.height = img.height
         const ctx = canvas.getContext('2d')
         if (!ctx) return reject(new Error('No 2d context'))
+        
+        // Dessiner l'image
         ctx.drawImage(img, 0, 0)
+        
+        // Obtenir les données de pixels
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        
+        // Convertir la couleur cible en RGB
+        const hex = targetColor.replace('#', '')
+        const r = parseInt(hex.substring(0, 2), 16)
+        const g = parseInt(hex.substring(2, 4), 16)
+        const b = parseInt(hex.substring(4, 6), 16)
+        
+        // Parcourir tous les pixels
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3]
+          
+          // Si le pixel n'est pas transparent
+          if (alpha > 0) {
+            // Remplacer par la couleur cible en gardant l'opacité
+            data[i] = r      // Rouge
+            data[i + 1] = g  // Vert
+            data[i + 2] = b  // Bleu
+            // data[i + 3] reste inchangé (alpha)
+          }
+        }
+        
+        // Remettre les données modifiées
+        ctx.putImageData(imageData, 0, 0)
         resolve(canvas.toDataURL('image/png'))
       }
       img.onerror = () => reject(new Error('Failed to load image'))
@@ -114,15 +149,26 @@ export default function QRExportButton({
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
       let firstPage = true
 
-      // Charger le logo si disponible
+      // Charger le logo si disponible et le recolorer
       let logoDataUrl: string | null = null
       if (restaurantLogoUrl) {
         try {
-          logoDataUrl = await loadImageAsDataUrl(restaurantLogoUrl)
+          logoDataUrl = await loadAndRecolorImage(restaurantLogoUrl, fgColor)
         } catch (err) {
           console.warn('Logo load failed:', err)
         }
       }
+
+      // Calculer les couleurs RGB une fois pour toutes
+      const bgHex = bgColor.replace('#', '')
+      const bgR = parseInt(bgHex.substring(0, 2), 16)
+      const bgG = parseInt(bgHex.substring(2, 4), 16)
+      const bgB = parseInt(bgHex.substring(4, 6), 16)
+      
+      const fgHex = fgColor.replace('#', '')
+      const fgR = parseInt(fgHex.substring(0, 2), 16)
+      const fgG = parseInt(fgHex.substring(2, 4), 16)
+      const fgB = parseInt(fgHex.substring(4, 6), 16)
 
       type Group = { title: string; tables: TableForExport[] }
       let groups: Group[]
@@ -174,6 +220,10 @@ export default function QRExportButton({
             const x = MARGIN_H + col * (STICKER_W + GAP_H)
             const y = MARGIN_V + row * (STICKER_H + GAP_V)
 
+            // Fond du sticker (couleur de fond personnalisée)
+            doc.setFillColor(bgR, bgG, bgB)
+            doc.rect(x, y, STICKER_W, STICKER_H, 'F')
+            
             // Bordure du sticker
             doc.setDrawColor(200, 200, 200)
             doc.setLineWidth(0.3)
@@ -191,7 +241,7 @@ export default function QRExportButton({
               width: 400,
               margin: 1,
               errorCorrectionLevel: 'L', // ← LOW pour QR plus simple
-              color: { dark: '#000000', light: '#ffffff' },
+              color: { dark: fgColor, light: bgColor },
             })
             
             const qrX = x + (QR_SECTION_W - QR_SIZE) / 2
@@ -201,7 +251,7 @@ export default function QRExportButton({
             // "NOTRE CARTE" sous le QR
             doc.setFontSize(6)
             doc.setFont('helvetica', 'normal')
-            doc.setTextColor(80, 80, 80)
+            doc.setTextColor(fgR, fgG, fgB)
             doc.text('NOTRE CARTE', x + QR_SECTION_W / 2, y + STICKER_H - 2, { align: 'center' })
 
             // === SECTION 2: LOGO ===
@@ -222,13 +272,13 @@ export default function QRExportButton({
             // "Table" en petit
             doc.setFontSize(8)
             doc.setFont('helvetica', 'normal')
-            doc.setTextColor(100, 100, 100)
+            doc.setTextColor(fgR, fgG, fgB)
             doc.text('Table', tableCenterX, y + 10, { align: 'center' })
             
             // Numéro en gros
             doc.setFontSize(18)
             doc.setFont('helvetica', 'bold')
-            doc.setTextColor(0, 0, 0)
+            doc.setTextColor(fgR, fgG, fgB)
             doc.text(`${t.number}`, tableCenterX, y + 19, { align: 'center' })
           }
         }
@@ -320,6 +370,69 @@ export default function QRExportButton({
                 ))}
               </select>
             )}
+
+            {/* Couleurs personnalisées */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-zinc-400">Personnaliser les couleurs</label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { setBgColor('#FFFFFF'); setFgColor('#000000') }}
+                    className="px-2 py-0.5 text-[10px] rounded bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 transition-colors"
+                    title="Noir sur blanc (défaut)"
+                  >
+                    Défaut
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBgColor('#000000'); setFgColor('#FFFFFF') }}
+                    className="px-2 py-0.5 text-[10px] rounded bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 transition-colors"
+                    title="Blanc sur noir"
+                  >
+                    Inversé
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-500 mb-1.5 block">Fond</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={bgColor}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-2 border-zinc-700 bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={bgColor.toUpperCase()}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                      placeholder="#FFFFFF"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500 mb-1.5 block">Éléments (QR, texte, logo)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={fgColor}
+                      onChange={(e) => setFgColor(e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-2 border-zinc-700 bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={fgColor.toUpperCase()}
+                      onChange={(e) => setFgColor(e.target.value)}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                      placeholder="#000000"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Summary */}
             <div className={`rounded-xl px-4 py-3 mb-5 text-sm transition-colors ${canGenerate ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-800/30 text-zinc-600'}`}>
