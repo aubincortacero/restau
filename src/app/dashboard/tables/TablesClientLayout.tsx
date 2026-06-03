@@ -24,10 +24,10 @@ const TABLES_TUTORIAL_STEPS: PageTutorialStep[] = [
   },
   {
     selector: '[data-page-tutorial="tables-qr"]',
-    emoji: '📱',
-    title: 'Exportez les QR codes',
+    emoji: '🏷️',
+    title: 'Imprimez les stickers',
     description:
-      'Générez un PDF avec les QR codes de toutes vos tables. Imprimez-les et posez-les sur les tables : vos clients commandent en 10 secondes.',
+      'Générez un PDF avec des stickers QR code pour vos tables (format pratique avec logo). Imprimez-les, découpez-les et collez-les : vos clients commandent en 10 secondes.',
   },
 ]
 
@@ -45,12 +45,16 @@ export default function TablesClientLayout({
   floors,
   restaurantId,
   restaurantSlug,
+  restaurantName,
+  restaurantLogoUrl,
   siteUrl,
 }: {
   tables: FloorTable[]
   floors: Floor[]
   restaurantId: string
   restaurantSlug: string
+  restaurantName: string
+  restaurantLogoUrl: string | null
   siteUrl: string
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -121,6 +125,8 @@ export default function TablesClientLayout({
                 tables={tables.map((t) => ({ id: t.id, number: t.number, label: t.label }))}
                 siteUrl={siteUrl}
                 restaurantSlug={restaurantSlug}
+                restaurantName={restaurantName}
+                restaurantLogoUrl={restaurantLogoUrl}
               />
             </div>
           )}

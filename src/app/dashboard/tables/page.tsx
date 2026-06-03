@@ -15,7 +15,7 @@ export default async function TablesPage() {
   const activeRestaurantId = await getActiveRestaurantId(user.id)
 
   const { data: restaurant } = activeRestaurantId
-    ? await supabase.from('restaurants').select('id, name, slug, floor_plan').eq('id', activeRestaurantId).maybeSingle()
+    ? await supabase.from('restaurants').select('id, name, slug, floor_plan, logo_url').eq('id', activeRestaurantId).maybeSingle()
     : { data: null }
 
   if (!restaurant) redirect('/dashboard/new')
@@ -64,6 +64,8 @@ export default async function TablesPage() {
       floors={floors}
       restaurantId={restaurant.id}
       restaurantSlug={restaurant.slug}
+      restaurantName={restaurant.name}
+      restaurantLogoUrl={restaurant.logo_url ?? null}
       siteUrl={siteUrl}
     />
   )

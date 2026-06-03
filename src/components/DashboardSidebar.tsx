@@ -15,11 +15,10 @@ type RestaurantSummary = { id: string; name: string; slug: string }
 type SubStatus = 'active' | 'trialing' | 'expired' | 'none'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',         label: 'Accueil',    icon: IconHome,     exact: true },
+  { href: '/dashboard/orders',  label: 'Commandes',  icon: IconOrders,   tutorialId: 'nav-orders' },
   { href: '/dashboard/menu',    label: 'Menu',       icon: IconMenu,     tutorialId: 'nav-menu' },
   { href: '/dashboard/tables',  label: 'Tables',     icon: IconTable,    tutorialId: 'nav-tables' },
   { href: '/dashboard/website', label: 'Site web',   icon: IconGlobe },
-  { href: '/dashboard/orders',  label: 'Commandes',  icon: IconOrders,   tutorialId: 'nav-orders' },
 ]
 
 const BOTTOM_ITEMS = [

@@ -5,25 +5,36 @@ import type QRCodeLib from 'qrcode'
 
 type TableForExport = { id: string; number: number; label: string | null }
 
-// A4 grid: 3 cols × 4 rows @ 60×65mm per cell
-const COLS = 3
-const ROWS = 4
-const CELL_W = 60      // mm
-const CELL_H = 65      // mm
-const QR_SIZE = 52     // mm — QR image within cell
-const MARGIN_H = 15    // mm — left & right
-const MARGIN_TOP = 20  // mm — space for page title
-const PAGE_W = 210     // A4 width mm
-const PER_PAGE = COLS * ROWS  // 12
+// Sticker horizontal layout: 85mm × 28mm
+const STICKER_W = 85      // mm - largeur totale
+const STICKER_H = 28      // mm - hauteur
+const QR_SECTION_W = 28   // mm - section QR code
+const LOGO_SECTION_W = 28 // mm - section logo
+const TABLE_SECTION_W = 29 // mm - section numéro table
+const QR_SIZE = 22        // mm - taille du QR
+const LOGO_SIZE = 20      // mm - taille du logo
+const MARGIN_H = 12       // mm - marges horizontales
+const MARGIN_V = 15       // mm - marges verticales
+const GAP_H = 5           // mm - espacement horizontal entre stickers
+const GAP_V = 5           // mm - espacement vertical entre stickers
+const PAGE_W = 210        // mm - A4 width
+const PAGE_H = 297        // mm - A4 height
+const COLS = 2            // 2 stickers par rangée
+const ROWS = 9            // 9 rangées par page
+const PER_PAGE = COLS * ROWS  // 18 stickers par page
 
 export default function QRExportButton({
   tables,
   siteUrl,
   restaurantSlug,
+  restaurantName,
+  restaurantLogoUrl,
 }: {
   tables: TableForExport[]
   siteUrl: string
   restaurantSlug: string
+  restaurantName: string
+  restaurantLogoUrl: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'all' | 'zone' | 'single'>('all')
@@ -73,6 +84,24 @@ export default function QRExportButton({
     return str.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   }
 
+  async function loadImageAsDataUrl(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('No 2d context'))
+        ctx.drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = url
+    })
+  }
+
   async function generate() {
     if (!canGenerate) return
     setGenerating(true)
@@ -85,6 +114,16 @@ export default function QRExportButton({
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
       let firstPage = true
 
+      // Charger le logo si disponible
+      let logoDataUrl: string | null = null
+      if (restaurantLogoUrl) {
+        try {
+          logoDataUrl = await loadImageAsDataUrl(restaurantLogoUrl)
+        } catch (err) {
+          console.warn('Logo load failed:', err)
+        }
+      }
+
       type Group = { title: string; tables: TableForExport[] }
       let groups: Group[]
 
@@ -92,7 +131,7 @@ export default function QRExportButton({
         const t = tables.find((t) => t.id === selectedTableId)!
         groups = [{ title: `Table ${t.number}`, tables: [t] }]
       } else if (mode === 'zone') {
-        groups = [{ title: `QR codes tables – ${selectedZone}`, tables: targetTables }]
+        groups = [{ title: `Stickers tables – ${selectedZone}`, tables: targetTables }]
       } else {
         const byZone = new Map<string, TableForExport[]>()
         for (const t of [...tables].sort((a, b) => a.number - b.number)) {
@@ -101,98 +140,106 @@ export default function QRExportButton({
           byZone.get(k)!.push(t)
         }
         groups = [...byZone.entries()].map(([zone, tbls]) => ({
-          title: `QR codes tables – ${zone}`,
+          title: `Stickers tables – ${zone}`,
           tables: tbls,
         }))
       }
 
       for (const group of groups) {
-        if (mode === 'single') {
-          // Full-page single QR
+        const pages = Math.ceil(group.tables.length / PER_PAGE)
+        for (let p = 0; p < pages; p++) {
           if (!firstPage) doc.addPage()
           firstPage = false
-          const t = group.tables[0]
-          const url = `${siteUrl}/menu/${restaurantSlug}?table=${t.id}`
-          const dataUrl = await QRCode.toDataURL(url, {
-            width: 600, margin: 1, color: { dark: '#000000', light: '#ffffff' },
-          })
-          const size = 120
-          const cx = (PAGE_W - size) / 2
-          const cy = 75
-          // Table title
-          doc.setFontSize(20)
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(0, 0, 0)
-          doc.text(`Table ${t.number}`, PAGE_W / 2, cy - 14, { align: 'center' })
-          if (t.label) {
-            doc.setFontSize(11)
+          const pageTables = group.tables.slice(p * PER_PAGE, (p + 1) * PER_PAGE)
+
+          // Page title (petit en haut)
+          doc.setFontSize(9)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(120, 120, 120)
+          const titleText = pages > 1
+            ? `${group.title}  (${p + 1}/${pages})`
+            : group.title
+          doc.text(titleText, PAGE_W / 2, 8, { align: 'center' })
+
+          // Lignes de découpe
+          doc.setDrawColor(200, 200, 200)
+          doc.setLineWidth(0.15)
+
+          for (let i = 0; i < pageTables.length; i++) {
+            const t = pageTables[i]
+            const col = i % COLS
+            const row = Math.floor(i / COLS)
+            
+            // Position du sticker
+            const x = MARGIN_H + col * (STICKER_W + GAP_H)
+            const y = MARGIN_V + row * (STICKER_H + GAP_V)
+
+            // Bordure du sticker
+            doc.setDrawColor(200, 200, 200)
+            doc.setLineWidth(0.3)
+            doc.rect(x, y, STICKER_W, STICKER_H)
+
+            // Séparateurs verticaux internes (lignes fines)
+            doc.setDrawColor(220, 220, 220)
+            doc.setLineWidth(0.15)
+            doc.line(x + QR_SECTION_W, y, x + QR_SECTION_W, y + STICKER_H)
+            doc.line(x + QR_SECTION_W + LOGO_SECTION_W, y, x + QR_SECTION_W + LOGO_SECTION_W, y + STICKER_H)
+
+            // === SECTION 1: QR CODE ===
+            const url = `${siteUrl}/menu/${restaurantSlug}?table=${t.id}`
+            const qrDataUrl = await QRCode.toDataURL(url, {
+              width: 400,
+              margin: 1,
+              errorCorrectionLevel: 'L', // ← LOW pour QR plus simple
+              color: { dark: '#000000', light: '#ffffff' },
+            })
+            
+            const qrX = x + (QR_SECTION_W - QR_SIZE) / 2
+            const qrY = y + 2.5
+            doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_SIZE, QR_SIZE)
+            
+            // "NOTRE CARTE" sous le QR
+            doc.setFontSize(6)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(80, 80, 80)
+            doc.text('NOTRE CARTE', x + QR_SECTION_W / 2, y + STICKER_H - 2, { align: 'center' })
+
+            // === SECTION 2: LOGO ===
+            if (logoDataUrl) {
+              const logoX = x + QR_SECTION_W + (LOGO_SECTION_W - LOGO_SIZE) / 2
+              const logoY = y + (STICKER_H - LOGO_SIZE) / 2
+              try {
+                doc.addImage(logoDataUrl, 'PNG', logoX, logoY, LOGO_SIZE, LOGO_SIZE)
+              } catch (err) {
+                console.warn('Failed to add logo to PDF:', err)
+              }
+            }
+
+            // === SECTION 3: TABLE ===
+            const tableSectionX = x + QR_SECTION_W + LOGO_SECTION_W
+            const tableCenterX = tableSectionX + TABLE_SECTION_W / 2
+            
+            // "Table" en petit
+            doc.setFontSize(8)
             doc.setFont('helvetica', 'normal')
             doc.setTextColor(100, 100, 100)
-            doc.text(t.label, PAGE_W / 2, cy - 8, { align: 'center' })
-          }
-          doc.addImage(dataUrl, 'PNG', cx, cy, size, size)
-          // Large number below
-          doc.setFontSize(28)
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(0, 0, 0)
-          doc.text(`${t.number}`, PAGE_W / 2, cy + size + 14, { align: 'center' })
-        } else {
-          // Grid layout
-          const pages = Math.ceil(group.tables.length / PER_PAGE)
-          for (let p = 0; p < pages; p++) {
-            if (!firstPage) doc.addPage()
-            firstPage = false
-            const pageTables = group.tables.slice(p * PER_PAGE, (p + 1) * PER_PAGE)
-
-            // Page title
-            doc.setFontSize(11)
+            doc.text('Table', tableCenterX, y + 10, { align: 'center' })
+            
+            // Numéro en gros
+            doc.setFontSize(18)
             doc.setFont('helvetica', 'bold')
-            doc.setTextColor(20, 20, 20)
-            const titleText = pages > 1
-              ? `${group.title}  (${p + 1}/${pages})`
-              : group.title
-            doc.text(titleText, PAGE_W / 2, 13, { align: 'center' })
-
-            // Cut-line grid
-            doc.setDrawColor(200, 200, 200)
-            doc.setLineWidth(0.2)
-
-            for (let i = 0; i < pageTables.length; i++) {
-              const t = pageTables[i]
-              const col = i % COLS
-              const row = Math.floor(i / COLS)
-              const x = MARGIN_H + col * CELL_W
-              const y = MARGIN_TOP + row * CELL_H
-
-              const url = `${siteUrl}/menu/${restaurantSlug}?table=${t.id}`
-              const dataUrl = await QRCode.toDataURL(url, {
-                width: 300, margin: 1, color: { dark: '#000000', light: '#ffffff' },
-              })
-
-              // Cell border
-              doc.rect(x, y, CELL_W, CELL_H)
-
-              // QR image centered horizontally, 3mm from top
-              const qx = x + (CELL_W - QR_SIZE) / 2
-              const qy = y + 3
-              doc.addImage(dataUrl, 'PNG', qx, qy, QR_SIZE, QR_SIZE)
-
-              // Table number — below QR
-              doc.setFontSize(14)
-              doc.setFont('helvetica', 'bold')
-              doc.setTextColor(0, 0, 0)
-              doc.text(`${t.number}`, x + CELL_W / 2, y + 3 + QR_SIZE + 7, { align: 'center' })
-            }
+            doc.setTextColor(0, 0, 0)
+            doc.text(`${t.number}`, tableCenterX, y + 19, { align: 'center' })
           }
         }
       }
 
       // Filename
-      let filename = 'qr-tables.pdf'
-      if (mode === 'zone') filename = `qr-tables-${slugify(selectedZone)}.pdf`
+      let filename = 'stickers-tables.pdf'
+      if (mode === 'zone') filename = `stickers-${slugify(selectedZone)}.pdf`
       if (mode === 'single') {
         const t = tables.find((t) => t.id === selectedTableId)
-        filename = `qr-table-${t?.number ?? 'x'}.pdf`
+        filename = `sticker-table-${t?.number ?? 'x'}.pdf`
       }
       doc.save(filename)
     } catch (err) {
@@ -214,7 +261,7 @@ export default function QRExportButton({
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 18.75h.75v.75h-.75v-.75ZM18.75 13.5h.75v.75h-.75v-.75ZM18.75 18.75h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
         </svg>
-        Exporter QR
+        Stickers tables
       </button>
 
       {open && (
@@ -226,7 +273,7 @@ export default function QRExportButton({
             className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-semibold text-white mb-5">Exporter les QR codes</h2>
+            <h2 className="text-base font-semibold text-white mb-5">Exporter les stickers</h2>
 
             {/* Mode */}
             <div className="flex bg-zinc-800 rounded-xl p-0.5 mb-4">
@@ -278,11 +325,10 @@ export default function QRExportButton({
             <div className={`rounded-xl px-4 py-3 mb-5 text-sm transition-colors ${canGenerate ? 'bg-zinc-800/60 text-zinc-400' : 'bg-zinc-800/30 text-zinc-600'}`}>
               {canGenerate ? (
                 <>
-                  <span className="text-white font-medium">{targetTables.length}</span> QR code{targetTables.length > 1 ? 's' : ''}
+                  <span className="text-white font-medium">{targetTables.length}</span> sticker{targetTables.length > 1 ? 's' : ''}
                   {mode !== 'single' && (
-                    <> · <span className="text-white font-medium">{pageCount}</span> feuille{pageCount > 1 ? 's' : ''} A4 (3 × 4)</>
+                    <> · <span className="text-white font-medium">{pageCount}</span> feuille{pageCount > 1 ? 's' : ''} A4 (18/page)</>
                   )}
-                  {mode === 'single' && <> · pleine page A4</>}
                   {mode === 'all' && zones.length > 0 && <> · groupés par zone</>}
                 </>
               ) : (
